@@ -1,0 +1,73 @@
+import { achievementsApi } from "../../../shared/services/api";
+
+/**
+ * Get all achievements
+ * @param {string} category - Optional category filter
+ * @returns {Promise<Array>} Array of achievements
+ */
+export const getAchievements = async (category) => {
+  try {
+    const response = await achievementsApi.getAchievements(category);
+    return response.data.achievements;
+  } catch (error) {
+    console.error('Error fetching achievements:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get achievements for the current user
+ * @returns {Promise<Array>} Array of user achievements
+ */
+export const getUserAchievements = async () => {
+  try {
+    const response = await achievementsApi.getUserAchievements();
+    return response.data.achievements;
+  } catch (error) {
+    console.error('Error fetching user achievements:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get unviewed achievements for the current user
+ * @returns {Promise<Array>} Array of unviewed achievements
+ */
+export const getUnviewedAchievements = async () => {
+  try {
+    const response = await achievementsApi.getUnviewedAchievements();
+    return response.data.achievements;
+  } catch (error) {
+    console.error('Error fetching unviewed achievements:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mark achievements as viewed
+ * @param {Array} achievementIds - Array of achievement IDs to mark as viewed
+ * @returns {Promise<Object>} Response data
+ */
+export const markAchievementsAsViewed = async (achievementIds) => {
+  try {
+    const response = await achievementsApi.markAchievementsAsViewed(achievementIds);
+    return response;
+  } catch (error) {
+    console.error('Error marking achievements as viewed:', error);
+    throw error;
+  }
+};
+
+/**
+ * Check and award achievements for the current user
+ * @returns {Promise<Array>} Array of newly earned achievements
+ */
+export const checkAndAwardAchievements = async () => {
+  try {
+    const response = await achievementsApi.checkAndAwardAchievements();
+    return response.data.newAchievements;
+  } catch (error) {
+    console.error('Error checking and awarding achievements:', error);
+    throw error;
+  }
+};
