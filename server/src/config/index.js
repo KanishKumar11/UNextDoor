@@ -30,9 +30,30 @@ const recommendedEnvVars = [
   "VAPI_API_KEY",
 ];
 
+// Payment-related environment variables (required if payments are enabled)
+const paymentEnvVars = [
+  "RAZORPAY_KEY_ID",
+  "RAZORPAY_KEY_SECRET",
+];
+
 try {
   // Validate required environment variables
   validateEnv(requiredEnvVars);
+
+  // Validate payment environment variables if payments are enabled
+  if (process.env.ENABLE_PAYMENTS === 'true') {
+    try {
+      validateEnv(paymentEnvVars);
+      console.log('✅ Payment system enabled with valid credentials');
+    } catch (error) {
+      console.error('❌ Payment system is enabled but missing required credentials:');
+      console.error(error.message);
+      console.error('Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your .env file');
+      process.exit(1);
+    }
+  } else {
+    console.log('ℹ️ Payment system is disabled');
+  }
 
   // Check for recommended environment variables
   const missingRecommended = recommendedEnvVars.filter(
@@ -122,6 +143,25 @@ const config = {
   vapi: {
     apiKey: process.env.VAPI_API_KEY,
     assistantId: process.env.VAPI_ASSISTANT_ID,
+  },
+
+  // Payment configuration
+  payments: {
+    enabled: process.env.ENABLE_PAYMENTS === "true",
+    razorpay: {
+      keyId: process.env.RAZORPAY_KEY_ID,
+      keySecret: process.env.RAZORPAY_KEY_SECRET,
+      webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
+    },
+  },
+
+  // Feature flags
+  features: {
+    payments: process.env.ENABLE_PAYMENTS === "true",
+    webhooks: process.env.ENABLE_WEBHOOKS === "true",
+    featureGating: process.env.ENABLE_FEATURE_GATING === "true",
+    subscriptionUpgrades: process.env.ENABLE_SUBSCRIPTION_UPGRADES === "true",
+    proration: process.env.ENABLE_PRORATION === "true",
   },
 };
 

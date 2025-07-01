@@ -129,6 +129,22 @@ const userSchema = new mongoose.Schema(
         default: "system",
       },
     },
+    // Subscription fields
+    currentSubscriptionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Subscription",
+      default: null,
+    },
+    subscriptionStatus: {
+      type: String,
+      enum: ["active", "inactive", "cancelled", "expired", "pending"],
+      default: "inactive",
+    },
+    subscriptionTier: {
+      type: String,
+      enum: ["free", "basic", "standard", "pro"],
+      default: "free",
+    },
     refreshTokens: [
       {
         token: {

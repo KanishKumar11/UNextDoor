@@ -469,6 +469,10 @@ export const getUserProfile = async (userId) => {
         createdAt: user.createdAt,
         lastLogin: user.lastLogin,
         preferences: user.preferences,
+        // Include subscription fields
+        currentSubscriptionId: user.currentSubscriptionId,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionTier: user.subscriptionTier,
       },
     };
   } catch (error) {
@@ -543,6 +547,10 @@ export const updateUserProfile = async (userId, profileData) => {
         createdAt: updatedUser.createdAt,
         lastLogin: updatedUser.lastLogin,
         preferences: updatedUser.preferences,
+        // Include subscription fields
+        currentSubscriptionId: updatedUser.currentSubscriptionId,
+        subscriptionStatus: updatedUser.subscriptionStatus,
+        subscriptionTier: updatedUser.subscriptionTier,
       },
     };
   } catch (error) {

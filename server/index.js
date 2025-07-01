@@ -20,6 +20,10 @@ import gamesRoutes from "./src/routes/games.js";
 import vocabularyRoutes from "./src/routes/vocabulary.js";
 import levelRoutes from "./src/routes/level.js";
 import xpRoutes from "./src/routes/xp.js";
+import subscriptionRoutes from "./src/routes/subscription.js";
+import webhookRoutes from "./src/routes/webhook.js";
+import featureRoutes from "./src/routes/feature.js";
+import paymentRecoveryService from "./src/services/paymentRecoveryService.js";
 import { sendSuccess, sendError } from "./src/utils/responseUtils.js";
 
 /**
@@ -102,6 +106,9 @@ const initializeApp = () => {
   app.use(`${apiPrefix}/levels`, levelRoutes);
   app.use(`${apiPrefix}/xp`, xpRoutes);
   app.use(`${apiPrefix}/achievements`, achievementRoutes);
+  app.use(`${apiPrefix}/subscriptions`, subscriptionRoutes);
+  app.use(`${apiPrefix}/webhooks`, webhookRoutes);
+  app.use(`${apiPrefix}/features`, featureRoutes);
 
   // Root route
   app.get("/", (_req, res) => {
@@ -153,6 +160,9 @@ const startServer = async (app) => {
     initializeWebRTCSocketHandlers(webrtcNamespace);
     initAITutorSocketHandlers(tutorNamespace);
     initializeRealtimeConversationHandlers(realtimeNamespace);
+
+    // Start payment recovery service
+    paymentRecoveryService.start();
 
     // Start server
     server.listen(config.port, () => {

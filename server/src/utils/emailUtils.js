@@ -61,11 +61,12 @@ export const sendEmail = async (to, subject, text, html = null) => {
         text,
         ...(html && { html }),
       });
-      return true;
+      // return true;
     }
 
     // Send email
-    await transporter.sendMail(mailOptions);
+   const res= await transporter.sendMail(mailOptions);
+   console.log(res);
     return true;
   } catch (error) {
     console.error("Error sending email:", error.message);
