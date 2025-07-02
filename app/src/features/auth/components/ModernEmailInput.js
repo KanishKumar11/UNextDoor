@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { View, StyleSheet } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, StyleSheet, Alert } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "../hooks/useAuth";
@@ -16,6 +16,10 @@ import ModernErrorMessage from "../../../shared/components/ModernErrorMessage";
 import { emailSchema } from "../../../shared/utils/validationUtils";
 import { handleApiError } from "../../../shared/utils/errorUtils";
 import modernTheme from "../../../shared/styles/modernTheme";
+import {
+  initializeGoogleSignIn,
+  signInWithGoogle
+} from "../../../services/googleAuthService";
 
 /**
  * ModernEmailInput component
@@ -41,6 +45,19 @@ const ModernEmailInput = ({ onContinue }) => {
     },
     mode: "onChange",
   });
+
+  // Initialize Google Sign-In when component mounts
+  useEffect(() => {
+    const initGoogle = async () => {
+      try {
+        await initializeGoogleSignIn();
+      } catch (error) {
+        console.error('Failed to initialize Google Sign-In:', error);
+      }
+    };
+
+    initGoogle();
+  }, []);
 
   const onSubmit = async (data) => {
     try {
@@ -172,22 +189,63 @@ const ModernEmailInput = ({ onContinue }) => {
           onPress={async () => {
             try {
               setServerError(null);
-              // In a real app, you would get the Google token using Expo Google Auth
-              const mockGoogleToken = "mock-google-token";
-              const result = await googleAuth(mockGoogleToken);
+              console.log('🔄 Starting Google Sign-In process...');
 
-              if (result.error) {
-                setServerError(result.error);
+              // Sign in with Google
+              const googleResult = await signInWithGoogle();
+              console.log('📱 Google Sign-In result:', googleResult);
+
+              if (googleResult && googleResult.idToken) {
+                console.log('🔑 Google ID token received, authenticating with backend...');
+
+                // Send the ID token to our backend for verification
+                const result = await googleAuth(googleResult.idToken);
+                console.log('🔐 Backend authentication result:', result);
+
+                if (result.error) {
+                  console.error('❌ Backend authentication failed:', result.error);
+                  setServerError(result.error);
+                } else if (result.success) {
+                  console.log('✅ Google authentication successful!');
+                  console.log('👤 User data:', result.user);
+
+                  // Force a small delay to ensure Redux state is updated
+                  setTimeout(() => {
+                    console.log('🔄 Authentication flow should complete now');
+                  }, 100);
+                } else {
+                  console.error('❌ Unexpected authentication result:', result);
+                  setServerError('Authentication failed - unexpected response');
+                }
+              } else {
+                console.error('❌ No Google ID token received');
+                setServerError('Failed to get Google authentication token');
               }
             } catch (error) {
-              handleApiError(error, setServerError);
+              console.error('Google Sign-In error:', error);
+
+              // Handle specific Google Sign-In errors
+              if (error.code === 'SIGN_IN_CANCELLED') {
+                // User cancelled the sign-in process
+                return;
+              } else if (error.code === 'IN_PROGRESS') {
+                setServerError('Sign-in already in progress');
+              } else if (error.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
+                Alert.alert(
+                  'Google Play Services Required',
+                  'Please install or update Google Play Services to use Google Sign-In.',
+                  [{ text: 'OK' }]
+                );
+              } else {
+                handleApiError(error, setServerError);
+              }
             }
           }}
           style={styles.socialButton}
           isDisabled={isLoading}
         />
 
-        <ModernSocialButton
+        {/* <ModernSocialButton
           text="Continue with Apple"
           provider="apple"
           onPress={async () => {
@@ -206,7 +264,7 @@ const ModernEmailInput = ({ onContinue }) => {
           }}
           style={styles.socialButton}
           isDisabled={isLoading}
-        />
+        /> */}
       </View>
     </ModernAuthLayout>
   );

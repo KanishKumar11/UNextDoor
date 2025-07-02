@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,10 +42,11 @@ const registrationSchema = z.object({
  *
  * @param {Object} props - Component props
  * @param {string} props.email - User email
+ * @param {Object} props.prefilledData - Pre-filled data from social login (optional)
  * @param {Function} props.onRegistered - Function to call when registration is complete
  * @param {Function} props.onBack - Function to go back to previous screen
  */
-const ModernRegistration = ({ email, onRegistered, onBack }) => {
+const ModernRegistration = ({ email, prefilledData = {}, onRegistered, onBack }) => {
   const { register, isLoading } = useAuth();
   const [serverError, setServerError] = useState(null);
 
@@ -56,12 +57,19 @@ const ModernRegistration = ({ email, onRegistered, onBack }) => {
   } = useForm({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
-      username: "",
-      firstName: "",
-      lastName: "",
+      username: prefilledData.suggestedUsername || "",
+      firstName: prefilledData.firstName || "",
+      lastName: prefilledData.lastName || "",
     },
     mode: "onChange",
   });
+
+  // Log pre-filled data for debugging
+  useEffect(() => {
+    if (Object.keys(prefilledData).length > 0) {
+      console.log('📋 Registration form pre-filled with data:', prefilledData);
+    }
+  }, [prefilledData]);
 
   const onSubmit = async (data) => {
     try {

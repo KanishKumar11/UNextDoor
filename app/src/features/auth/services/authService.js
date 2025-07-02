@@ -408,23 +408,36 @@ export const googleAuth = (token) => async (dispatch) => {
 
     // Call the backend API for Google authentication
     const response = await api.auth.googleAuth(token);
+    console.log("Google auth API response:", response);
 
-    // Extract tokens and user data
-    const accessToken =
-      response.accessToken || (response.data && response.data.accessToken);
-    const refreshToken =
-      response.refreshToken || (response.data && response.data.refreshToken);
-    const userData = response.user || (response.data && response.data.user);
+    // Extract tokens and user data - handle both direct response and nested data
+    const accessToken = response.accessToken || response.data?.accessToken;
+    const refreshToken = response.refreshToken || response.data?.refreshToken;
+    const userData = response.user || response.data?.user;
+
+    console.log("Extracted auth data:", {
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+      userData
+    });
 
     // Store the complete auth data
-    if (accessToken) {
+    if (accessToken && userData) {
       await storeToken(accessToken, refreshToken, userData);
-      console.log("Auth data stored during Google authentication");
-    }
+      console.log("✅ Auth data stored during Google authentication");
 
-    dispatch(setUser(response.user));
-    return { success: true };
+      // Update Redux state with user data
+      dispatch(setUser(userData));
+      console.log("✅ User data set in Redux store");
+
+      return { success: true, user: userData };
+    } else {
+      console.error("❌ Missing auth data in response");
+      dispatch(setError("Authentication failed - missing user data"));
+      return { success: false, error: "Authentication failed - missing user data" };
+    }
   } catch (error) {
+    console.error("❌ Google auth error:", error);
     dispatch(setError(error.message));
     return { success: false, error: error.message };
   } finally {

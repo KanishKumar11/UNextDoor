@@ -400,11 +400,12 @@ class PaymentWebhookController {
 
       await subscription.save();
 
-      // Update user
+      // Update user - use plan type extracted from planId
+      const subscriptionTier = planType; // Use planType extracted from planId: 'basic', 'standard', 'pro'
       await User.findByIdAndUpdate(transaction.userId, {
         currentSubscriptionId: subscription._id,
         subscriptionStatus: 'active',
-        subscriptionTier: planDetails.name.toLowerCase()
+        subscriptionTier: subscriptionTier // Use valid enum values: 'free', 'basic', 'standard', 'pro'
       });
 
       console.log('Subscription activated via webhook for user:', transaction.userId);

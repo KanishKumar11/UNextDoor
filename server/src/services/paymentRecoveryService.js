@@ -221,6 +221,11 @@ class PaymentRecoveryService {
 
       // Create new subscription
       const planDetails = transaction.metadata.planDetails;
+
+      // Extract plan type from planId (e.g., 'basic_monthly' -> 'basic')
+      const planParts = transaction.planId.split('_');
+      const planType = planParts[0]; // 'basic', 'standard', 'pro'
+
       const now = new Date();
       const currentPeriodEnd = new Date(now);
       currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + planDetails.intervalCount);
@@ -247,11 +252,12 @@ class PaymentRecoveryService {
 
       await subscription.save();
 
-      // Update user
+      // Update user - use plan type extracted from planId
+      const subscriptionTier = planType; // Use planType extracted from planId: 'basic', 'standard', 'pro'
       await User.findByIdAndUpdate(transaction.userId, {
         currentSubscriptionId: subscription._id,
         subscriptionStatus: 'active',
-        subscriptionTier: planDetails.name.toLowerCase()
+        subscriptionTier: subscriptionTier // Use valid enum values: 'free', 'basic', 'standard', 'pro'
       });
 
       console.log(`✅ Subscription activated via recovery for user: ${transaction.userId}`);

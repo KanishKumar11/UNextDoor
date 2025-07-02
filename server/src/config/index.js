@@ -155,6 +155,12 @@ const config = {
     },
   },
 
+  // Google OAuth configuration
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  },
+
   // Feature flags
   features: {
     payments: process.env.ENABLE_PAYMENTS === "true",

@@ -142,7 +142,7 @@ const userSchema = new mongoose.Schema(
     },
     subscriptionTier: {
       type: String,
-      enum: ["free", "basic", "standard", "pro"],
+      enum: ["free", "basic", "standard", "pro", "Pro Yearly"],
       default: "free",
     },
     refreshTokens: [

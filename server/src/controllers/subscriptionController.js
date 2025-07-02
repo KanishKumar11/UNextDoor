@@ -1068,23 +1068,15 @@ class SubscriptionController {
       throw subscriptionError;
     }
 
-    // Determine subscription tier for user profile
-    let subscriptionTier = planType; // 'basic', 'standard', 'pro'
-    if (planDetails.name) {
-      // Create proper display name: "Standard Monthly", "Basic Monthly", etc.
-      const tierName = planDetails.name; // "Standard", "Basic", "Pro"
-      const intervalName = planDuration === 'monthly' ? 'Monthly' :
-                          planDuration === 'quarterly' ? 'Quarterly' :
-                          planDuration === 'yearly' ? 'Yearly' : 'Monthly';
-      subscriptionTier = `${tierName} ${intervalName}`;
-    }
+    // Set subscription tier for user profile (use enum values only)
+    const subscriptionTier = planType; // 'basic', 'standard', 'pro' - these are valid enum values
 
     // Update user profile with subscription information
     console.log('📋 Updating user profile with subscription data');
     await User.findByIdAndUpdate(transaction.userId, {
       currentSubscriptionId: subscription._id,
       subscriptionStatus: 'active',
-      subscriptionTier: subscriptionTier
+      subscriptionTier: subscriptionTier // Use only valid enum values: 'free', 'basic', 'standard', 'pro'
     });
 
     console.log('✅ Subscription activated for user:', transaction.userId);

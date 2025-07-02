@@ -14,11 +14,14 @@ try {
 // Environment detection
 const isDev = __DEV__;
 
-// Base configuration for all environments
+// Fetch production API URLs from environment variables if available
+const PROD_HTTP = process.env.EXPO_PUBLIC_API_HTTP || "https://api.unextdoor.co/api/v1";
+const PROD_WS = process.env.EXPO_PUBLIC_API_WS || "wss://api.unextdoor.co/api/v1";
+
 const CONFIG = {
   production: {
-    http: "https://outgoing-grizzly-in.ngrok-free.app/api/v1",
-    ws: "wss://outgoing-grizzly-in.ngrok-free.app",
+    http: PROD_HTTP,
+    ws: PROD_WS,
   },
   development: {
     web: {

@@ -663,41 +663,66 @@ export const authenticateWithGoogle = async (token, metadata = {}) => {
           email: googleUser.email,
           username: uniqueUsername,
           displayName: googleUser.name,
+          firstName: googleUser.givenName || '',
+          lastName: googleUser.familyName || '',
           profilePicture: googleUser.picture,
           authProvider: AuthProvider.GOOGLE,
           authProviderId: googleUser.id,
           isVerified: true,
           status: UserStatus.ACTIVE,
           lastLogin: new Date(),
+          subscriptionTier: 'free', // Set default subscription tier for new Google users
         });
       } else {
         user = await userModel.create({
           email: googleUser.email,
           username,
           displayName: googleUser.name,
+          firstName: googleUser.givenName || '',
+          lastName: googleUser.familyName || '',
           profilePicture: googleUser.picture,
           authProvider: AuthProvider.GOOGLE,
           authProviderId: googleUser.id,
           isVerified: true,
           status: UserStatus.ACTIVE,
           lastLogin: new Date(),
+          subscriptionTier: 'free', // Set default subscription tier for new Google users
         });
       }
     } else {
       // Update user with Google info if needed
       if (!user.authProviderId || user.authProvider !== AuthProvider.GOOGLE) {
-        await userModel.findByIdAndUpdate(user._id, {
+        // Prepare update data
+        const updateData = {
           authProviderId: googleUser.id,
           authProvider:
             user.authProvider === AuthProvider.EMAIL
               ? AuthProvider.GOOGLE
               : user.authProvider,
           lastLogin: new Date(),
-        });
+        };
+
+        // Fix invalid subscription tier if it exists
+        if (user.subscriptionTier && !['free', 'basic', 'standard', 'pro'].includes(user.subscriptionTier)) {
+          console.log(`⚠️ Fixing invalid subscription tier for user ${user.email}: ${user.subscriptionTier} -> pro`);
+          updateData.subscriptionTier = 'pro'; // Default to 'pro' since they had a paid plan
+        }
+
+        await userModel.findByIdAndUpdate(user._id, updateData);
       } else {
-        // Update last login
-        await user.updateLastLogin();
+        // Update last login and fix subscription tier if needed
+        const updateData = { lastLogin: new Date() };
+
+        if (user.subscriptionTier && !['free', 'basic', 'standard', 'pro'].includes(user.subscriptionTier)) {
+          console.log(`⚠️ Fixing invalid subscription tier for user ${user.email}: ${user.subscriptionTier} -> pro`);
+          updateData.subscriptionTier = 'pro'; // Default to 'pro' since they had a paid plan
+        }
+
+        await userModel.findByIdAndUpdate(user._id, updateData);
       }
+
+      // Refresh user data after update
+      user = await userModel.findById(user._id);
     }
 
     // Convert MongoDB ObjectId to string for consistency
@@ -740,7 +765,13 @@ export const authenticateWithGoogle = async (token, metadata = {}) => {
         email: user.email,
         username: user.username,
         displayName: user.displayName,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        profilePicture: user.profilePicture || '',
         role: user.role || UserRole.USER,
+        authProvider: user.authProvider,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
       },
     };
   } catch (error) {

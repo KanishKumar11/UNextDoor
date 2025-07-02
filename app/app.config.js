@@ -2,7 +2,7 @@
 const config = {
   name: "UNextDoor",
   slug: "UNextDoor",
-  version: "1.0.0",
+  version: "1.0.1", // bumped version
   orientation: "portrait",
   icon: "./src/assets/app-logo-square.png",
   userInterfaceStyle: "light",
@@ -24,9 +24,10 @@ const config = {
     bitcode: false,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      NSPhotoLibraryUsageDescription: "This app needs access to your photo library to allow you to upload and select photos for your profile and other features.",
     },
   },
-  runtimeVersion: "1.0.0",
+  runtimeVersion: "1.0.1", // keep in sync with version
   android: {
     adaptiveIcon: {
       foregroundImage: "./src/assets/app-logo-square.png",
@@ -61,6 +62,14 @@ const config = {
           "Allow UNextDoor to access your camera for video conversations",
         microphonePermission:
           "Allow UNextDoor to access your microphone for voice conversations",
+      },
+    ],
+    [
+      "./plugins/withGoogleSignIn",
+      {
+        iosClientId: "1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
+        androidClientId: "1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
+        webClientId: "1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
       },
     ],
   ],
