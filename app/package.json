@@ -60,6 +60,7 @@
     "expo-status-bar": "^2.2.3",
     "expo-system-ui": "~5.0.9",
     "expo-video": "~2.2.2",
+    "immer": "^10.1.1",
     "lottie-react-native": "^7.2.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -81,7 +82,8 @@
     "react-redux": "^9.2.0",
     "redux": "^5.0.1",
     "socket.io-client": "^4.8.1",
-    "zod": "^3.24.4"
+    "zod": "^3.24.4",
+    "zustand": "^5.0.6"
   },
   "devDependencies": {
     "@babel/core": "^7.27.1",

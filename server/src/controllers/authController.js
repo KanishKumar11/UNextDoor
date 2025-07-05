@@ -88,22 +88,13 @@ export const verifyOTP = async (req, res) => {
  */
 export const register = async (req, res) => {
   try {
-    // Log detailed request information for debugging
-    console.log("Registration request received:");
-    console.log("Headers:", JSON.stringify(req.headers));
-    console.log("Body:", req.body);
-    console.log("Content-Type:", req.headers["content-type"]);
-    console.log("Body type:", typeof req.body);
-    console.log("URL:", req.url);
-    console.log("Method:", req.method);
+   
 
     // Check if we have query parameters that might contain the data
     if (req.query && Object.keys(req.query).length > 0) {
-      console.log("Query parameters:", req.query);
 
       // If we have email and username in query, use those
       if (req.query.email && req.query.username) {
-        console.log("Using query parameters for registration");
         req.body = {
           email: req.query.email,
           username: req.query.username,
@@ -116,7 +107,6 @@ export const register = async (req, res) => {
 
     // Check if req.body exists and is not empty
     if (!req.body || Object.keys(req.body).length === 0) {
-      console.error("Request body is missing or empty");
       return sendError(
         res,
         400,
@@ -127,13 +117,7 @@ export const register = async (req, res) => {
     // Extract all fields from request body
     const { email, username, displayName, firstName, lastName } = req.body;
 
-    console.log("Extracted fields:", {
-      email,
-      username,
-      displayName,
-      firstName,
-      lastName,
-    });
+   
 
     // Validate required fields
     if (!email || !username) {
@@ -155,7 +139,6 @@ export const register = async (req, res) => {
       return sendError(res, 400, result.error);
     }
 
-    console.log("User registered successfully:", result.user.id);
     return sendSuccess(res, 201, "User registered successfully", {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,

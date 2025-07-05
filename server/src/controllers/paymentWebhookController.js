@@ -14,11 +14,6 @@ class PaymentWebhookController {
    */
   async handleRazorpayWebhook(req, res) {
     try {
-      console.log('🔍 Webhook handler called');
-      console.log('📋 Headers:', JSON.stringify(req.headers, null, 2));
-      console.log('📋 Body:', JSON.stringify(req.body, null, 2));
-      console.log('📋 Raw Body length:', req.rawBody?.length || 'undefined');
-
       const webhookSignature = req.headers['x-razorpay-signature'];
 
       if (!webhookSignature) {
@@ -40,7 +35,6 @@ class PaymentWebhookController {
 
       // Use raw body for signature verification
       const bodyForVerification = req.rawBody || JSON.stringify(req.body);
-      console.log('📋 Body for verification length:', bodyForVerification.length);
 
       // Verify webhook signature using crypto directly to avoid binding issues
       const isValidSignature = this.verifyWebhookSignature ?
@@ -64,10 +58,8 @@ class PaymentWebhookController {
         });
       }
 
-      console.log('✅ Webhook signature verified successfully');
 
       const event = req.body;
-      console.log('Razorpay webhook received:', event.event, event.payload?.payment?.entity?.id);
 
       // Handle different webhook events
       switch (event.event) {
@@ -145,7 +137,6 @@ class PaymentWebhookController {
         await this.processSubscriptionActivation(transaction);
       }
 
-      console.log('Payment captured processed:', payment.id);
 
     } catch (error) {
       console.error('Error handling payment captured:', error);
@@ -173,7 +164,6 @@ class PaymentWebhookController {
       
       await transaction.save();
 
-      console.log('Payment failed processed:', payment.id);
 
     } catch (error) {
       console.error('Error handling payment failed:', error);

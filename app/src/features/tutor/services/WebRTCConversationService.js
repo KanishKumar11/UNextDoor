@@ -440,7 +440,7 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
         ephemeralKey = data.token;
       } else {
         console.error("🎯 Invalid token response structure:", data);
-        throw new Error(`Invalid token response from server: ${JSON.stringify(data)}`);
+        // throw new Error(`Invalid token response from server: ${JSON.stringify(data)}`);
       }
 
       console.log("🎯 Ephemeral token received successfully");

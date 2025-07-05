@@ -142,10 +142,6 @@ export class RazorpayGateway extends IPaymentGateway {
    */
   async createOrder(amount, currency = "INR", options = {}) {
     try {
-      console.log("🛒 Creating Razorpay order with params:");
-      console.log("  - amount:", amount, "(type:", typeof amount, ")");
-      console.log("  - currency:", currency);
-      console.log("  - options:", JSON.stringify(options, null, 2));
       
       // Validate that amount is a number
       if (typeof amount !== 'number') {
@@ -161,7 +157,6 @@ export class RazorpayGateway extends IPaymentGateway {
         partial_payment: options.partialPayment || false,
       };
       
-      console.log("📋 Razorpay order data:", JSON.stringify(orderData, null, 2));
       
       const order = await this.razorpay.orders.create(orderData);
 

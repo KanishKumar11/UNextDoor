@@ -127,7 +127,6 @@ export const initializeNewUser = async (userId, userPreferences = {}) => {
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     };
 
-    console.error('📋 Initialization error details:', JSON.stringify(errorDetails, null, 2));
 
     return {
       success: false,

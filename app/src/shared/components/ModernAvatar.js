@@ -99,7 +99,7 @@ const ModernAvatar = ({
     width: sizeValue,
     height: sizeValue,
     borderRadius: getBorderRadius(),
-    backgroundColor: backgroundColor || modernTheme.colors.primary[100],
+    // backgroundColor: backgroundColor || modernTheme.colors.primary[100],
   };
 
   // Badge size based on avatar size

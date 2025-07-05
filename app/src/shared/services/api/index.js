@@ -26,26 +26,15 @@ apiClient.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
 
-      // Log request details for debugging
-      console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`);
-      console.log("Headers:", JSON.stringify(config.headers));
-
-      if (config.data) {
-        console.log("Request data:", JSON.stringify(config.data));
-      }
+   
 
       // Special handling for registration
       if (config.url.includes("/auth/register")) {
-        console.log("REGISTRATION REQUEST DETAILS:");
-        console.log("Data type:", typeof config.data);
-        console.log("Data:", config.data);
 
         // Ensure Content-Type is set correctly
         config.headers["Content-Type"] = "application/json";
 
         // Log the stringified data
-        const jsonData = JSON.stringify(config.data);
-        console.log("Stringified data:", jsonData);
 
         // Ensure data is not empty
         if (

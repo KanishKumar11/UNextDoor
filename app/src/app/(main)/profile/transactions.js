@@ -59,10 +59,9 @@ const TransactionsPage = () => {
       });
 
       if (response.success && response.data) {
-        console.log('📊 Raw transaction response:', JSON.stringify(response.data, null, 2));
 
         const rawTransactions = response.data.transactions || [];
-        console.log('📊 Raw transactions count:', rawTransactions.length);
+        // console.log('📊 Raw transactions count:', rawTransactions.length);
 
         const formattedTransactions = rawTransactions.map(transaction => ({
           id: transaction._id,
