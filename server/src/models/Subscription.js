@@ -198,6 +198,32 @@ const subscriptionSchema = new mongoose.Schema(
       default: false,
     },
 
+    // Renewal tracking fields
+    lastReminderSent: {
+      type: Date,
+      default: null,
+    },
+    lastRenewalAttempt: {
+      type: Date,
+      default: null,
+    },
+    renewalFailedAt: {
+      type: Date,
+      default: null,
+    },
+    renewalFailureCount: {
+      type: Number,
+      default: 0,
+    },
+    lastRetryAttempt: {
+      type: Date,
+      default: null,
+    },
+    expiredAt: {
+      type: Date,
+      default: null,
+    },
+
     // Scheduled downgrade tracking
     scheduledDowngrade: {
       planId: {

@@ -120,6 +120,11 @@ export const useSubscription = () => {
       intervalCount: sub.intervalCount,
       currentPeriodEnd: sub.currentPeriodEnd,
       cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+      autoRenewal: sub.autoRenewal,
+      nextRenewalDate: sub.nextRenewalDate,
+      reminderSent: sub.reminderSent,
+      isRecurring: sub.isRecurring,
+      subscriptionId: sub.subscriptionId, // Razorpay subscription ID
     };
 
     console.log('🎯 [getCurrentPlan] Final result:', result);

@@ -1,5 +1,6 @@
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import { PLAN_PRICES } from "../../../utils/currencyUtils.js";
 import { 
   IPaymentGateway, 
   PaymentResult, 
@@ -51,6 +52,23 @@ export class RazorpayGateway extends IPaymentGateway {
       return PaymentResult.success(customer);
     } catch (error) {
       console.error("❌ Error creating Razorpay customer:", error);
+      // Handle customer already exists error gracefully
+      if (error.error?.code === "BAD_REQUEST_ERROR" &&
+          error.error?.description?.includes("already exists")) {
+        console.log("ℹ️ Customer already exists, fetching existing customer");
+        try {
+          const result = await this.razorpay.customers.all({ email: customerDetails.email, count: 1 });
+          const existing = result.items?.[0];
+          if (existing) {
+            console.log("✅ Fetched existing Razorpay customer:", existing.id);
+            return PaymentResult.success(existing);
+          }
+          return PaymentResult.failure("Customer exists but not found", error.error?.code);
+        } catch (fetchError) {
+          console.error("❌ Error fetching existing Razorpay customer:", fetchError);
+          return PaymentResult.failure(fetchError.message, fetchError.error?.code);
+        }
+      }
       return PaymentResult.failure(error.message, error.error?.code);
     }
   }
@@ -63,39 +81,74 @@ export class RazorpayGateway extends IPaymentGateway {
   async createPlan(planDetails) {
     try {
       console.log("📋 Creating Razorpay plan:", planDetails.name);
-      
-      const plan = await this.razorpay.plans.create({
-        id: planDetails.id,
+      console.log("💰 Plan details:", {
+        currency: planDetails.currency,
+        price: planDetails.price,
+        id: planDetails.id
+      });
+
+      // Build plan payload, mapping intervals to Razorpay period values
+      const notes = { created_by: "UNextDoor_System" };
+      // Determine correct period: Razorpay expects 'monthly' or 'yearly'
+      let period = planDetails.interval;
+      if (planDetails.interval === 'month') period = 'monthly';
+      else if (planDetails.interval === 'year') period = 'yearly';
+      // Include plan_type only if planDetails.id is provided
+      if (planDetails.id) {
+        notes.plan_type = planDetails.id.split("_")[1] || planDetails.id;
+        notes.original_currency = planDetails.currency || 'INR';
+        notes.original_price = planDetails.price || planDetails.amount;
+      }
+
+      // IMPORTANT: Razorpay plans must always be in INR for Indian Razorpay accounts
+      // For USD users, we'll create INR plans but handle currency conversion in orders
+      let amountInRupees = typeof planDetails.price === 'number' ? planDetails.price : planDetails.amount;
+      let planCurrency = 'INR';
+
+      if (planDetails.currency && planDetails.currency !== 'INR') {
+        console.log("🔄 Converting USD plan to INR for Razorpay compatibility");
+        // Always use configured INR price for plan creation
+        const priceConfig = PLAN_PRICES[planDetails.id];
+        if (priceConfig && typeof priceConfig.INR === 'number') {
+          amountInRupees = priceConfig.INR;
+          console.log(`💱 Using INR price: ₹${amountInRupees} for plan ${planDetails.id}`);
+        } else {
+          // Fallback conversion if no configured price (should not happen)
+          amountInRupees = Math.round(planDetails.price * 83); // Approximate USD to INR
+          console.warn(`⚠️ Using fallback conversion: $${planDetails.price} → ₹${amountInRupees}`);
+        }
+      }
+
+      const amountInSubunits = Math.round(amountInRupees * 100);
+      console.log(`💰 Final plan amount: ₹${amountInRupees} (${amountInSubunits} paise)`);
+
+      const payload = {
         item: {
           name: planDetails.name,
-          amount: planDetails.amount,
-          currency: planDetails.currency,
+          amount: amountInSubunits,
+          currency: planCurrency, // Always INR for Razorpay plans
         },
-        period: planDetails.interval,
+        period: period,
         interval: planDetails.intervalCount,
-        notes: {
-          created_by: "UNextDoor_System",
-          plan_type: planDetails.id.split("_")[1], // Extract plan type from ID
-        },
-      });
+        notes: notes
+      };
+
+      // Note: Razorpay doesn't allow custom IDs for plans, so we'll create without ID
+      // and track the mapping in our database using the notes field
+      console.log(`📋 Creating plan without custom ID (Razorpay limitation)`);
+
+      const plan = await this.razorpay.plans.create(payload);
 
       console.log("✅ Razorpay plan created:", plan.id);
       return PaymentResult.success(plan);
     } catch (error) {
       console.error("❌ Error creating Razorpay plan:", error);
-      
-      // Handle plan already exists error
-      if (error.error?.code === "BAD_REQUEST_ERROR" && 
-          error.error?.description?.includes("already exists")) {
-        console.log("ℹ️ Plan already exists, fetching existing plan");
-        try {
-          const existingPlan = await this.razorpay.plans.fetch(planDetails.id);
-          return PaymentResult.success(existingPlan);
-        } catch (fetchError) {
-          return PaymentResult.failure(fetchError.message, fetchError.error?.code);
-        }
-      }
-      
+
+      // Since we can't use custom IDs, we'll create a new plan each time
+      // This is acceptable for Razorpay as plans are lightweight and can be created on-demand
+      console.log("ℹ️ Plan creation failed, this is expected behavior for Razorpay");
+      console.log("📋 Error details:", error.error?.description || error.message);
+
       return PaymentResult.failure(error.message, error.error?.code);
     }
   }

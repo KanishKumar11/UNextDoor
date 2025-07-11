@@ -18,6 +18,10 @@ const PaymentSuccessDialog = ({
   onClose,
   planName = 'Subscription',
   amount = null,
+  originalAmount = null,
+  prorationCredit = 0,
+  isUpgrade = false,
+  previousPlan = null,
   message = 'Your subscription has been activated successfully!',
   showConfetti = true,
 }) => {
@@ -292,7 +296,7 @@ const PaymentSuccessDialog = ({
                 )}
                 
                 {amount && (
-                  <Row justify="space-between" align="center">
+                  <Row justify="space-between" align="center" style={{ marginBottom: isUpgrade && prorationCredit > 0 ? 8 : 0 }}>
                     <Text
                       style={{
                         color: theme.colors.neutral[700],
@@ -312,12 +316,84 @@ const PaymentSuccessDialog = ({
                     </Text>
                   </Row>
                 )}
+
+                {/* Upgrade Information */}
+                {isUpgrade && prorationCredit > 0 && (
+                  <>
+                    {originalAmount && originalAmount !== amount && (
+                      <Row justify="space-between" align="center" style={{ marginBottom: 8 }}>
+                        <Text
+                          style={{
+                            color: theme.colors.neutral[600],
+                            fontFamily: theme.typography.fontFamily.regular,
+                            fontSize: 13,
+                          }}
+                        >
+                          Original Price:
+                        </Text>
+                        <Text
+                          style={{
+                            color: theme.colors.neutral[600],
+                            fontFamily: theme.typography.fontFamily.medium,
+                            fontSize: 13,
+                            textDecorationLine: 'line-through',
+                          }}
+                        >
+                          ₹{originalAmount}
+                        </Text>
+                      </Row>
+                    )}
+
+                    <Row justify="space-between" align="center" style={{ marginBottom: 8 }}>
+                      <Text
+                        style={{
+                          color: theme.colors.success.main,
+                          fontFamily: theme.typography.fontFamily.medium,
+                          fontSize: 13,
+                        }}
+                      >
+                        Proration Credit:
+                      </Text>
+                      <Text
+                        style={{
+                          color: theme.colors.success.main,
+                          fontFamily: theme.typography.fontFamily.semibold,
+                          fontSize: 13,
+                        }}
+                      >
+                        -₹{prorationCredit}
+                      </Text>
+                    </Row>
+
+                    {previousPlan && (
+                      <View
+                        style={{
+                          backgroundColor: theme.colors.info.main + '10',
+                          borderRadius: 8,
+                          padding: 8,
+                          marginTop: 8,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: theme.colors.info.main,
+                            fontFamily: theme.typography.fontFamily.medium,
+                            fontSize: 12,
+                            textAlign: 'center',
+                          }}
+                        >
+                          Upgraded from {previousPlan.planName || previousPlan.planId}
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                )}
               </View>
             )}
 
             {/* Action Button */}
             <ModernButton
-              title="Continue"
+              text="Continue"
               onPress={handleClose}
               variant="solid"
               style={{

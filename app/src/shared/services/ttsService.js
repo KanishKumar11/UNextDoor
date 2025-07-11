@@ -67,6 +67,49 @@ class TTSService {
     const cleanText = text.trim();
     console.log("Attempting to speak:", cleanText);
 
+    // Handle single Korean characters (vowels, consonants) with special care
+    const isSingleKoreanChar = cleanText.length === 1 && /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(cleanText);
+    
+    if (isSingleKoreanChar) {
+      console.log("Single Korean character detected, using enhanced TTS handling");
+      
+      // For single characters, try to add a bit of context to help TTS
+      // This is especially important for vowels which might be hard to pronounce alone
+      const enhancedText = cleanText;
+      
+      // Add slight delay for single characters to ensure proper pronunciation
+      const enhancedOptions = {
+        ...options,
+        rate: 0.6, // Slower rate for single characters
+        pitch: 1.0,
+      };
+      
+      return await this.speakEnhanced(enhancedText, enhancedOptions);
+    }
+
+    try {
+      // Check if speech is available
+      const speechAvailable = await this.isSpeechAvailable();
+      if (!speechAvailable) {
+        throw new Error("Speech synthesis not available");
+      }
+
+      // For multi-character text, use regular TTS flow
+      return await this.speakEnhanced(cleanText, options);
+    } catch (error) {
+      console.error("Error speaking text:", error);
+      throw new Error(`Audio playback not available: ${error.message}`);
+    }
+  }
+
+  /**
+   * Enhanced speak method with better error handling
+   * @param {string} text - Korean text to speak
+   * @param {Object} options - TTS options
+   */
+  async speakEnhanced(text, options = {}) {
+    const isSingleKoreanChar = text.length === 1 && /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(text);
+    
     try {
       // Check if speech is available
       const speechAvailable = await this.isSpeechAvailable();
@@ -78,9 +121,9 @@ class TTSService {
         // Web fallback - use Web Speech API
         if (typeof window !== "undefined" && window.speechSynthesis) {
           return new Promise((resolve, reject) => {
-            const utterance = new SpeechSynthesisUtterance(cleanText);
+            const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = "ko-KR";
-            utterance.rate = options.rate || 0.8;
+            utterance.rate = options.rate || (isSingleKoreanChar ? 0.6 : 0.8);
             utterance.pitch = options.pitch || 1.0;
 
             // Try to find a Korean voice
@@ -92,8 +135,19 @@ class TTSService {
               utterance.voice = koreanVoice;
             }
 
-            utterance.onend = () => resolve();
-            utterance.onerror = (error) => reject(error);
+            utterance.onend = () => {
+              console.log("TTS completed successfully");
+              resolve();
+            };
+            utterance.onerror = (error) => {
+              console.warn("TTS error:", error);
+              // For single characters, don't treat as critical error
+              if (isSingleKoreanChar) {
+                resolve(); // Resolve instead of reject for single characters
+              } else {
+                reject(error);
+              }
+            };
 
             window.speechSynthesis.speak(utterance);
           });
@@ -101,16 +155,16 @@ class TTSService {
           throw new Error("Web Speech API not available");
         }
       } else {
-        // Mobile platforms - use expo-speech
+        // Mobile platforms - use expo-speech with enhanced error handling
         if (!Speech || typeof Speech.speak !== "function") {
           throw new Error("expo-speech not available");
         }
 
         return new Promise((resolve, reject) => {
-          Speech.speak(cleanText, {
+          Speech.speak(text, {
             language: "ko-KR", // Korean language code
             pitch: options.pitch || 1.0,
-            rate: options.rate || 0.8, // Slower rate for learning
+            rate: options.rate || (isSingleKoreanChar ? 0.6 : 0.8), // Slower rate for single characters
             voice: options.voice || undefined,
             onDone: () => {
               console.log("Speech completed successfully");
@@ -121,15 +175,27 @@ class TTSService {
               resolve();
             },
             onError: (error) => {
-              console.error("Speech error:", error);
-              reject(new Error(`Speech synthesis failed: ${error}`));
+              console.warn("Speech error:", error);
+              // For single characters, don't treat as critical error
+              // Some TTS engines have trouble with single Korean characters
+              if (isSingleKoreanChar) {
+                resolve(); // Resolve instead of reject for single characters
+              } else {
+                reject(new Error(`Speech synthesis failed: ${error}`));
+              }
             },
           });
         });
       }
     } catch (error) {
-      console.error("Error speaking text:", error);
-      throw new Error(`Audio playback not available: ${error.message}`);
+      console.warn("Enhanced TTS error:", error);
+      // For single characters, don't throw - just log the warning
+      // This prevents the UI from showing error dialogs for pronunciation issues
+      if (isSingleKoreanChar) {
+        return Promise.resolve();
+      } else {
+        throw error;
+      }
     }
   }
 

@@ -1,5 +1,5 @@
-import React from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import React, { useState } from "react";
+import { View, StyleSheet, ScrollView, TouchableOpacity, Animated } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "../../../shared/context/ThemeContext";
 import SafeAreaWrapper from "../../../shared/components/SafeAreaWrapper";
@@ -15,6 +15,8 @@ import {
   ModernBadge,
 } from "../../../shared/components";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from 'expo-linear-gradient';
+import { learningScenarios } from './scenarioData';
 
 /**
  * Scenarios Screen
@@ -23,73 +25,10 @@ import { Ionicons } from "@expo/vector-icons";
 export default function ScenariosScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const [selectedLevel, setSelectedLevel] = useState("All");
 
-  // Sample learning scenarios
-  const learningScenarios = [
-    {
-      id: "s1",
-      title: "Greetings & Introductions",
-      description: "Learn how to introduce yourself and greet others",
-      level: "Beginner",
-      icon: "hand-left-outline",
-      color: theme.colors.brandGreen,
-      completed: true,
-    },
-    {
-      id: "s2",
-      title: "Ordering Food",
-      description: "Practice ordering food at a restaurant",
-      level: "Beginner",
-      icon: "restaurant-outline",
-      color: theme.colors.brandNavy,
-      completed: true,
-    },
-    {
-      id: "s3",
-      title: "Making Plans",
-      description: "Learn how to make plans with friends",
-      level: "Intermediate",
-      icon: "calendar-outline",
-      color: "#FF9800", // Orange
-      completed: true,
-    },
-    {
-      id: "s4",
-      title: "Shopping",
-      description: "Practice shopping conversations",
-      level: "Beginner",
-      icon: "cart-outline",
-      color: "#2196F3", // Blue
-      completed: false,
-    },
-    {
-      id: "s5",
-      title: "Asking for Directions",
-      description: "Learn how to ask for and give directions",
-      level: "Beginner",
-      icon: "map-outline",
-      color: "#9C27B0", // Purple
-      completed: false,
-    },
-    {
-      id: "s6",
-      title: "Job Interview",
-      description: "Practice for a job interview",
-      level: "Advanced",
-      icon: "briefcase-outline",
-      color: "#F44336", // Red
-      completed: false,
-    },
-    {
-      id: "s7",
-      title: "Making a Complaint",
-      description: "Learn how to make a complaint politely",
-      level: "Intermediate",
-      icon: "alert-circle-outline",
-      color: "#607D8B", // Blue Grey
-      completed: false,
-    },
-  ];
+  // Use static learning scenarios
+  // const learningScenarios = [...];
 
   // Navigate to scenario
   const navigateToScenario = (scenarioId) => {
@@ -128,146 +67,357 @@ export default function ScenariosScreen() {
     (scenario) => scenario.level === "Advanced"
   );
 
-  // Render a scenario group
-  const renderScenarioGroup = (title, scenarios) => (
-    <>
-      <Heading
-        level="h3"
-        gutterBottom
+  // Filter scenarios based on selected level
+  const getFilteredScenarios = () => {
+    if (selectedLevel === "All") {
+      return learningScenarios;
+    }
+    return learningScenarios.filter(scenario => scenario.level === selectedLevel);
+  };
+
+  // Render level filter tabs
+  const renderLevelTabs = () => {
+    const levels = ["All", "Beginner", "Intermediate", "Advanced"];
+
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: theme.spacing.md,
+          // paddingVertical: theme.spacing.sm,
+          // paddingRight: theme.spacing.xl, // Extra padding to prevent cropping
+        }}
         style={{
-          color: theme.colors.brandNavy,
-          fontFamily: theme.typography.fontFamily.semibold,
+          height: 60,
+          // marginBottom: theme.spacing.xl,
+          marginHorizontal: -theme.spacing.xs, // Negative margin for better alignment
         }}
       >
-        {title}
-      </Heading>
-
-      {scenarios.map((scenario) => (
-        <ModernCard
-          key={scenario.id}
-          interactive
-          onPress={() => navigateToScenario(scenario.id)}
-          style={{
-            marginBottom: theme.spacing.sm,
-            backgroundColor: theme.colors.brandWhite,
-            borderWidth: 1,
-            borderColor: scenario.color + "20",
-          }}
-        >
-          <Row align="center">
-            <View
+        {levels.map((level) => (
+          <TouchableOpacity
+            key={level}
+            onPress={() => setSelectedLevel(level)}
+            style={[
+              styles.levelTab,
+              {
+                backgroundColor: selectedLevel === level
+                  ? theme.colors.brandGreen
+                  : theme.colors.brandWhite,
+                borderColor: selectedLevel === level
+                  ? theme.colors.brandGreen
+                  : theme.colors.neutral[300],
+                marginRight: theme.spacing.sm,
+              }
+            ]}
+          >
+            <Text
+              weight="semibold"
               style={{
-                width: 48,
-                height: 48,
-                borderRadius: 24,
-                backgroundColor: scenario.color + "15",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: theme.spacing.md,
+                color: selectedLevel === level
+                  ? theme.colors.brandWhite
+                  : theme.colors.neutral[600],
+                fontFamily: theme.typography.fontFamily.semibold,
+                fontSize: 14,
               }}
             >
-              <Ionicons name={scenario.icon} size={24} color={scenario.color} />
-            </View>
+              {level}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    );
+  };
 
-            <Column style={{ flex: 1, minWidth: "85%", maxWidth: "90%" }}>
-              <Row
-                align="center"
-                justify="space-between"
-                style={{ marginBottom: 2 }}
-              >
-                <Text
-                  weight="semibold"
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                  style={{
-                    color: theme.colors.brandNavy,
-                    fontFamily: theme.typography.fontFamily.semibold,
-                    flex: 1,
-                  }}
-                >
-                  {scenario.title}
-                </Text>
-                {scenario.completed && (
-                  <ModernBadge
-                    text="Completed"
-                    variant="success"
-                    size="sm"
-                    style={{
-                      marginLeft: 8,
-                      position: "absolute",
-                      right: -20,
-                      top: -20,
-                    }}
-                  />
-                )}
-              </Row>
-              <Text
-                variant="caption"
-                numberOfLines={2}
-                ellipsizeMode="tail"
-                style={{
-                  color: theme.colors.neutral[600],
-                  fontFamily: theme.typography.fontFamily.regular,
-                  lineHeight: 16,
-                  maxWidth: "95%",
-                }}
-              >
-                {scenario.description}
-              </Text>
-            </Column>
-
+  // Render enhanced scenario card
+  const renderScenarioCard = (scenario) => (
+    <TouchableOpacity
+      key={scenario.id}
+      onPress={() => navigateToScenario(scenario.id)}
+      style={[
+        styles.scenarioCard,
+        {
+          backgroundColor: theme.colors.brandWhite,
+          borderColor: scenario.color + "20",
+          shadowColor: scenario.color,
+        }
+      ]}
+    >
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={[scenario.color + "15", scenario.color + "05"]}
+        style={styles.cardHeader}
+      >
+        <View style={styles.iconContainer}>
+          <View
+            style={[
+              styles.iconBackground,
+              { backgroundColor: scenario.color + "20" }
+            ]}
+          >
             <Ionicons
-              name="chevron-forward"
-              size={20}
+              name={scenario.icon}
+              size={28}
               color={scenario.color}
-              style={{ position: "absolute", right: 20 }}
             />
-          </Row>
-        </ModernCard>
-      ))}
+          </View>
+        </View>
 
-      <Spacer size="lg" />
-    </>
+        {scenario.completed && (
+          <View style={styles.completedBadge}>
+            <Ionicons name="checkmark-circle" size={20} color={theme.colors.brandGreen} />
+          </View>
+        )}
+      </LinearGradient>
+
+      {/* Content */}
+      <View style={styles.cardContent}>
+        <Text
+          weight="bold"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={[
+            styles.scenarioTitle,
+            { color: theme.colors.brandNavy }
+          ]}
+        >
+          {scenario.title}
+        </Text>
+
+        <Text
+          numberOfLines={2}
+          ellipsizeMode="tail"
+          style={[
+            styles.scenarioDescription,
+            { color: theme.colors.neutral[600] }
+          ]}
+        >
+          {scenario.description}
+        </Text>
+
+        {/* Duration */}
+        <Row align="center" style={{ marginTop: theme.spacing.sm }}>
+          <Ionicons name="time-outline" size={14} color={theme.colors.neutral[500]} />
+          <Text
+            variant="caption"
+            style={[
+              styles.durationText,
+              { color: theme.colors.neutral[500] }
+            ]}
+          >
+            5-10 min
+          </Text>
+        </Row>
+      </View>
+
+      {/* Action Arrow */}
+      <View style={styles.actionArrow}>
+        <Ionicons
+          name="arrow-forward"
+          size={18}
+          color={scenario.color}
+        />
+      </View>
+    </TouchableOpacity>
   );
 
   return (
     <SafeAreaWrapper>
       <Container>
+        {/* Header */}
+        <View style={styles.header}>
+          <Column>
+            <Text
+              variant="caption"
+              weight="medium"
+              style={[
+                styles.headerLabel,
+                { color: theme.colors.neutral[500] }
+              ]}
+            >
+              PRACTICE
+            </Text>
+            <Heading
+              level="h2"
+              style={[
+                styles.headerTitle,
+                { color: theme.colors.brandNavy }
+              ]}
+            >
+              Learning Scenarios
+            </Heading>
+          </Column>
+        </View>
+
+        {/* Level Filter Tabs */}
+        {renderLevelTabs()}
+
+        {/* Scenarios Grid */}
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            padding: theme.spacing.lg,
-            paddingBottom: 100, // Add padding to avoid floating tab bar overlap
-          }}
+          contentContainerStyle={styles.scrollContent}
         >
-          <Heading
-            level="h1"
-            gutterBottom
-            style={{
-              color: theme.colors.brandNavy,
-              fontFamily: theme.typography.fontFamily.bold,
-            }}
-          >
-            Learning Scenarios
-          </Heading>
           <Text
-            gutterBottom
-            style={{
-              color: theme.colors.neutral[600],
-              fontFamily: theme.typography.fontFamily.regular,
-            }}
+            style={[
+              styles.subtitle,
+              { color: theme.colors.neutral[600] }
+            ]}
           >
-            Choose a scenario to practice with our AI tutor
+            Choose a scenario to practice with Miles, your AI tutor
           </Text>
 
-          <Spacer size="lg" />
+          <View style={styles.scenariosGrid}>
+            {getFilteredScenarios().map(renderScenarioCard)}
+          </View>
 
-          {/* Render scenario groups */}
-          {renderScenarioGroup("Beginner", beginnerScenarios)}
-          {renderScenarioGroup("Intermediate", intermediateScenarios)}
-          {renderScenarioGroup("Advanced", advancedScenarios)}
+          {/* Empty State */}
+          {getFilteredScenarios().length === 0 && (
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="chatbubbles-outline"
+                size={64}
+                color={theme.colors.neutral[400]}
+              />
+              <Text
+                weight="semibold"
+                style={[
+                  styles.emptyTitle,
+                  { color: theme.colors.neutral[600] }
+                ]}
+              >
+                No scenarios found
+              </Text>
+              <Text
+                style={[
+                  styles.emptyDescription,
+                  { color: theme.colors.neutral[500] }
+                ]}
+              >
+                Try selecting a different level
+              </Text>
+            </View>
+          )}
         </ScrollView>
       </Container>
     </SafeAreaWrapper>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingTop: 8,
+  },
+  headerLabel: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontSize: 11,
+    marginBottom: -4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  levelTab: {
+    paddingHorizontal: 16,
+    height: 32,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
+  },
+  subtitle: {
+    fontSize: 16,
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  scenariosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  scenarioCard: {
+    width: '48%',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBackground: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  cardContent: {
+    padding: 16,
+  },
+  scenarioTitle: {
+    fontSize: 16,
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  scenarioDescription: {
+    fontSize: 14,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+
+  durationText: {
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  actionArrow: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyDescription: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+});

@@ -55,6 +55,11 @@ router.put("/profile", authenticate, authController.updateProfile);
 
 router.post("/logout", authenticate, authController.logout);
 
+// User preferences routes
+router.get("/preferences", authenticate, authController.getUserPreferences);
+
+router.put("/preferences", authenticate, authController.updateUserPreferences);
+
 // Admin routes
 router.get(
   "/users",

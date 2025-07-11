@@ -39,6 +39,8 @@ class EventEmitter {
 }
 import { AudioModule } from 'expo-audio';
 import { mediaDevices, RTCPeerConnection, RTCSessionDescription } from 'react-native-webrtc';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../../../shared/config/api.js';
 import getScenarioPrompt from '../data/scenarioPrompts';
 
 /**
@@ -65,16 +67,21 @@ class WebRTCConversationService extends EventEmitter {
     this.currentScenario = null;
     this.currentLevel = "beginner";
     
-    // Message queue to prevent conflicts during AI speech
-    this.messageQueue = [];
-    this.isProcessingQueue = false;
+    // Session control state
+    this.userEndedSession = false; // Flag to prevent auto-restart when user explicitly ends
+    this.allowAutoRestart = true; // Global flag to control automatic session restart
+    
+    // Transcription state
+    this.currentUserTranscript = "";
+    this.currentAITranscript = "";
+    this.conversationHistory = []; // Array of {type: 'user'|'ai', text: string, timestamp: Date}
+    
+    // Note: Message queue removed - OpenAI handles conversation flow automatically
     
     // Debounced state management
     this.stateUpdateTimeout = null;
     
-    // Audio level detection
-    this.audioLevelInterval = null;
-    this.currentAudioLevel = 0;
+    // Note: Audio level detection removed - OpenAI handles VAD automatically
 
     // Rate limiting and cooldown
     this.lastConnectionAttempt = 0;
@@ -186,10 +193,19 @@ class WebRTCConversationService extends EventEmitter {
     try {
       console.log(`🎯 Starting conversation session: ${scenarioId}, level: ${level}`);
       
+      // Check if auto-restart is disabled (user explicitly ended session)
+      if (!this.allowAutoRestart) {
+        console.log("🎯 Auto-restart disabled, user ended session. Use resetSessionControlFlags() to re-enable.");
+        return false;
+      }
+      
       if (this.isSessionActive) {
         console.log("🎯 Session already active, stopping current session first");
         await this.stopSession();
       }
+      
+      // Reset user ended flag when starting a new session
+      this.userEndedSession = false;
       
       this.currentScenario = scenarioId;
       this.currentLevel = level;
@@ -230,10 +246,12 @@ class WebRTCConversationService extends EventEmitter {
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
       });
       
-      // Set up event handlers
+      // Set up event handlers with null checks
       this.peerConnection.oniceconnectionstatechange = () => {
-        console.log("🎯 ICE connection state:", this.peerConnection.iceConnectionState);
-        this.emit('connectionStateChanged', this.peerConnection.iceConnectionState);
+        if (this.peerConnection) {
+          console.log("🎯 ICE connection state:", this.peerConnection.iceConnectionState);
+          this.emit('connectionStateChanged', this.peerConnection.iceConnectionState);
+        }
       };
       
       this.peerConnection.ontrack = (event) => {
@@ -306,14 +324,22 @@ class WebRTCConversationService extends EventEmitter {
       // Get ephemeral token from backend
       const ephemeralKey = await this.getEphemeralToken();
 
-      // Create offer
+      // Create offer with null check
+      if (!this.peerConnection) {
+        throw new Error("Peer connection is null when creating offer");
+      }
+
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
 
       // Send offer to OpenAI Realtime API
       const response = await this.sendOfferToOpenAI(offer, ephemeralKey);
 
-      // Set remote description
+      // Set remote description with null check
+      if (!this.peerConnection) {
+        throw new Error("Peer connection is null when setting remote description");
+      }
+
       await this.peerConnection.setRemoteDescription(new RTCSessionDescription(response));
 
       this.isConnected = true;
@@ -338,13 +364,56 @@ class WebRTCConversationService extends EventEmitter {
       console.log("🎯 Configuring AI session");
       
       // Get scenario-specific prompt
-      const sessionInstructions = getScenarioPrompt(this.currentScenario, this.currentLevel);
+      // Prepare scenario details
+      const scenarioDetails = this.currentScenario
+        ? `Scenario Details: ${getScenarioPrompt(this.currentScenario, this.currentLevel)}`
+        : '';
       
-      // Add critical instruction for natural teaching flow
-      const finalInstructions = `${sessionInstructions}
+      // Dynamic greeting variations
+      const greetings = [
+        "Hello! How are you today?",
+        "Hi there! How has your day been?",
+        "Good day! What have you been up to today?",
+        "Hey! How is everything going today?",
+        "Hello! How do you feel today?"
+      ];
+      const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+      
+      // Get improved prompt - use fallback since backend template import is problematic in RN
+      const finalInstructions = `You are Miles, a friendly and experienced Korean language tutor for personalized one-on-one sessions.
 
-CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When asking for repetition, speak the Korean phrase clearly, then pause and wait for the student to practice. Don't rush - allow natural pauses for learning.`;
+🚨 CRITICAL: You MUST speak first immediately when the conversation starts. Begin speaking RIGHT NOW with ONLY your greeting in English. Do not wait for the user to speak first.
 
+CONVERSATION FLOW:
+1. START IMMEDIATELY with ONLY: "${randomGreeting}" (in English only - keep it simple and warm)
+2. Wait for user response, then continue naturally and ask follow-up questions  
+3. After some natural conversation, gradually introduce Korean elements
+4. Maintain an interactive, back-and-forth conversation style like a real video call
+5. Ask questions and wait for responses - don't lecture continuously
+6. Be conversational, warm, and encouraging
+
+${scenarioDetails}
+
+TEACHING STYLE:
+- Start with English ONLY for the greeting and initial conversation
+- Use English primarily for beginners (80-90%), gradually introduce Korean later
+- Only introduce Korean after establishing natural conversation rapport
+- Always provide Korean pronunciation and English translations when you do teach
+- Give positive feedback and gentle corrections
+- Encourage practice and repetition in a supportive way
+- Keep responses conversational length (2-3 sentences max per turn)
+
+INTERACTION PATTERN:
+- Speak naturally as if on a video call with a friend
+- Start with just the greeting - nothing more
+- Pause after questions to let the user respond
+- React authentically to what the user shares
+- Build on their responses to keep conversation flowing
+- Make learning feel effortless and enjoyable
+
+🚨 START NOW with ONLY the greeting: "${randomGreeting}" - Say this and wait for their response!`;
+
+      // Enhanced session configuration for more natural conversation
       const sessionUpdateEvent = {
         type: "session.update",
         session: {
@@ -357,19 +426,34 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
           },
           turn_detection: {
             type: "server_vad",
-            threshold: 0.5, // Lower threshold to be less sensitive
+            threshold: 0.5,
             prefix_padding_ms: 300,
-            silence_duration_ms: 5000, // Much longer silence duration to let AI finish speaking
+            silence_duration_ms: 1800, // Shorter silence for more interactive conversation
           },
           tools: [],
           tool_choice: "none",
-          temperature: 0.7,
-          max_response_output_tokens: 300, // Allow longer responses for teaching and explanations
+          temperature: 0.9, // Higher temperature for more natural, varied responses
+          max_response_output_tokens: 150, // Shorter responses for better conversation flow
         },
       };
 
       this.sendMessage(sessionUpdateEvent);
       console.log("🎯 Session configured with scenario:", this.currentScenario);
+
+      // Trigger the AI to start speaking immediately (like Vapi)
+      setTimeout(() => {
+        console.log("🎯 Triggering AI to start conversation with simple greeting only");
+        
+        // Use response.create to make AI speak first without any user input
+        const responseCreateEvent = {
+          type: "response.create",
+          response: {
+            modalities: ["text", "audio"],
+            instructions: "IMMEDIATELY start the conversation with ONLY your greeting in English as instructed. Say just the greeting and wait for the user's response. This is the very first message - keep it simple and warm."
+          }
+        };
+        this.sendMessage(responseCreateEvent);
+      }, 2000); // Wait 2 seconds after session update for proper initialization
       
     } catch (error) {
       console.error("🎯 Error configuring session:", error);
@@ -381,14 +465,10 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
    * Get ephemeral token from backend with retry logic
    */
   async getEphemeralToken(retryCount = 0) {
-    const maxRetries = 3;
-    const baseDelay = 1000; // 1 second
+    const maxRetries = 8; // Increased from 3 to 8 attempts
+    const baseDelay = 1500; // Increased base delay from 1000ms to 1500ms
 
     try {
-      // Import API configuration
-      const { API_BASE_URL } = await import('../../../shared/config/api.js');
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-
       // Get auth token
       const authToken = await AsyncStorage.getItem('accessToken');
       if (!authToken) {
@@ -396,7 +476,7 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
       }
 
       const requestBody = {
-        model: "gpt-4o-mini-realtime-preview-2024-12-17",
+        model: "gpt-4o-realtime-preview-2025-06-03",
         voice: "alloy",
         scenarioId: this.currentScenario,
         isScenarioBased: true,
@@ -417,8 +497,22 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
       if (!response.ok) {
         // Handle rate limiting with exponential backoff
         if (response.status === 429 && retryCount < maxRetries) {
-          const delay = baseDelay * Math.pow(2, retryCount);
-          console.log(`🎯 Rate limited, retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+          let delay = baseDelay * Math.pow(2, retryCount); // Default exponential backoff
+          
+          // Try to get enhanced rate limit info from backend
+          try {
+            const errorData = await response.json();
+            if (errorData.retryAfter) {
+              // Use the backend's suggested retry time (in seconds), but cap it at 5 minutes
+              delay = Math.min(errorData.retryAfter * 1000, 5 * 60 * 1000);
+              console.log(`🎯 Rate limited, backend suggests retrying in ${errorData.retryAfter}s (attempt ${retryCount + 1}/${maxRetries + 1})`);
+              console.log(`🎯 Rate limit details:`, errorData);
+            } else {
+              console.log(`🎯 Rate limited, using exponential backoff: ${delay}ms (attempt ${retryCount + 1}/${maxRetries + 1})`);
+            }
+          } catch (parseError) {
+            console.log(`🎯 Rate limited, using exponential backoff: ${delay}ms (attempt ${retryCount + 1}/${maxRetries + 1})`);
+          }
 
           await new Promise(resolve => setTimeout(resolve, delay));
           return this.getEphemeralToken(retryCount + 1);
@@ -457,7 +551,7 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
   async sendOfferToOpenAI(offer, ephemeralKey) {
     try {
       const baseUrl = "https://api.openai.com/v1/realtime";
-      const model = "gpt-4o-mini-realtime-preview-2024-12-17";
+      const model = "gpt-4o-realtime-preview-2025-06-03";
 
       console.log(`🎯 Sending SDP to OpenAI using model: ${model}`);
 
@@ -574,11 +668,49 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
         this.emit('responseCompleted');
         break;
 
-      // Handle transcript messages (don't log to reduce noise)
+      // Handle transcript messages (now we'll process these)
       case 'response.audio_transcript.delta':
+        // AI speaking transcript (partial)
+        if (message.delta) {
+          this.currentAITranscript += message.delta;
+          this.emit('aiTranscriptDelta', {
+            delta: message.delta,
+            transcript: this.currentAITranscript
+          });
+        }
+        break;
+
       case 'response.audio_transcript.done':
-      case 'input_audio_buffer.committed':
+        // AI speaking transcript (complete)
+        if (this.currentAITranscript.trim()) {
+          const finalTranscript = {
+            type: 'ai',
+            text: this.currentAITranscript.trim(),
+            timestamp: new Date()
+          };
+          this.conversationHistory.push(finalTranscript);
+          this.emit('aiTranscriptComplete', finalTranscript);
+          this.currentAITranscript = "";
+        }
+        break;
+
       case 'conversation.item.created':
+        // Handle user input transcription
+        if (message.item && message.item.type === 'message' && message.item.role === 'user') {
+          const content = message.item.content?.[0];
+          if (content && content.type === 'input_audio' && content.transcript) {
+            const userTranscript = {
+              type: 'user',
+              text: content.transcript,
+              timestamp: new Date()
+            };
+            this.conversationHistory.push(userTranscript);
+            this.emit('userTranscriptComplete', userTranscript);
+          }
+        }
+        break;
+
+      case 'input_audio_buffer.committed':
       case 'conversation.item.truncated':
       case 'response.created':
       case 'response.output_item.added':
@@ -603,16 +735,9 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
   }
 
   /**
-   * Send message to OpenAI with queue management
+   * Send message to OpenAI directly (no queue management - OpenAI handles this)
    */
   sendMessage(message) {
-    if (this.isAISpeaking && message.type !== 'response.cancel') {
-      // Queue the message if AI is speaking
-      console.log("🎯 Queueing message while AI is speaking:", message.type);
-      this.messageQueue.push(message);
-      return;
-    }
-
     this.sendMessageImmediate(message);
   }
 
@@ -637,26 +762,10 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
     }
   }
 
-  /**
-   * Process queued messages
-   */
-  processMessageQueue() {
-    if (this.isProcessingQueue || this.messageQueue.length === 0 || this.isAISpeaking) {
-      return;
-    }
-
-    this.isProcessingQueue = true;
-
-    while (this.messageQueue.length > 0 && !this.isAISpeaking) {
-      const message = this.messageQueue.shift();
-      this.sendMessageImmediate(message);
-    }
-
-    this.isProcessingQueue = false;
-  }
+  // Note: Message queue processing removed - OpenAI handles conversation flow
 
   /**
-   * Update state with debouncing
+   * Update state (simplified - no queue management needed)
    */
   updateState(newState) {
     // Clear existing timeout
@@ -664,25 +773,9 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
       clearTimeout(this.stateUpdateTimeout);
     }
 
-    // Update state immediately for critical properties
-    const criticalProps = ['isAISpeaking'];
-    const hasCriticalUpdate = Object.keys(newState).some(key => criticalProps.includes(key));
-
-    if (hasCriticalUpdate) {
-      Object.assign(this, newState);
-      this.emit('stateChanged', { ...newState });
-
-      // Process message queue when AI stops speaking
-      if (newState.isAISpeaking === false) {
-        setTimeout(() => this.processMessageQueue(), 100);
-      }
-    } else {
-      // Debounce non-critical updates
-      this.stateUpdateTimeout = setTimeout(() => {
-        Object.assign(this, newState);
-        this.emit('stateChanged', { ...newState });
-      }, 100);
-    }
+    // Update state immediately
+    Object.assign(this, newState);
+    this.emit('stateChanged', { ...newState });
   }
 
 
@@ -693,12 +786,6 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
   async stopSession() {
     try {
       console.log("🎯 Stopping conversation session");
-
-      // Stop audio level detection
-      if (this.audioLevelInterval) {
-        clearInterval(this.audioLevelInterval);
-        this.audioLevelInterval = null;
-      }
 
       // Close data channel
       if (this.dataChannel) {
@@ -718,23 +805,59 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
         this.localStream = null;
       }
 
-      // Clear message queue
-      this.messageQueue = [];
-      this.isProcessingQueue = false;
-
       // Reset state
       this.isConnected = false;
       this.isSessionActive = false;
       this.isAISpeaking = false;
       this.currentScenario = null;
       this.currentLevel = "beginner";
+      
+      // Reset transcription state
+      this.currentUserTranscript = "";
+      this.currentAITranscript = "";
+      this.conversationHistory = [];
 
+      console.log("🎯 Session stopped successfully");
       this.emit('sessionStopped');
+
+      // Add a small delay to ensure cleanup is complete
+      await new Promise(resolve => setTimeout(resolve, 100));
 
     } catch (error) {
       console.error("🎯 Error stopping session:", error);
       this.emit('error', { type: 'session_stop', error });
     }
+  }
+
+  /**
+   * Stop the current session due to user action (prevents auto-restart)
+   */
+  async stopSessionByUser() {
+    try {
+      console.log("🎯 User ending conversation session - preventing auto-restart");
+      
+      // Set flags to prevent automatic restart
+      this.userEndedSession = true;
+      this.allowAutoRestart = false;
+      
+      // Stop the session
+      await this.stopSession();
+      
+      this.emit('userEndedSession');
+      
+    } catch (error) {
+      console.error("🎯 Error stopping session by user:", error);
+      this.emit('error', { type: 'session_stop', error });
+    }
+  }
+
+  /**
+   * Reset session control flags (e.g., when starting a new scenario)
+   */
+  resetSessionControlFlags() {
+    console.log("🎯 Resetting session control flags");
+    this.userEndedSession = false;
+    this.allowAutoRestart = true;
   }
 
   /**
@@ -770,7 +893,12 @@ CRITICAL: Keep responses focused and concise (2-3 sentences maximum). When askin
       isBluetoothAvailable: this.isBluetoothAvailable,
       currentScenario: this.currentScenario,
       currentLevel: this.currentLevel,
-      currentAudioLevel: this.currentAudioLevel,
+      userEndedSession: this.userEndedSession,
+      allowAutoRestart: this.allowAutoRestart,
+      conversationHistory: this.conversationHistory,
+      currentUserTranscript: this.currentUserTranscript,
+      currentAITranscript: this.currentAITranscript,
+      // Note: currentAudioLevel removed - OpenAI handles VAD
     };
   }
 

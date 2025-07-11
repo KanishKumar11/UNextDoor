@@ -7,6 +7,7 @@
  * Match Word Game Content
  * Organized by difficulty level and category for better content distribution
  */
+import { TUTOR_NAME } from "../constants/tutorConstants.js";
 export const matchWordContent = {
   beginner: {
     greetings: [
@@ -1092,7 +1093,7 @@ export const conversationQuestContent = {
       estimatedDuration: 5,
       difficulty: "easy",
       category: "social",
-      systemPrompt: `You are Cooper, a friendly Korean language tutor. Help the student practice basic greetings in Korean.
+systemPrompt: `You are ${TUTOR_NAME}, a friendly Korean language tutor. Help the student practice basic greetings in Korean.
 
 Guidelines:
 - Start with a simple greeting in Korean
@@ -1127,7 +1128,7 @@ Example flow:
       estimatedDuration: 7,
       difficulty: "medium",
       category: "dining",
-      systemPrompt: `You are Cooper, acting as a friendly Korean restaurant server. Help the student practice ordering food.
+      systemPrompt: `You are ${TUTOR_NAME}, acting as a friendly Korean restaurant server. Help the student practice ordering food.
 
 Guidelines:
 - Greet them as they enter: "어서 오세요! (Welcome!)"
@@ -1161,7 +1162,7 @@ Example menu items to practice:
       estimatedDuration: 6,
       difficulty: "medium",
       category: "navigation",
-      systemPrompt: `You are Cooper, helping the student practice asking for directions in Korean.
+      systemPrompt: `You are ${TUTOR_NAME}, helping the student practice asking for directions in Korean.
 
 Guidelines:
 - Start by asking where they want to go
@@ -1195,7 +1196,7 @@ Common places to practice:
       estimatedDuration: 8,
       difficulty: "medium",
       category: "shopping",
-      systemPrompt: `You are Cooper, acting as a helpful shop clerk. Practice shopping conversations.
+      systemPrompt: `You are ${TUTOR_NAME}, acting as a helpful shop clerk. Practice shopping conversations.
 
 Guidelines:
 - Welcome them to the store
@@ -1229,7 +1230,7 @@ Shopping scenarios:
       estimatedDuration: 6,
       difficulty: "easy",
       category: "personal",
-      systemPrompt: `You are Cooper, helping the student practice talking about family.
+      systemPrompt: `You are ${TUTOR_NAME}, helping the student practice talking about family.
 
 Guidelines:
 - Ask about their family members
@@ -1262,7 +1263,7 @@ Family vocabulary to practice:
       estimatedDuration: 5,
       difficulty: "easy",
       category: "daily_life",
-      systemPrompt: `You are Cooper, helping practice weather conversations.
+      systemPrompt: `You are ${TUTOR_NAME}, helping practice weather conversations.
 
 Guidelines:
 - Start by commenting on today's weather
@@ -1297,7 +1298,7 @@ Weather expressions:
       estimatedDuration: 10,
       difficulty: "hard",
       category: "professional",
-      systemPrompt: `You are Cooper, acting as a Korean job interviewer. Help practice formal interview Korean.
+      systemPrompt: `You are ${TUTOR_NAME}, acting as a Korean job interviewer. Help practice formal interview Korean.
 
 Guidelines:
 - Use formal speech (습니다/ㅂ니다 endings)
@@ -1329,7 +1330,7 @@ Interview questions to practice:
       estimatedDuration: 8,
       difficulty: "medium",
       category: "health",
-      systemPrompt: `You are Cooper, acting as a Korean doctor. Help practice medical conversations.
+      systemPrompt: `You are ${TUTOR_NAME}, acting as a Korean doctor. Help practice medical conversations.
 
 Guidelines:
 - Ask about symptoms professionally
@@ -1362,7 +1363,7 @@ Medical vocabulary to practice:
       estimatedDuration: 9,
       difficulty: "medium",
       category: "travel",
-      systemPrompt: `You are Cooper, helping plan a trip to Korea. Practice travel-related conversations.
+      systemPrompt: `You are ${TUTOR_NAME}, helping plan a trip to Korea. Practice travel-related conversations.
 
 Guidelines:
 - Discuss travel destinations in Korea
@@ -1394,7 +1395,7 @@ Travel topics to practice:
       estimatedDuration: 7,
       difficulty: "medium",
       category: "personal",
-      systemPrompt: `You are Cooper, having a casual conversation about hobbies and interests.
+      systemPrompt: `You are ${TUTOR_NAME}, having a casual conversation about hobbies and interests.
 
 Guidelines:
 - Ask about their hobbies and interests
@@ -1430,7 +1431,7 @@ Hobby vocabulary to practice:
       estimatedDuration: 12,
       difficulty: "very_hard",
       category: "professional",
-      systemPrompt: `You are Cooper, acting as a Korean business partner in a formal meeting.
+      systemPrompt: `You are ${TUTOR_NAME}, acting as a Korean business partner in a formal meeting.
 
 Guidelines:
 - Use very formal business Korean
@@ -1463,7 +1464,7 @@ Business topics:
       estimatedDuration: 10,
       difficulty: "hard",
       category: "culture",
-      systemPrompt: `You are Cooper, engaging in deep cultural discussions about Korea.
+      systemPrompt: `You are ${TUTOR_NAME}, engaging in deep cultural discussions about Korea.
 
 Guidelines:
 - Discuss Korean traditions and customs
@@ -1496,7 +1497,7 @@ Cultural topics:
       estimatedDuration: 11,
       difficulty: "very_hard",
       category: "academic",
-      systemPrompt: `You are Cooper, engaging in academic-level Korean discussions.
+      systemPrompt: `You are ${TUTOR_NAME}, engaging in academic-level Korean discussions.
 
 Guidelines:
 - Use sophisticated vocabulary and grammar

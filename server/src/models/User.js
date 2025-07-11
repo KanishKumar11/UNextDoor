@@ -113,6 +113,11 @@ const userSchema = new mongoose.Schema(
         enum: ["beginner", "intermediate", "advanced"],
         default: "beginner",
       },
+      currency: {
+        type: String,
+        enum: ["INR", "USD"],
+        default: null, // null means auto-detect
+      },
       notifications: {
         email: {
           type: Boolean,

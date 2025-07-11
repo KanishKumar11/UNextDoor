@@ -24,6 +24,7 @@ import subscriptionRoutes from "./src/routes/subscription.js";
 import webhookRoutes from "./src/routes/webhook.js";
 import featureRoutes from "./src/routes/feature.js";
 import paymentRecoveryService from "./src/services/paymentRecoveryService.js";
+import subscriptionRenewalService from "./src/services/subscriptionRenewalService.js";
 import { sendSuccess, sendError } from "./src/utils/responseUtils.js";
 
 /**
@@ -163,6 +164,9 @@ const startServer = async (app) => {
 
     // Start payment recovery service
     paymentRecoveryService.start();
+
+    // Start subscription renewal service
+    subscriptionRenewalService.start();
 
     // Start server
     server.listen(config.port, () => {

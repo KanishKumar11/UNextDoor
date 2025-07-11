@@ -25,11 +25,11 @@ const CONFIG = {
   },
   development: {
     web: {
-      http: "http://192.168.1.2:5001/api/v1",
+      http: "http://192.168.1.3:5001/api/v1",
       ws: "ws://localhost:5001",
     },
     mobile: {
-      http: "http://192.168.1.2:5001/api/v1", // Android emulator localhost
+      http: "http://192.168.1.3:5001/api/v1", // Android emulator localhost
       ws: "ws://10.0.2.2:5001",
     },
   },

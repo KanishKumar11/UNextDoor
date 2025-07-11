@@ -899,3 +899,88 @@ export const authenticateWithApple = async (token, metadata = {}) => {
     return { error: "Server error" };
   }
 };
+
+/**
+ * Update user preferences
+ * @param {string} userId - User ID
+ * @param {Object} preferences - Preferences to update
+ * @returns {Promise<Object>} Result with updated preferences or error
+ */
+export const updateUserPreferences = async (userId, preferences) => {
+  try {
+    if (!userId) {
+      return { error: "User ID is required" };
+    }
+
+    // Build update object with only provided preferences
+    const updateObject = {};
+    
+    if (preferences.currency !== undefined) {
+      updateObject['preferences.currency'] = preferences.currency;
+    }
+    if (preferences.language !== undefined) {
+      updateObject['preferences.language'] = preferences.language;
+    }
+    if (preferences.languageLevel !== undefined) {
+      updateObject['preferences.languageLevel'] = preferences.languageLevel;
+    }
+    if (preferences.theme !== undefined) {
+      updateObject['preferences.theme'] = preferences.theme;
+    }
+    if (preferences.notifications !== undefined) {
+      if (preferences.notifications.email !== undefined) {
+        updateObject['preferences.notifications.email'] = preferences.notifications.email;
+      }
+      if (preferences.notifications.push !== undefined) {
+        updateObject['preferences.notifications.push'] = preferences.notifications.push;
+      }
+    }
+
+    const user = await userModel.findByIdAndUpdate(
+      userId,
+      { $set: updateObject },
+      { new: true, runValidators: true }
+    ).select('preferences');
+
+    if (!user) {
+      return { error: "User not found" };
+    }
+
+    console.log(`Updated preferences for user ${userId}:`, user.preferences);
+
+    return {
+      success: true,
+      preferences: user.preferences,
+    };
+  } catch (error) {
+    console.error("Error updating user preferences:", error);
+    return { error: "Server error" };
+  }
+};
+
+/**
+ * Get user preferences
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} Result with preferences or error
+ */
+export const getUserPreferences = async (userId) => {
+  try {
+    if (!userId) {
+      return { error: "User ID is required" };
+    }
+
+    const user = await userModel.findById(userId).select('preferences');
+
+    if (!user) {
+      return { error: "User not found" };
+    }
+
+    return {
+      success: true,
+      preferences: user.preferences,
+    };
+  } catch (error) {
+    console.error("Error getting user preferences:", error);
+    return { error: "Server error" };
+  }
+};

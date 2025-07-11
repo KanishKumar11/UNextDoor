@@ -6,7 +6,7 @@ import RazorpayGateway from '../services/payment/gateways/RazorpayGateway.js';
 import { validationResult } from 'express-validator';
 import config from '../config/index.js';
 import mongoose from 'mongoose';
-import { getUserCurrency, getPlanPrice } from '../utils/currencyUtils.js';
+import { getUserCurrency, PLAN_PRICES, getPlanPrice } from '../utils/currencyUtils.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
@@ -30,8 +30,30 @@ class SubscriptionController {
    */
   async getPlans(req, res) {
     try {
-      // Get user's currency
-      const currency = getUserCurrency(req);
+      // Get user's currency preference (saved preference takes priority over location detection)
+      let currency = getUserCurrency(req); // Default based on location
+      console.log(`💰 Location-based currency for request:`, currency.code);
+      
+      // If user is authenticated, check their saved currency preference
+      if (req.user) {
+        const user = await User.findById(req.user.id);
+        console.log(`💰 User preferences:`, user?.preferences);
+        
+        if (user && user.preferences && user.preferences.currency) {
+          // Use saved preference
+          const savedCurrencyCode = user.preferences.currency;
+          if (savedCurrencyCode === 'INR') {
+            currency = { code: 'INR', symbol: '₹', exchangeRate: 1, name: 'Indian Rupee' };
+          } else if (savedCurrencyCode === 'USD') {
+            currency = { code: 'USD', symbol: '$', exchangeRate: 0.012, name: 'US Dollar' };
+          }
+          console.log(`💰 Using saved currency preference for user ${req.user.id}:`, currency.code);
+        } else {
+          console.log(`💰 No saved currency preference, using location-based:`, currency.code);
+        }
+      } else {
+        console.log(`💰 Anonymous user, using location-based:`, currency.code);
+      }
       
       const plans = [
         {
@@ -63,7 +85,7 @@ class SubscriptionController {
           id: 'basic_monthly',
           name: 'Basic',
           description: 'Perfect for getting started with Korean learning',
-          price: getPlanPrice('basic_monthly', req),
+          price: PLAN_PRICES.basic_monthly[currency.code] ?? PLAN_PRICES.basic_monthly.INR,
           currency: currency.code,
           currencySymbol: currency.symbol,
           interval: 'month',
@@ -88,7 +110,7 @@ class SubscriptionController {
           id: 'standard_quarterly',
           name: 'Standard',
           description: 'Most popular choice for serious learners',
-          price: getPlanPrice('standard_quarterly', req),
+          price: PLAN_PRICES.standard_quarterly[currency.code] ?? PLAN_PRICES.standard_quarterly.INR,
           currency: currency.code,
           currencySymbol: currency.symbol,
           interval: 'month',
@@ -126,7 +148,7 @@ class SubscriptionController {
           id: 'pro_yearly',
           name: 'Pro',
           description: 'Ultimate Korean learning experience with all features',
-          price: getPlanPrice('pro_yearly', req),
+          price: PLAN_PRICES.pro_yearly[currency.code] ?? PLAN_PRICES.pro_yearly.INR,
           currency: currency.code,
           currencySymbol: currency.symbol,
           interval: 'month',
@@ -1003,7 +1025,7 @@ class SubscriptionController {
       planType: planType,
       planName: planDetails.name ? `${planDetails.name} ${planDuration === 'monthly' ? 'Monthly' : planDuration === 'quarterly' ? 'Quarterly' : planDuration === 'yearly' ? 'Yearly' : 'Monthly'}` : (planConfig?.name || 'Basic Plan'),
       planPrice: planDetails.price || planConfig?.price || 14900,
-      planDuration: planDuration,
+      planDuration: planDetails.duration || planConfig?.duration || 'monthly',
       status: 'active',
       startDate: now,
       endDate: endDate,
@@ -1096,6 +1118,391 @@ class SubscriptionController {
     };
   }
 
+  /**
+   * Create recurring subscription with Razorpay subscriptions
+   */
+  async createRecurringSubscription(req, res) {
+    try {
+      if (!config.features.payments || !this.razorpay) {
+        return res.status(503).json({
+          success: false,
+          message: 'Payment system is currently disabled'
+        });
+      }
+
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array()
+        });
+      }
+
+      const { planId, customerInfo, currency: requestCurrency } = req.body;
+      const userId = req.user.id;
+
+      console.log('🔄 Creating recurring subscription:', {
+        planId,
+        userId,
+        requestCurrency,
+        userAgent: req.headers['user-agent']?.substring(0, 100)
+      });
+
+      // Validate plan
+      const validPlans = ['basic_monthly', 'standard_quarterly', 'pro_yearly'];
+      if (!validPlans.includes(planId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid subscription plan'
+        });
+      }
+
+      // Get user currency - prioritize request body, then detect from headers
+      let userCurrency;
+      if (requestCurrency) {
+        // Use currency from frontend request
+        userCurrency = requestCurrency === 'USD' ?
+          { code: 'USD', symbol: '$', name: 'US Dollar' } :
+          { code: 'INR', symbol: '₹', name: 'Indian Rupee' };
+        console.log('💰 Using frontend-provided currency:', userCurrency);
+      } else {
+        // Fallback to server-side detection
+        userCurrency = getUserCurrency(req);
+        console.log('💰 Using server-detected currency:', userCurrency);
+      }
+
+      // Get plan details with correct currency
+      const planDetails = await this.getPlanDetailsWithCurrency(planId, userCurrency);
+      const user = await User.findById(userId);
+
+      console.log('📋 Plan details:', {
+        name: planDetails.name,
+        price: planDetails.price,
+        currency: planDetails.currency,
+        interval: planDetails.interval,
+        intervalCount: planDetails.intervalCount
+      });
+
+      // Check for existing active subscription and handle upgrades
+      const existingSubscription = await Subscription.findOne({
+        userId,
+        status: { $in: ['active', 'trialing'] }
+      });
+
+      let prorationCredit = 0;
+      let isUpgrade = false;
+
+      if (existingSubscription) {
+        console.log('📋 Found existing subscription:', existingSubscription.planId);
+
+        // Check if this is the same plan
+        if (existingSubscription.planId === planId) {
+          return res.status(409).json({
+            success: false,
+            message: 'User already has this subscription plan',
+            existingSubscription: {
+              planId: existingSubscription.planId,
+              status: existingSubscription.status,
+              currentPeriodEnd: existingSubscription.currentPeriodEnd
+            }
+          });
+        }
+
+        // Calculate if this is an upgrade
+        const upgrade = this.calculateUpgrade(existingSubscription, planDetails);
+
+        if (!upgrade.isUpgrade) {
+          return res.status(400).json({
+            success: false,
+            message: 'Downgrades are not supported for recurring subscriptions. Please cancel your current subscription and subscribe to the new plan after it expires.',
+            existingSubscription: {
+              planId: existingSubscription.planId,
+              status: existingSubscription.status,
+              currentPeriodEnd: existingSubscription.currentPeriodEnd
+            }
+          });
+        }
+
+        // This is an upgrade - calculate proration
+        isUpgrade = true;
+        prorationCredit = upgrade.prorationCredit;
+        console.log('💰 Calculated proration credit for upgrade:', prorationCredit);
+      }
+
+      // Step 1: Create or get Razorpay customer
+      let razorpayCustomerId = user.razorpayCustomerId;
+      
+      if (!razorpayCustomerId) {
+        const customerResult = await this.razorpay.createCustomer({
+          name: user.name || customerInfo?.name || 'User',
+          email: user.email,
+          contact: customerInfo?.phone || user.phone || '',
+          notes: {
+            userId: userId,
+            source: 'subscription_signup'
+          }
+        });
+
+        if (!customerResult.success) {
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to create customer profile'
+          });
+        }
+
+        razorpayCustomerId = customerResult.data.id;
+        
+        // Save customer ID to user
+        await User.findByIdAndUpdate(userId, {
+          razorpayCustomerId: razorpayCustomerId
+        });
+      }
+
+      // Step 2: Ensure Razorpay subscription plan exists or create a new one
+      let razorpayPlan;
+      console.log('📋 Creating Razorpay plan with details:', {
+        name: `${planDetails.name} Plan`,
+        id: planId,
+        price: planDetails.price,
+        currency: planDetails.currency,
+        interval: planDetails.interval,
+        intervalCount: planDetails.intervalCount
+      });
+
+      const planResult = await this.razorpay.createPlan({
+        name: `${planDetails.name} Plan`,
+        price: planDetails.price, // This will be converted to INR in RazorpayGateway if needed
+        amount: planDetails.price, // Fallback field
+        currency: planDetails.currency, // Original currency (USD/INR)
+        interval: planDetails.interval,
+        intervalCount: planDetails.intervalCount,
+        // Add metadata to track the original plan ID and currency
+        id: planId, // This will be stored in notes, not as custom ID
+      });
+
+      if (!planResult.success) {
+        console.error('❌ Failed to create or fetch Razorpay plan:', planResult.error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create or fetch subscription plan',
+          error: planResult.error
+        });
+      }
+      razorpayPlan = planResult.data;
+      const razorpayPlanId = razorpayPlan.id;
+      console.log('✅ Razorpay plan ready:', razorpayPlanId);
+
+      // Step 3: Create Razorpay subscription
+      const subscriptionResult = await this.razorpay.createSubscription(
+        razorpayCustomerId,
+        razorpayPlanId,
+        {
+          total_count: 0, // Unlimited renewals
+          customer_notify: 1,
+          notes: {
+            userId: userId,
+            planId: planId
+          }
+        }
+      );
+
+      if (!subscriptionResult.success) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create subscription'
+        });
+      }
+
+      const razorpaySubscription = subscriptionResult.data;
+
+      // Step 4: Create local subscription record
+      const now = new Date();
+      const currentPeriodEnd = new Date(now);
+      const nextBillingDate = new Date(now);
+
+      if (planDetails.interval === 'month') {
+        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + planDetails.intervalCount);
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + planDetails.intervalCount);
+      } else if (planDetails.interval === 'year') {
+        currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + planDetails.intervalCount);
+        nextBillingDate.setFullYear(nextBillingDate.getFullYear() + planDetails.intervalCount);
+      }
+
+      // Derive planType and planDuration from planId
+      const [type, duration] = planId.split('_');
+      // Get plan configuration for feature defaults
+      // Subscription.getPlanConfig may not be defined; fallback to planDetails.features
+      let planConfig = { features: {} };
+      if (typeof Subscription.getPlanConfig === 'function') {
+        planConfig = Subscription.getPlanConfig(type) || { features: {} };
+      } else {
+        planConfig = { features: planDetails.features || {} };
+      }
+
+      const subscription = new Subscription({
+        userId: userId,
+        planId: planId,
+        planType: type,
+        planDuration: duration,
+        planName: planDetails.name,
+        planPrice: planDetails.price,
+        status: 'pending', // Initial state before first payment
+        startDate: now,
+        endDate: new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()), // 1 year from now
+        currentPeriodStart: now,
+        currentPeriodEnd: currentPeriodEnd,
+        nextBillingDate: nextBillingDate,
+        razorpaySubscriptionId: razorpaySubscription.id,
+        razorpayPlanId: razorpayPlanId,
+        razorpayCustomerId: razorpayCustomerId,
+        paymentMethod: 'razorpay',
+        amount: planDetails.price,
+        currency: planDetails.currency,
+        interval: planDetails.interval,
+        intervalCount: planDetails.intervalCount,
+        autoRenewal: true,
+        features: {
+          lessonsPerPeriod: planConfig?.features?.lessonsPerPeriod || planDetails.features?.lessons?.value || 10,
+          hasForumAccess: planConfig?.features?.hasForumAccess || false,
+          hasLiveChatSupport: planConfig?.features?.hasLiveChatSupport || false,
+          hasBonusContent: planConfig?.features?.hasBonusContent || false,
+          hasCertification: planConfig?.features?.hasCertification || false,
+          hasEarlyAccess: planConfig?.features?.hasEarlyAccess || false,
+          discountPercentage: planConfig?.features?.discountPercentage || 0
+        },
+        metadata: new Map([
+          ['createdViaRecurring', 'true'],
+          ['subscriptionType', existingSubscription ? 'upgrade' : 'new'],
+          ['prorationCredit', prorationCredit.toString()],
+          ['previousSubscriptionId', existingSubscription?._id?.toString() || 'none']
+        ])
+      });
+
+      let savedSubscription;
+      try {
+        savedSubscription = await subscription.save();
+      } catch (saveError) {
+        // Handle duplicate userId (unique index) by fetching existing subscription
+        if (saveError.code === 11000) {
+          console.warn('⚠️ Duplicate subscription for user, fetching existing record');
+          savedSubscription = await Subscription.findOne({ userId });
+        } else {
+          throw saveError;
+        }
+      }
+
+      // Step 5: Create payment order for the first payment (with proration if upgrade)
+      const finalAmount = Math.max(0, planDetails.price - prorationCredit);
+      console.log('💳 Creating payment order for subscription:', {
+        originalPrice: planDetails.price,
+        prorationCredit: prorationCredit,
+        finalAmount: finalAmount,
+        isUpgrade: !!existingSubscription
+      });
+
+      const amountInPaise = Math.round(finalAmount * 100);
+      const orderId = `sub_${Date.now().toString().slice(-10)}`;
+
+      const razorpayOrder = await this.razorpay.createOrder(
+        amountInPaise,
+        'INR', // Always INR for Razorpay
+        {
+          receipt: orderId,
+          notes: {
+            userId: userId,
+            planId: planId,
+            subscriptionId: savedSubscription._id.toString(),
+            razorpaySubscriptionId: razorpaySubscription.id,
+            subscriptionType: existingSubscription ? 'recurring_upgrade' : 'recurring_first_payment',
+            prorationCredit: prorationCredit.toString(),
+            originalAmount: planDetails.price.toString(),
+            existingSubscriptionId: existingSubscription?._id?.toString() || ''
+          }
+        }
+      );
+
+      if (!razorpayOrder.success) {
+        console.error('❌ Failed to create payment order for subscription:', razorpayOrder);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create payment order for subscription',
+          error: razorpayOrder.error
+        });
+      }
+
+      // Create payment order record
+      const paymentOrder = new PaymentOrder({
+        userId,
+        planId,
+        orderId,
+        razorpayOrderId: razorpayOrder.data.id,
+        amount: finalAmount, // Use final amount after proration
+        originalAmount: planDetails.price,
+        currency: 'INR',
+        status: 'created',
+        planDetails,
+        userDetails: {
+          name: user.name || user.email,
+          email: user.email,
+          contact: user.phone || ''
+        },
+        prorationCredit: prorationCredit,
+        metadata: new Map([
+          ['subscriptionId', savedSubscription._id.toString()],
+          ['razorpaySubscriptionId', razorpaySubscription.id],
+          ['subscriptionType', existingSubscription ? 'recurring_upgrade' : 'recurring_first_payment'],
+          ['orderCreatedAt', new Date().toISOString()],
+          ['userAgent', req.headers['user-agent'] || ''],
+          ['existingSubscriptionId', existingSubscription?._id?.toString() || ''],
+          ['isUpgrade', existingSubscription ? 'true' : 'false']
+        ])
+      });
+
+      await paymentOrder.save();
+
+      // Generate payment URL with token
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      const paymentUrl = `${req.protocol}://${req.get('host')}/api/v1/subscriptions/payment-page/${orderId}?token=${encodeURIComponent(token)}`;
+
+      // Use savedSubscription for response
+      res.json({
+        success: true,
+        message: existingSubscription ? 'Subscription upgrade created successfully' : 'Recurring subscription created successfully',
+        data: {
+          orderId: orderId, // Use payment order ID, not subscription ID
+          subscriptionId: savedSubscription._id,
+          razorpaySubscriptionId: razorpaySubscription.id,
+          razorpayOrderId: razorpayOrder.data.id,
+          planDetails: planDetails,
+          paymentUrl: paymentUrl, // Use proper payment page URL
+          nextBillingDate: nextBillingDate,
+          autoRenewal: true,
+          amount: finalAmount, // Show final amount after proration
+          originalAmount: planDetails.price,
+          prorationCredit: prorationCredit,
+          currency: 'INR',
+          isUpgrade: !!existingSubscription,
+          previousSubscription: existingSubscription ? {
+            planId: existingSubscription.planId,
+            planName: existingSubscription.planName,
+            currentPeriodEnd: existingSubscription.currentPeriodEnd
+          } : null
+        }
+      });
+
+    } catch (error) {
+      // Enhanced error logging for recurring subscription failures
+      console.error('Error creating recurring subscription:', error.message);
+      console.error(error.stack);
+      // Return error message to frontend for debugging
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to create recurring subscription'
+      });
+    }
+  }
+
   // Helper methods
 
   async getPlanDetails(planId, req = null) {
@@ -1155,6 +1562,81 @@ class SubscriptionController {
     };
 
     return plans[planId];
+  }
+
+  /**
+   * Get plan details with specific currency (for recurring subscriptions)
+   */
+  async getPlanDetailsWithCurrency(planId, currency) {
+    console.log('💰 Getting plan details for currency:', { planId, currency });
+
+    // Get price in the specified currency
+    const prices = PLAN_PRICES[planId];
+    if (!prices) {
+      throw new Error(`Plan ${planId} not found in PLAN_PRICES`);
+    }
+
+    const price = prices[currency.code] || prices.INR; // Fallback to INR
+    console.log(`💰 Price for ${planId} in ${currency.code}: ${currency.symbol}${price}`);
+
+    const plans = {
+      basic_monthly: {
+        id: 'basic_monthly',
+        name: 'Basic',
+        price: price,
+        currency: currency.code,
+        currencySymbol: currency.symbol,
+        interval: 'month',
+        intervalCount: 1,
+        features: {
+          lessons: 10,
+          community: 'limited',
+          support: '48h',
+          bonusContent: false,
+          certification: false
+        }
+      },
+      standard_quarterly: {
+        id: 'standard_quarterly',
+        name: 'Standard',
+        price: price,
+        currency: currency.code,
+        currencySymbol: currency.symbol,
+        interval: 'month',
+        intervalCount: 3,
+        features: {
+          lessons: 30,
+          community: 'full',
+          support: '24h',
+          bonusContent: 'deep_dive',
+          certification: 'module'
+        }
+      },
+      pro_yearly: {
+        id: 'pro_yearly',
+        name: 'Pro',
+        price: price,
+        currency: currency.code,
+        currencySymbol: currency.symbol,
+        interval: 'month',
+        intervalCount: 12,
+        features: {
+          lessons: 120,
+          community: 'premium',
+          support: 'live_chat',
+          bonusContent: 'premium',
+          certification: 'advanced'
+        }
+      }
+    };
+
+    const planDetails = plans[planId];
+    if (!planDetails) {
+      throw new Error(`Plan ${planId} not found`);
+    }
+
+    console.log('📋 Final plan details:', planDetails);
+    return planDetails;
   }
 
   getDefaultPrice(planId) {
@@ -1336,6 +1818,176 @@ class SubscriptionController {
           </body>
         </html>
       `);
+    }
+  }
+
+  // Helper method to calculate upgrade and proration
+  calculateUpgrade(existingSubscription, newPlanDetails) {
+    try {
+      console.log('🔍 Calculating upgrade from existing subscription:', {
+        currentPlan: existingSubscription.planId,
+        currentPrice: existingSubscription.amount,
+        newPlan: newPlanDetails.id,
+        newPrice: newPlanDetails.price
+      });
+
+      // Define plan hierarchy (higher number = higher tier)
+      const planHierarchy = {
+        'basic_monthly': 1,
+        'basic_quarterly': 1,
+        'basic_yearly': 1,
+        'standard_monthly': 2,
+        'standard_quarterly': 2,
+        'standard_yearly': 2,
+        'pro_monthly': 3,
+        'pro_quarterly': 3,
+        'pro_yearly': 3
+      };
+
+      const currentPlanLevel = planHierarchy[existingSubscription.planId] || 0;
+      const newPlanLevel = planHierarchy[newPlanDetails.id] || 0;
+
+      // Check if this is an upgrade (higher tier or same tier with longer duration)
+      const isUpgrade = newPlanLevel > currentPlanLevel ||
+                       (newPlanLevel === currentPlanLevel && newPlanDetails.price > existingSubscription.amount);
+
+      if (!isUpgrade) {
+        return {
+          isUpgrade: false,
+          prorationCredit: 0,
+          reason: 'Not an upgrade - same or lower tier'
+        };
+      }
+
+      // Calculate proration credit based on remaining time
+      const now = new Date();
+      const currentPeriodEnd = new Date(existingSubscription.currentPeriodEnd);
+      const remainingDays = Math.max(0, Math.ceil((currentPeriodEnd - now) / (1000 * 60 * 60 * 24)));
+
+      // Calculate daily rate of current subscription
+      const currentPeriodStart = new Date(existingSubscription.currentPeriodStart || existingSubscription.createdAt);
+      const totalDays = Math.ceil((currentPeriodEnd - currentPeriodStart) / (1000 * 60 * 60 * 24));
+      const dailyRate = existingSubscription.amount / totalDays;
+
+      // Calculate proration credit (unused portion of current subscription)
+      const prorationCredit = Math.round(dailyRate * remainingDays * 100) / 100; // Round to 2 decimal places
+
+      console.log('💰 Proration calculation:', {
+        remainingDays,
+        totalDays,
+        dailyRate,
+        prorationCredit,
+        currentAmount: existingSubscription.amount,
+        newAmount: newPlanDetails.price
+      });
+
+      return {
+        isUpgrade: true,
+        prorationCredit: prorationCredit,
+        remainingDays: remainingDays,
+        dailyRate: dailyRate,
+        reason: `Upgrade from ${existingSubscription.planId} to ${newPlanDetails.id}`
+      };
+
+    } catch (error) {
+      console.error('Error calculating upgrade:', error);
+      return {
+        isUpgrade: false,
+        prorationCredit: 0,
+        reason: 'Error calculating upgrade'
+      };
+    }
+  }
+
+  /**
+   * Get upgrade preview with proration calculation
+   */
+  async getUpgradePreview(req, res) {
+    try {
+      const { planId } = req.params;
+      const { currency = 'INR' } = req.body;
+      const userId = req.user.id;
+
+      console.log('🔍 Getting upgrade preview for:', { userId, planId, currency });
+
+      // Get current active subscription
+      const existingSubscription = await Subscription.findOne({
+        userId,
+        status: { $in: ['active', 'trialing'] }
+      });
+
+      if (!existingSubscription) {
+        return res.status(400).json({
+          success: false,
+          message: 'No active subscription found. This is a new subscription, not an upgrade.'
+        });
+      }
+
+      // Get plan details
+      const planDetails = await this.getPlanDetails(planId, req);
+      if (!planDetails) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid plan selected'
+        });
+      }
+
+      // Check if this is the same plan
+      if (existingSubscription.planId === planId) {
+        return res.status(400).json({
+          success: false,
+          message: 'You already have this subscription plan'
+        });
+      }
+
+      // Calculate upgrade details
+      const upgrade = this.calculateUpgrade(existingSubscription, planDetails);
+
+      if (!upgrade.isUpgrade) {
+        return res.status(400).json({
+          success: false,
+          message: 'This is not an upgrade. Downgrades are not supported for recurring subscriptions.',
+          reason: upgrade.reason
+        });
+      }
+
+      // Prepare response data
+      const previewData = {
+        currentPlan: {
+          id: existingSubscription.planId,
+          name: existingSubscription.planName,
+          amount: existingSubscription.amount,
+          currentPeriodEnd: existingSubscription.currentPeriodEnd
+        },
+        targetPlan: {
+          id: planDetails.id,
+          name: planDetails.name,
+          amount: planDetails.price
+        },
+        originalPrice: planDetails.price,
+        prorationCredit: upgrade.prorationCredit,
+        finalPrice: Math.max(0, planDetails.price - upgrade.prorationCredit),
+        remainingDays: upgrade.remainingDays,
+        dailyRate: upgrade.dailyRate,
+        currency: currency,
+        savings: upgrade.prorationCredit,
+        upgradeReason: upgrade.reason
+      };
+
+      console.log('💰 Upgrade preview calculated:', previewData);
+
+      res.json({
+        success: true,
+        message: 'Upgrade preview calculated successfully',
+        data: previewData
+      });
+
+    } catch (error) {
+      console.error('Error getting upgrade preview:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to calculate upgrade preview'
+      });
     }
   }
 }
@@ -1587,5 +2239,7 @@ export const scheduleDowngrade = async (req, res) => {
     });
   }
 };
+
+
 
 

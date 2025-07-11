@@ -521,7 +521,7 @@ console.log( billingDetails )
 
                   {/* Payment Method */}
                   <TouchableOpacity
-                    onPress={handleUpdatePaymentMethod}
+                    // onPress={handleUpdatePaymentMethod}
                     style={{
                       backgroundColor: theme.colors.neutral[50],
                       borderRadius: 12,

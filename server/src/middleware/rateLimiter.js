@@ -53,12 +53,17 @@ export const rateLimiter = (resource, limit = 1000) => {
       if (entry.count >= limit) {
         const retryAfter = Math.ceil((entry.resetTime - now) / 1000);
 
+        console.log(`Rate limit exceeded for ${key}: ${entry.count}/${limit} requests. Reset in ${retryAfter}s`);
+
         res.set("Retry-After", retryAfter.toString());
         return res.status(429).json({
           error: "Rate limit exceeded",
+          message: `Too many requests for ${resource}. Try again in ${retryAfter} seconds.`,
           retryAfter,
           limit,
+          current: entry.count,
           resource,
+          resetTime: entry.resetTime,
         });
       }
 

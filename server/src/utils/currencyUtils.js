@@ -1,35 +1,35 @@
 /**
- * Currency and pricing utilities
+ * Currency and pricing utilities - Simplified version
+ * Primary focus: India (INR) vs Rest of World (USD)
  */
 
 export const SUPPORTED_CURRENCIES = {
-  'IN': { code: 'INR', symbol: '₹', exchangeRate: 1 },
-  'US': { code: 'USD', symbol: '$', exchangeRate: 0.012 },
-  'GB': { code: 'GBP', symbol: '£', exchangeRate: 0.0095 },
-  'EU': { code: 'EUR', symbol: '€', exchangeRate: 0.011 },
-  'JP': { code: 'JPY', symbol: '¥', exchangeRate: 1.8 },
-  'KR': { code: 'KRW', symbol: '₩', exchangeRate: 16.2 },
-  'CN': { code: 'CNY', symbol: '¥', exchangeRate: 0.086 }
+  'IN': { code: 'INR', symbol: '₹', exchangeRate: 1, name: 'Indian Rupee' },
+  'DEFAULT': { code: 'USD', symbol: '$', exchangeRate: 0.012, name: 'US Dollar' }
 };
 
 export const PLAN_PRICES = {
-  'basic_monthly': { INR: 149, USD: 1.99, EUR: 1.79, GBP: 1.49, JPY: 299, KRW: 2400, CNY: 14 },
-  'standard_quarterly': { INR: 399, USD: 4.99, EUR: 4.49, GBP: 3.99, JPY: 799, KRW: 6400, CNY: 36 },
-  'pro_yearly': { INR: 999, USD: 11.99, EUR: 10.99, GBP: 9.99, JPY: 1799, KRW: 15900, CNY: 86 }
+  // Base prices in INR, USD prices calculated
+  'basic_monthly': { INR: 149, USD: 1.99 },
+  'standard_quarterly': { INR: 399, USD: 4.99 },
+  'pro_yearly': { INR: 999, USD: 11.99 }
 };
 
 /**
  * Detect user's country from request headers
+ * Simplified: India vs Rest of World
  */
 export function detectUserCountry(req) {
   // Check for Cloudflare country header
   if (req.headers['cf-ipcountry']) {
-    return req.headers['cf-ipcountry'];
+    const country = req.headers['cf-ipcountry'];
+    return country === 'IN' ? 'IN' : 'DEFAULT';
   }
   
   // Check for X-Forwarded-For country
   if (req.headers['x-country-code']) {
-    return req.headers['x-country-code'];
+    const country = req.headers['x-country-code'];
+    return country === 'IN' ? 'IN' : 'DEFAULT';
   }
   
   // Check Accept-Language header
@@ -38,14 +38,20 @@ export function detectUserCountry(req) {
     const languages = acceptLanguage.split(',');
     for (const lang of languages) {
       const langCode = lang.split('-')[1];
-      if (langCode && SUPPORTED_CURRENCIES[langCode.toUpperCase()]) {
-        return langCode.toUpperCase();
+      if (langCode && langCode.toUpperCase() === 'IN') {
+        return 'IN';
       }
     }
   }
   
-  // Default to India
-  return 'IN';
+  // Check user-agent for Indian indicators
+  const userAgent = req.headers['user-agent'] || '';
+  if (userAgent.toLowerCase().includes('india') || userAgent.toLowerCase().includes('in')) {
+    return 'IN';
+  }
+  
+  // Default to international (USD)
+  return 'DEFAULT';
 }
 
 /**
@@ -53,7 +59,7 @@ export function detectUserCountry(req) {
  */
 export function getUserCurrency(req) {
   const country = detectUserCountry(req);
-  return SUPPORTED_CURRENCIES[country] || SUPPORTED_CURRENCIES['IN'];
+  return SUPPORTED_CURRENCIES[country];
 }
 
 /**
@@ -69,9 +75,8 @@ export function getPlanPrice(planId, req) {
   
   const price = prices[currency.code];
   if (!price) {
-    // Fallback to INR price converted to user's currency
-    const inrPrice = prices.INR;
-    return Math.round(inrPrice * currency.exchangeRate);
+    // Fallback to INR price
+    return prices.INR;
   }
   
   return price;
@@ -84,8 +89,8 @@ export function formatCurrency(amount, currencyCode) {
   const formatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currencyCode,
-    minimumFractionDigits: currencyCode === 'JPY' || currencyCode === 'KRW' ? 0 : 2,
-    maximumFractionDigits: currencyCode === 'JPY' || currencyCode === 'KRW' ? 0 : 2
+    minimumFractionDigits: currencyCode === 'USD' ? 2 : 0,
+    maximumFractionDigits: currencyCode === 'USD' ? 2 : 0
   });
   
   return formatter.format(amount);

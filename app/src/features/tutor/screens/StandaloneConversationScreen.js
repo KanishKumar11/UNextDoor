@@ -48,9 +48,9 @@ export default function StandaloneConversationScreen() {
         <Text style={styles.title}>{scenarioTitle}</Text>
       </View>
 
-      <View style={styles.levelBadge}>
+      {/* <View style={styles.levelBadge}>
         <Text style={styles.levelText}>{proficiencyLevel}</Text>
-      </View>
+      </View> */}
 
 
 

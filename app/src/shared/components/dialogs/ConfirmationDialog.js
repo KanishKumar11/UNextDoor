@@ -90,7 +90,7 @@ const ConfirmationDialog = ({
           {/* Header */}
           <Row justify="space-between" align="flex-start" style={{ marginBottom: 16 }}>
             <Row align="center" style={{ flex: 1, marginRight: 12 }}>
-              {icon && (
+              {!icon && (
                 <View
                   style={{
                     width: 40,
@@ -99,7 +99,7 @@ const ConfirmationDialog = ({
                     backgroundColor: (iconColor || theme.colors.brandGreen) + '20',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginRight: 12,
+                    // marginRight: 12,
                   }}
                 >
                   <Ionicons
@@ -116,7 +116,7 @@ const ConfirmationDialog = ({
                   fontFamily: theme.typography.fontFamily.bold,
                   flex: 1,
                 }}
-                numberOfLines={2}
+                // numberOfLines={2}
                 ellipsizeMode="tail"
               >
                 {title}
@@ -152,7 +152,7 @@ const ConfirmationDialog = ({
           {/* Actions */}
           <Row justify="flex-end" align="center">
             <ModernButton
-              text={cancelText}
+              text={cancelText||"cancel"}
               variant={cancelVariant}
               size="md"
               disabled={loading}
@@ -162,9 +162,10 @@ const ConfirmationDialog = ({
                 paddingHorizontal: 20,
                 backgroundColor: cancelVariant === 'outline' ? 'transparent' : theme.colors.neutral[200],
                 borderColor: theme.colors.neutral[400],
+                color:"#000"
               }}
               textStyle={{
-                color: theme.colors.neutral[600],
+                color: "#000",
               }}
             />
             

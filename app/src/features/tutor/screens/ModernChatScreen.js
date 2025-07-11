@@ -54,7 +54,7 @@ const ModernChatScreen = () => {
     const initialMessages = [
       {
         id: "1",
-        text: `Welcome to the ${scenario.title} scenario! I'm Cooper, your AI language tutor. How can I help you practice today?`,
+        text: `Welcome to the ${scenario.title} scenario! I'm Miles, your AI language tutor. How can I help you practice today?`,
         sender: "assistant",
         timestamp: new Date(Date.now() - 60000),
       },

@@ -29,7 +29,7 @@ router.use(authenticate);
  */
 router.post(
   "/realtime/token",
-  rateLimiter("realtime_token", 10),
+  rateLimiter("realtime_token", 100), // Increased from 10 to 100 requests per hour
   getRealtimeToken
 );
 

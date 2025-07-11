@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "../../../shared/context/ThemeContext";
@@ -6,7 +6,7 @@ import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { Text, Heading } from "../../../shared/components";
 import SafeAreaWrapper from "../../../shared/components/SafeAreaWrapper";
 import CurriculumMap from "../../../features/curriculum/components/CurriculumMap";
-import { curriculumService } from "../../../features/curriculum/services/curriculumService";
+import useLessonsStore from "../../../features/curriculum/stores/lessonsStore";
 import { useResponsiveFonts } from "../../../shared/hooks/useResponsiveFonts";
 
 /**
@@ -18,9 +18,14 @@ export default function LessonsScreen() {
   const { user } = useAuth();
   const fonts = useResponsiveFonts();
 
-  const [userProgress, setUserProgress] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Use centralized lessons store
+  const {
+    userProgress,
+    isLoading,
+    error,
+    fetchUserProgress: storeFetchUserProgress,
+    clearError,
+  } = useLessonsStore();
 
   // Track if this is the initial mount to prevent double loading
   const isInitialMount = useRef(true);
@@ -28,91 +33,14 @@ export default function LessonsScreen() {
   // Create responsive styles
   const styles = createStyles(fonts);
 
-  // Function to fetch user progress
+  // Wrapper function to maintain compatibility with existing code
   const fetchUserProgress = async (forceRefresh = false) => {
     try {
-      setIsLoading(true);
-      setError(null);
-
-      console.log("🔄 Fetching user progress from backend...");
-
-      // If force refresh, make multiple cache-busting calls to ensure fresh data
-      if (forceRefresh) {
-        console.log(
-          "🔄 Force refresh - making multiple cache-busting calls..."
-        );
-        await curriculumService.getUserProgress(true); // Cache-busting call
-        await curriculumService.getUserProgress(true); // Second cache-busting call
-      }
-
-      const response = await curriculumService.getUserProgress(forceRefresh);
-      console.log("✅ Backend response:", response);
-      console.log("✅ Backend response:", response.data.progress.modules[0]);
-
-      if (response.data && response.data.progress) {
-        setUserProgress(response.data.progress);
-        console.log("📊 User progress updated successfully");
-
-        // Debug: Check the actual progress data
-        console.log("🔍 DEBUG: User progress data:", {
-          totalExperience: response.data.progress.totalExperience,
-          lessonsCompleted: response.data.progress.lessonsCompleted,
-          streak: response.data.progress.streak,
-          streakCurrent: response.data.progress.streak?.current,
-          streakLongest: response.data.progress.streak?.longest,
-          level: response.data.progress.level,
-        });
-
-        // 🔥 STREAK DISPLAY DEBUG
-        console.log("🔥 STREAK DISPLAY DEBUG:", {
-          rawStreak: response.data.progress.streak,
-          streakType: typeof response.data.progress.streak,
-          streakCurrent: response.data.progress.streak?.current,
-          streakCurrentType: typeof response.data.progress.streak?.current,
-          willDisplay: response.data.progress.streak?.current || 0,
-        });
-
-        // Debug: Check lesson progress details
-        if (response.data.progress.levels) {
-          const currentLevel = response.data.progress.levels.find(
-            (l) => l.isCurrentLevel
-          );
-          if (currentLevel && currentLevel.modules) {
-            console.log(
-              "🔍 DEBUG: Current level modules:",
-              currentLevel.modules.map((m) => ({
-                id: m.id,
-                name: m.name,
-                progress: m.progress,
-                lessons: m.lessons.map((l) => ({
-                  id: l.id,
-                  name: l.name,
-                  completed: l.progress?.completed,
-                  xpEarned: l.progress?.xpEarned,
-                })),
-              }))
-            );
-          }
-        }
-      } else {
-        console.error("❌ Invalid response structure:", response);
-        setError("Invalid data received from server");
-      }
+      console.log("🔄 Fetching user progress via centralized store...");
+      await storeFetchUserProgress(forceRefresh);
+      console.log("✅ User progress fetched successfully via store");
     } catch (err) {
-      console.error("❌ Error fetching user progress:", err);
-
-      let errorMessage = "Failed to load modules";
-      if (err.response?.status === 401) {
-        errorMessage = "Please log in to view your lessons";
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+      console.error("❌ Error fetching user progress via store:", err);
     }
   };
 

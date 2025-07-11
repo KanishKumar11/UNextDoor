@@ -75,14 +75,18 @@ router.post('/verify-payment', [
 ], subscriptionController.verifyPaymentAndActivate.bind(subscriptionController));
 
 /**
- * @route   GET /api/subscriptions/upgrade-preview/:planId
+ * @route   POST /api/subscriptions/upgrade-preview/:planId
  * @desc    Get upgrade preview with proration calculation
  * @access  Private
  */
-router.get('/upgrade-preview/:planId', [
+router.post('/upgrade-preview/:planId', [
   param('planId')
     .isIn(['basic_monthly', 'standard_quarterly', 'pro_yearly'])
-    .withMessage('Invalid subscription plan')
+    .withMessage('Invalid subscription plan'),
+  body('currency')
+    .optional()
+    .isIn(['INR', 'USD'])
+    .withMessage('Invalid currency')
 ], subscriptionController.getUpgradePreview.bind(subscriptionController));
 
 /**
@@ -109,6 +113,25 @@ router.post('/schedule-downgrade', [
     .isIn(['basic_monthly', 'standard_quarterly', 'pro_yearly'])
     .withMessage('Invalid subscription plan')
 ], scheduleDowngrade);
+
+/**
+ * @route   POST /api/subscriptions/create-recurring
+ * @desc    Create a recurring subscription with Razorpay subscriptions
+ * @access  Private
+ */
+router.post('/create-recurring', [
+  body('planId')
+    .isIn(['basic_monthly', 'standard_quarterly', 'pro_yearly'])
+    .withMessage('Invalid plan ID'),
+  body('customerInfo.name')
+    .optional()
+    .isLength({ min: 2 })
+    .withMessage('Name must be at least 2 characters'),
+  body('customerInfo.phone')
+    .optional()
+    .isMobilePhone()
+    .withMessage('Invalid phone number')
+], subscriptionController.createRecurringSubscription.bind(subscriptionController));
 
 // Transaction routes
 router.get('/transactions', getTransactionHistory);

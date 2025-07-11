@@ -12,7 +12,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
 import * as FileSystem from "expo-file-system";
-import { AudioModule } from "expo-audio";
+import { useAudioRecorder, AudioModule, RecordingPresets } from "expo-audio";
+import { Audio } from "../../../shared/utils/audioUtils";
 import ttsService from "../../../shared/services/ttsService";
 import { useTheme } from "../../../shared/context/ThemeContext";
 import { Text, Heading, ModernButton, Row } from "../../../shared/components";
@@ -61,9 +62,10 @@ const PronunciationChallengeGame = ({
   const [gameResults, setGameResults] = useState(null);
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
+  const [permissionsGranted, setPermissionsGranted] = useState(false);
 
-  // Recording objects
-  const recording = useRef(null);
+  // expo-audio recorder hook
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   // Confetti ref
   const confettiRef = useRef(null);
@@ -74,28 +76,44 @@ const PronunciationChallengeGame = ({
 
   // Initialize game
   useEffect(() => {
-    if (phrases.length > 0) {
-      initializeGame(phrases);
-    } else if (lessonId && lessonId !== "practice") {
-      loadPhrasesFromLesson(lessonId);
-    } else {
-      // Load content from new content service for practice mode
-      loadContentFromService();
+    initializeGameAsync();
+  }, [lessonId, phrases]);
+
+  // Initialize game asynchronously
+  const initializeGameAsync = async () => {
+    try {
+      // Request permissions first
+      const permissionsResult = await requestPermissions();
+      if (!permissionsResult) {
+        return; // Exit if permissions not granted
+      }
+
+      // Load phrases
+      if (phrases.length > 0) {
+        initializeGame(phrases);
+      } else if (lessonId && lessonId !== "practice") {
+        await loadPhrasesFromLesson(lessonId);
+      } else {
+        await loadContentFromService();
+      }
+
+      // Start game timer
+      setStartTime(Date.now());
+    } catch (error) {
+      console.error("❌ Error initializing game:", error);
+      setIsLoading(false);
     }
+  };
 
-    // Start game timer
-    setStartTime(Date.now());
-
-    // Request audio recording permissions
-    requestPermissions();
-
-    // Clean up recording when component unmounts
+  // Clean up when component unmounts
+  useEffect(() => {
     return () => {
-      if (recording.current) {
-        recording.current.stopAndUnloadAsync().catch(() => {});
+      if (isRecording) {
+        // Stop recording on cleanup
+        audioRecorder.stop().catch(() => {});
       }
     };
-  }, [lessonId, phrases]);
+  }, []);
 
   // Load content from the new game content service
   const loadContentFromService = async () => {
@@ -168,20 +186,38 @@ const PronunciationChallengeGame = ({
   // Request audio recording permissions
   const requestPermissions = async () => {
     try {
-      const { status } = await AudioModule.requestPermissionsAsync();
-      if (status !== "granted") {
-        console.error("Audio recording permissions not granted");
+      console.log("🎤 Requesting audio permissions...");
+
+      // Request recording permissions using AudioModule
+      const permissionResult = await AudioModule.requestRecordingPermissionsAsync();
+      console.log("📱 Permission result:", permissionResult);
+
+      if (!permissionResult.granted) {
+        console.error("❌ Audio recording permissions not granted");
+        alert("Microphone permission is required for pronunciation practice. Please enable it in your device settings.");
+        setPermissionsGranted(false);
+        return false;
       }
 
+      console.log("✅ Audio permissions granted");
+      setPermissionsGranted(true);
+
       // Set audio mode for recording
-      await AudioModule.setAudioModeAsync({
+      await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
         shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
       });
+
+      console.log("✅ Audio mode configured for recording");
+      return true;
     } catch (error) {
-      console.error("Error requesting permissions:", error);
+      console.error("❌ Error requesting permissions:", error);
+      alert("Failed to set up audio recording. Please check your device settings.");
+      setPermissionsGranted(false);
+      return false;
     }
   };
 
@@ -261,39 +297,67 @@ const PronunciationChallengeGame = ({
   // Start recording
   const startRecording = async () => {
     try {
-      // Create recording
-      const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
+      if (!permissionsGranted) {
+        console.error("❌ Permissions not granted for recording");
+        alert("Please grant microphone permissions to record pronunciation.");
+        return;
+      }
 
-      recording.current = newRecording;
+      console.log("🎤 Starting recording...");
+
+      // Prepare and start recording using expo-audio
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+
       setIsRecording(true);
+
+      console.log("✅ Recording started successfully");
     } catch (error) {
-      console.error("Error starting recording:", error);
+      console.error("❌ Error starting recording:", error);
+      
+      // Provide specific error messages based on the error type
+      if (error.message.includes("permissions")) {
+        alert("Microphone permission is required. Please enable it in your device settings.");
+      } else if (error.message.includes("busy")) {
+        alert("Microphone is busy. Please close other apps using the microphone and try again.");
+      } else {
+        alert("Failed to start recording. Please check microphone permissions and try again.");
+      }
     }
   };
 
   // Stop recording
   const stopRecording = async () => {
     try {
-      if (!recording.current) return;
+      if (!isRecording) {
+        console.warn("⚠️ No recording to stop");
+        return;
+      }
 
-      // Stop recording
-      await recording.current.stopAndUnloadAsync();
+      console.log("🛑 Stopping recording...");
 
-      // Get recording URI
-      const uri = recording.current.getURI();
+      // Stop recording using expo-audio
+      await audioRecorder.stop();
+
+      // Get recording URI from audioRecorder
+      const uri = audioRecorder.uri;
+      console.log("📁 Recording URI:", uri);
+
       setRecordingUri(uri);
-
-      // Reset recording object
-      recording.current = null;
       setIsRecording(false);
+      console.log("✅ Recording stopped, URI:", uri);
 
       // Analyze pronunciation
-      analyzePronunciation(uri);
+      if (uri) {
+        await analyzePronunciation(uri);
+      } else {
+        console.error("❌ No recording URI available");
+        alert("Recording failed. Please try again.");
+      }
     } catch (error) {
-      console.error("Error stopping recording:", error);
+      console.error("❌ Error stopping recording:", error);
       setIsRecording(false);
+      alert("Failed to stop recording. Please try again.");
     }
   };
 
@@ -310,7 +374,7 @@ const PronunciationChallengeGame = ({
         name: "recording.m4a",
       });
       formData.append("targetText", gamePhrases[currentPhraseIndex].korean);
-      formData.append("userLevel", "beginner");
+      formData.append("userLevel", user?.preferences?.languageLevel || "beginner");
 
       // Send to server for analysis
       const response = await apiClient.post(
@@ -377,7 +441,7 @@ const PronunciationChallengeGame = ({
         }
       }
     } catch (error) {
-      console.error("Error analyzing pronunciation:", error);
+      console.error("❌ Error analyzing pronunciation:", error);
 
       // Check if it's a 404 or server error - likely means no speech detected
       if (
@@ -481,6 +545,8 @@ const PronunciationChallengeGame = ({
     });
   };
 
+
+
   // Complete game and show results
   const completeGame = () => {
     const endTimeValue = Date.now();
@@ -583,6 +649,30 @@ const PronunciationChallengeGame = ({
       // Navigate back to lesson or games screen
       router.back();
     }
+  };
+
+  // Handle try again button in results screen
+  const handleTryAgain = () => {
+    console.log("🔄 Restarting pronunciation challenge game...");
+
+    // Reset all game state
+    setGameCompleted(false);
+    setGameResults(null);
+    setCurrentPhraseIndex(0);
+    setScore(0);
+    setAccuracyScores([]);
+    setFeedback(null);
+    setRecordingUri(null);
+    setIsRecording(false);
+    setIsAnalyzing(false);
+    setStartTime(Date.now());
+
+    // Reset animations
+    fadeAnim.setValue(1);
+    slideAnim.setValue(0);
+    progressAnim.setValue(0);
+
+    console.log("✅ Game restarted successfully");
   };
 
   // Handle close button
@@ -903,16 +993,25 @@ const PronunciationChallengeGame = ({
             </View>
           )}
 
-          {/* Continue Button */}
-          <View style={{ paddingBottom: theme.spacing.xl }}>
+          {/* Action Buttons */}
+          <View style={styles.resultsActionButtons}>
+            {gameResults.accuracy < 80 && (
+              <ModernButton
+                text="Try Again"
+                variant="outline"
+                color="secondary"
+                onPress={handleTryAgain}
+                style={styles.resultsTryAgainButton}
+              />
+            )}
+
             <ModernButton
               text="Continue"
               onPress={handleContinue}
-              style={{
-                backgroundColor: theme.colors.brandGreen,
-                borderRadius: 12,
-                // paddingVertical: theme.spacing.md,
-              }}
+              style={[
+                styles.resultsContinueButton,
+                gameResults.accuracy >= 80 && { flex: 1 } // Full width when no try again button
+              ]}
             />
           </View>
         </View>
@@ -1071,11 +1170,26 @@ const PronunciationChallengeGame = ({
 
             <Text style={styles.feedbackText}>{feedback.text}</Text>
 
-            <ModernButton
-              text="Continue"
-              onPress={moveToNextPhrase}
-              style={styles.nextButton}
-            />
+            {/* Action Buttons */}
+            <View style={styles.actionButtonsContainer}>
+              <ModernButton
+                text="Try Again"
+                variant="outline"
+                color="secondary"
+                onPress={() => {
+                  // Reset feedback and allow user to record again
+                  setFeedback(null);
+                  setRecordingUri(null);
+                }}
+                style={styles.tryAgainButton}
+              />
+
+              <ModernButton
+                text="Continue"
+                onPress={moveToNextPhrase}
+                style={styles.nextButton}
+              />
+            </View>
           </View>
         ) : (
           <View style={styles.recordingContainer}>
@@ -1265,7 +1379,16 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     color: "#666",
   },
+  actionButtonsContainer: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  tryAgainButton: {
+    flex: 1,
+  },
   nextButton: {
+    flex: 1,
     backgroundColor: "#6FC953",
   },
   resultsContainer: {
@@ -1336,6 +1459,20 @@ const styles = StyleSheet.create({
   },
   continueButton: {
     backgroundColor: "#6FC953",
+  },
+  // Results page action buttons
+  resultsActionButtons: {
+    flexDirection: "row",
+    gap: 12,
+    paddingBottom: 32,
+  },
+  resultsTryAgainButton: {
+    flex: 1,
+  },
+  resultsContinueButton: {
+    flex: 1,
+    backgroundColor: "#6FC953",
+    borderRadius: 12,
   },
 });
 

@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Easing,
+  StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,7 +27,7 @@ import { xpService } from "../../../shared/services/xpService";
 import gameContentService from "../services/gameContentService";
 import { useAuth } from "../../auth/hooks/useAuth";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 /**
  * Sentence Scramble Game Component
@@ -43,6 +44,7 @@ const SentenceScrambleGame = ({
   sentences = [],
   onComplete,
   onClose,
+  userLevel = 1, // Add user level prop for difficulty scaling
 }) => {
   const router = useRouter();
   const { theme } = useTheme();
@@ -215,11 +217,58 @@ const SentenceScrambleGame = ({
     }
   };
 
+  // Calculate difficulty based on user level and question number
+  const getDifficultySettings = (questionNumber) => {
+    // Get user level from props or user data
+    const actualUserLevel = userLevel || user?.level || user?.preferences?.level || 1;
+    const progressionFactor = Math.floor(questionNumber / 3); // Increase difficulty every 3 questions
+    const currentDifficulty = Math.min(actualUserLevel + progressionFactor, 5); // Cap at level 5
+
+    return {
+      level: currentDifficulty,
+      maxQuestions: Math.min(5 + currentDifficulty, 10), // 6-10 questions based on difficulty
+      timeLimit: Math.max(30 - (currentDifficulty * 3), 15), // 15-30 seconds based on difficulty
+      complexSentences: currentDifficulty >= 3, // Use complex sentences for level 3+
+    };
+  };
+
+  // Filter sentences based on difficulty
+  const filterSentencesByDifficulty = (sentencesToFilter, difficulty) => {
+    if (!sentencesToFilter || sentencesToFilter.length === 0) return [];
+
+    return sentencesToFilter.filter(sentence => {
+      if (!sentence.words || !Array.isArray(sentence.words)) return false;
+
+      const wordCount = sentence.words.length;
+
+      // Filter by word count based on difficulty
+      if (difficulty.level <= 2) {
+        return wordCount >= 3 && wordCount <= 5; // Beginner: 3-5 words
+      } else if (difficulty.level <= 4) {
+        return wordCount >= 4 && wordCount <= 7; // Intermediate: 4-7 words
+      } else {
+        return wordCount >= 5 && wordCount <= 8; // Advanced: 5-8 words
+      }
+    });
+  };
+
   // Initialize game with sentences
   const initializeGame = (sentenceList) => {
+    console.log("🎮 Initializing game with sentences:", sentenceList.length);
+    console.log("🎯 User level:", userLevel);
+
+    // Apply difficulty filtering
+    const difficulty = getDifficultySettings(0);
+    const filteredSentences = filterSentencesByDifficulty(sentenceList, difficulty);
+
+    console.log(`🎯 Difficulty level ${difficulty.level}: ${filteredSentences.length} suitable sentences`);
+
+    // Use filtered sentences or fall back to original if no suitable ones found
+    const sentencesToUse = filteredSentences.length > 0 ? filteredSentences : sentenceList;
+
     // Shuffle sentences and create game state
-    const shuffledSentences = [...sentenceList].sort(() => Math.random() - 0.5);
-    const gameSentencesList = shuffledSentences.slice(0, 5); // Limit to 5 sentences for game
+    const shuffledSentences = [...sentencesToUse].sort(() => Math.random() - 0.5);
+    const gameSentencesList = shuffledSentences.slice(0, difficulty.maxQuestions); // Dynamic question count
     setGameSentences(gameSentencesList);
 
     // Set up first sentence
@@ -268,8 +317,16 @@ const SentenceScrambleGame = ({
 
       if (isAnswerCorrect) {
         // Increase score and correct answers count
-        setScore((prevScore) => prevScore + 200);
-        setCorrectAnswers((prev) => prev + 1);
+        setScore((prevScore) => {
+          console.log("✅ Correct answer! Score:", prevScore + 200);
+          return prevScore + 200;
+        });
+        setCorrectAnswers((prev) => {
+          console.log("✅ Correct answers count:", prev + 1);
+          return prev + 1;
+        });
+      } else {
+        console.log("❌ Incorrect answer");
       }
 
       // Wait 1.5 seconds before moving to next sentence
@@ -360,6 +417,14 @@ const SentenceScrambleGame = ({
     const totalTime = (endTimeValue - startTime) / 1000; // in seconds
     const accuracy = (correctAnswers / gameSentences.length) * 100;
 
+    console.log("🎮 Game completion stats:", {
+      correctAnswers,
+      totalQuestions: gameSentences.length,
+      accuracy,
+      score,
+      totalTime
+    });
+
     // Calculate time bonus (faster = more points)
     const timeBonus = Math.max(0, 500 - Math.floor(totalTime) * 2);
 
@@ -378,6 +443,8 @@ const SentenceScrambleGame = ({
       timeSpent: totalTime,
       rewards: [],
     };
+
+    console.log("🎮 Final game results:", results);
 
     // Add rewards based on performance
     if (accuracy === 100) {
@@ -508,159 +575,64 @@ const SentenceScrambleGame = ({
   // Render game results screen
   if (gameCompleted && gameResults) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: theme.colors.brandWhite,
-        }}
-      >
-        {/* Enhanced Confetti */}
+      <View style={styles.resultsContainer}>
+        {/* Confetti for celebrations */}
         {gameResults.accuracy >= 70 && (
           <ConfettiCannon
             ref={confettiRef}
-            count={200}
+            count={150}
             origin={{ x: width / 2, y: height * 0.1 }}
             autoStart={false}
             fadeOut={true}
-            explosionSpeed={400}
-            fallSpeed={1500}
-            colors={[
-              theme.colors.brandGreen,
-              "#FFD700",
-              "#FF6B35",
-              "#9B59B6",
-              "#3498DB",
-              "#E74C3C",
-            ]}
+            explosionSpeed={350}
+            fallSpeed={1200}
+            colors={["#6FC935", "#FFD700", "#FF6B35", "#3498DB"]}
           />
         )}
 
         <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{
-            padding: theme.spacing.lg,
-            paddingBottom: 120,
-          }}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Enhanced Header */}
-          <Row
-            justify="space-between"
-            align="center"
-            style={{
-              marginBottom: theme.spacing.xl,
-              paddingBottom: theme.spacing.md,
-              borderBottomWidth: 1,
-              borderBottomColor: theme.colors.neutral[100],
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 20,
-                color: theme.colors.brandNavy,
-                fontFamily: theme.typography.fontFamily.bold,
-              }}
-            >
-              Sentence Scramble Results
-            </Text>
-            <TouchableOpacity
-              onPress={handleClose}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: theme.colors.neutral[100],
-                alignItems: "center",
-                justifyContent: "center",
-                shadowColor: theme.colors.neutral[300],
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.15,
-                shadowRadius: 3,
-                elevation: 2,
-              }}
-            >
-              <Ionicons
-                name="close"
-                size={20}
-                color={theme.colors.neutral[600]}
-              />
+          {/* Modern Header */}
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <Text style={styles.headerTitle}>Game Complete!</Text>
+              <Text style={styles.headerSubtitle}>Sentence Scramble</Text>
+            </View>
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color="#666" />
             </TouchableOpacity>
-          </Row>
+          </View>
 
-          {/* Enhanced Celebration Card */}
-          <ModernCard
-            style={{
-              alignItems: "center",
-              padding: theme.spacing.xl,
-              marginBottom: theme.spacing.xl,
-              backgroundColor:
-                gameResults.accuracy >= 90
-                  ? "#FFD700" + "10"
+          {/* Modern Hero Section */}
+          <View style={styles.heroSection}>
+            {/* Performance Emoji */}
+            <View style={styles.emojiContainer}>
+              <Text style={styles.performanceEmoji}>
+                {gameResults.accuracy >= 90
+                  ? "🏆"
                   : gameResults.accuracy >= 70
-                  ? theme.colors.brandGreen + "10"
-                  : theme.colors.brandWhite,
-              borderRadius: 24,
-              borderWidth: gameResults.accuracy >= 70 ? 2 : 1,
-              borderColor:
-                gameResults.accuracy >= 90
-                  ? "#FFD700"
-                  : gameResults.accuracy >= 70
-                  ? theme.colors.brandGreen
-                  : theme.colors.neutral[200],
-              shadowColor:
-                gameResults.accuracy >= 70
-                  ? theme.colors.brandGreen
-                  : theme.colors.neutral[300],
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: gameResults.accuracy >= 70 ? 0.2 : 0.1,
-              shadowRadius: 16,
-              elevation: 8,
-            }}
-          >
-            {/* Dynamic Emoji based on performance */}
-            <Text
-              style={{ fontSize: 80, marginBottom: 20, textAlign: "center" }}
-            >
-              {gameResults.accuracy >= 90
-                ? "🏆"
-                : gameResults.accuracy >= 70
-                ? "🎉"
-                : gameResults.accuracy >= 50
-                ? "👏"
-                : "💪"}
-            </Text>
+                  ? "🎉"
+                  : gameResults.accuracy >= 50
+                  ? "👏"
+                  : "💪"}
+              </Text>
+            </View>
 
-            <Heading
-              level="h1"
-              style={{
-                textAlign: "center",
-                marginBottom: 12,
-                color: theme.colors.brandNavy,
-                fontFamily: theme.typography.fontFamily.bold,
-                fontSize: 28,
-                letterSpacing: 0.5,
-              }}
-            >
+            {/* Main Message */}
+            <Text style={styles.heroTitle}>
               {gameResults.accuracy >= 90
                 ? "Outstanding!"
                 : gameResults.accuracy >= 70
-                ? "Excellent!"
+                ? "Excellent Work!"
                 : gameResults.accuracy >= 50
                 ? "Well Done!"
-                : "Keep Going!"}
-            </Heading>
+                : "Keep Practicing!"}
+            </Text>
 
-            <Text
-              style={{
-                textAlign: "center",
-                color: theme.colors.neutral[600],
-                fontFamily: theme.typography.fontFamily.medium,
-                fontSize: 16,
-                lineHeight: 22,
-                paddingHorizontal: theme.spacing.sm,
-                marginBottom: theme.spacing.lg,
-              }}
-            >
+            <Text style={styles.heroSubtitle}>
               {gameResults.accuracy >= 90
                 ? "Perfect performance! You're a sentence master!"
                 : gameResults.accuracy >= 70
@@ -670,325 +642,86 @@ const SentenceScrambleGame = ({
                 : "Every attempt makes you better. Try again!"}
             </Text>
 
-            {/* Progress Bar */}
-            <View
-              style={{
-                width: "100%",
-                height: 8,
-                backgroundColor: theme.colors.neutral[200],
-                borderRadius: 4,
-                overflow: "hidden",
-              }}
-            >
-              <View
-                style={{
-                  width: `${gameResults.accuracy}%`,
-                  height: "100%",
-                  backgroundColor:
-                    gameResults.accuracy >= 90
-                      ? "#FFD700"
-                      : gameResults.accuracy >= 70
-                      ? theme.colors.brandGreen
-                      : theme.colors.neutral[400],
-                  borderRadius: 4,
-                }}
-              />
+            {/* Accuracy Circle */}
+            <View style={styles.accuracyCircle}>
+              <Text style={styles.accuracyPercentage}>{gameResults.accuracy}%</Text>
+              <Text style={styles.accuracyLabel}>Accuracy</Text>
+            </View>
+          </View>
+
+          {/* Modern Stats Grid */}
+          <View style={styles.statsGrid}>
+            <View style={styles.statItem}>
+              <View style={styles.statIconContainer}>
+                <Ionicons name="star" size={20} color="#6FC935" />
+              </View>
+              <Text style={styles.statValue}>{gameResults.score}</Text>
+              <Text style={styles.statLabel}>Score</Text>
             </View>
 
-            {/* Performance Level Badge */}
-            <View
-              style={{
-                marginTop: theme.spacing.md,
-                paddingHorizontal: 16,
-                paddingVertical: 6,
-                borderRadius: 16,
-                backgroundColor:
-                  gameResults.accuracy >= 90
-                    ? "#FFD700" + "20"
-                    : gameResults.accuracy >= 70
-                    ? theme.colors.brandGreen + "20"
-                    : gameResults.accuracy >= 50
-                    ? "#FF6B35" + "20"
-                    : theme.colors.neutral[200],
-              }}
-            >
-              <Text
-                style={{
-                  color:
-                    gameResults.accuracy >= 90
-                      ? "#B8860B"
-                      : gameResults.accuracy >= 70
-                      ? theme.colors.brandGreen
-                      : gameResults.accuracy >= 50
-                      ? "#FF6B35"
-                      : theme.colors.neutral[600],
-                  fontSize: 14,
-                  fontFamily: theme.typography.fontFamily.bold,
-                  textAlign: "center",
-                }}
-              >
-                {gameResults.accuracy >= 90
-                  ? "EXPERT LEVEL"
-                  : gameResults.accuracy >= 70
-                  ? "ADVANCED LEVEL"
-                  : gameResults.accuracy >= 50
-                  ? "INTERMEDIATE LEVEL"
-                  : "BEGINNER LEVEL"}
+            <View style={styles.statItem}>
+              <View style={styles.statIconContainer}>
+                <Ionicons name="checkmark-circle" size={20} color="#6FC935" />
+              </View>
+              <Text style={styles.statValue}>
+                {gameResults.correctAnswers}/{gameResults.totalQuestions}
+              </Text>
+              <Text style={styles.statLabel}>Correct</Text>
+            </View>
+
+            <View style={styles.statItem}>
+              <View style={styles.statIconContainer}>
+                <Ionicons name="time" size={20} color="#6FC935" />
+              </View>
+              <Text style={styles.statValue}>{Math.round(gameResults.timeSpent || 120)}s</Text>
+              <Text style={styles.statLabel}>Time</Text>
+            </View>
+
+            <View style={styles.statItem}>
+              <View style={styles.statIconContainer}>
+                <Ionicons name="trophy" size={20} color="#6FC935" />
+              </View>
+              <Text style={styles.statValue}>+{Math.floor(gameResults.score * 0.15)}</Text>
+              <Text style={styles.statLabel}>XP Earned</Text>
+            </View>
+          </View>
+
+          {/* Performance Insights */}
+          {gameResults.accuracy >= 90 && (
+            <View style={styles.insightCard}>
+              <View style={styles.insightHeader}>
+                <Ionicons name="trophy" size={24} color="#FFD700" />
+                <Text style={styles.insightTitle}>Perfect Performance!</Text>
+              </View>
+              <Text style={styles.insightText}>
+                You've mastered sentence scrambling! Your accuracy shows excellent understanding of Korean sentence structure.
               </Text>
             </View>
-          </ModernCard>
+          )}
 
-          {/* Enhanced Main Stats Cards */}
-          <Row
-            justify="space-between"
-            style={{ marginBottom: theme.spacing.lg }}
-          >
-            <ModernCard
-              style={{
-                flex: 1,
-                alignItems: "center",
-                padding: theme.spacing.lg,
-                marginRight: theme.spacing.sm,
-                backgroundColor: "#FFD700" + "10",
-                borderRadius: 20,
-                borderWidth: 2,
-                borderColor: "#FFD700" + "40",
-                shadowColor: "#FFD700",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              <View
-                style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
-                  backgroundColor: "#FFD700" + "20",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 12,
-                  borderWidth: 2,
-                  borderColor: "#FFD700" + "30",
-                }}
-              >
-                <Ionicons name="star" size={28} color="#FFD700" />
+          {gameResults.accuracy >= 70 && gameResults.accuracy < 90 && (
+            <View style={styles.insightCard}>
+              <View style={styles.insightHeader}>
+                <Ionicons name="checkmark-circle" size={24} color="#6FC935" />
+                <Text style={styles.insightTitle}>Great Progress!</Text>
               </View>
-              <Text
-                style={{
-                  fontSize: 32,
-                  color: theme.colors.brandNavy,
-                  fontFamily: theme.typography.fontFamily.bold,
-                  marginBottom: 4,
-                }}
-              >
-                {gameResults.score}
+              <Text style={styles.insightText}>
+                You're doing well with sentence structure. Keep practicing to reach perfect accuracy!
               </Text>
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: theme.colors.neutral[600],
-                  fontFamily: theme.typography.fontFamily.semibold,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.8,
-                }}
-              >
-                TOTAL SCORE
-              </Text>
-            </ModernCard>
+            </View>
+          )}
 
-            <ModernCard
-              style={{
-                flex: 1,
-                alignItems: "center",
-                padding: theme.spacing.lg,
-                marginLeft: theme.spacing.sm,
-                backgroundColor:
-                  gameResults.accuracy >= 70
-                    ? theme.colors.brandGreen + "10"
-                    : theme.colors.neutral[100],
-                borderRadius: 20,
-                borderWidth: 2,
-                borderColor:
-                  gameResults.accuracy >= 70
-                    ? theme.colors.brandGreen + "40"
-                    : theme.colors.neutral[300],
-                shadowColor:
-                  gameResults.accuracy >= 70
-                    ? theme.colors.brandGreen
-                    : theme.colors.neutral[400],
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              <View
-                style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
-                  backgroundColor:
-                    gameResults.accuracy >= 70
-                      ? theme.colors.brandGreen + "20"
-                      : theme.colors.neutral[200],
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 12,
-                  borderWidth: 2,
-                  borderColor:
-                    gameResults.accuracy >= 70
-                      ? theme.colors.brandGreen + "30"
-                      : theme.colors.neutral[300],
-                }}
-              >
-                <Ionicons
-                  name="checkmark-circle"
-                  size={28}
-                  color={
-                    gameResults.accuracy >= 70
-                      ? theme.colors.brandGreen
-                      : theme.colors.neutral[500]
-                  }
-                />
+          {gameResults.accuracy < 70 && (
+            <View style={styles.insightCard}>
+              <View style={styles.insightHeader}>
+                <Ionicons name="bulb" size={24} color="#FF6B35" />
+                <Text style={styles.insightTitle}>Learning Opportunity</Text>
               </View>
-              <Text
-                style={{
-                  fontSize: 32,
-                  color: theme.colors.brandNavy,
-                  fontFamily: theme.typography.fontFamily.bold,
-                  marginBottom: 4,
-                }}
-              >
-                {gameResults.accuracy}%
+              <Text style={styles.insightText}>
+                Focus on understanding Korean word order patterns. Practice makes perfect!
               </Text>
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: theme.colors.neutral[600],
-                  fontFamily: theme.typography.fontFamily.semibold,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.8,
-                }}
-              >
-                ACCURACY
-              </Text>
-            </ModernCard>
-          </Row>
-
-          {/* Enhanced Secondary Stats */}
-          <Row
-            justify="space-between"
-            style={{ marginBottom: theme.spacing.xl }}
-          >
-            <ModernCard
-              style={{
-                flex: 1,
-                alignItems: "center",
-                padding: theme.spacing.md,
-                marginRight: theme.spacing.xs,
-                backgroundColor: theme.colors.neutral[50],
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: theme.colors.neutral[200],
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 20,
-                  color: theme.colors.brandNavy,
-                  fontFamily: theme.typography.fontFamily.bold,
-                  marginBottom: 2,
-                }}
-              >
-                {gameResults.correctAnswers ||
-                  Math.round((gameResults.score * gameResults.accuracy) / 100)}
-                /{gameResults.totalQuestions || 10}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 11,
-                  color: theme.colors.neutral[600],
-                  fontFamily: theme.typography.fontFamily.semibold,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                }}
-              >
-                CORRECT
-              </Text>
-            </ModernCard>
-
-            <ModernCard
-              style={{
-                flex: 1,
-                alignItems: "center",
-                padding: theme.spacing.md,
-                marginHorizontal: theme.spacing.xs,
-                backgroundColor: theme.colors.neutral[50],
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: theme.colors.neutral[200],
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 20,
-                  color: theme.colors.brandNavy,
-                  fontFamily: theme.typography.fontFamily.bold,
-                  marginBottom: 2,
-                }}
-              >
-                {Math.round(gameResults.timeSpent || 120)}s
-              </Text>
-              <Text
-                style={{
-                  fontSize: 11,
-                  color: theme.colors.neutral[600],
-                  fontFamily: theme.typography.fontFamily.semibold,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                }}
-              >
-                TIME
-              </Text>
-            </ModernCard>
-
-            <ModernCard
-              style={{
-                flex: 1,
-                alignItems: "center",
-                padding: theme.spacing.md,
-                marginLeft: theme.spacing.xs,
-                backgroundColor: theme.colors.neutral[50],
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: theme.colors.neutral[200],
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 20,
-                  color: theme.colors.brandNavy,
-                  fontFamily: theme.typography.fontFamily.bold,
-                  marginBottom: 2,
-                }}
-              >
-                +{Math.floor(gameResults.score * 0.15)}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 11,
-                  color: theme.colors.neutral[600],
-                  fontFamily: theme.typography.fontFamily.semibold,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                }}
-              >
-                BONUS
-              </Text>
-            </ModernCard>
-          </Row>
+            </View>
+          )}
 
           {/* Enhanced Rewards Section */}
           {gameResults.rewards && gameResults.rewards.length > 0 && (
@@ -1123,74 +856,56 @@ const SentenceScrambleGame = ({
             </ModernCard>
           )}
 
-          {/* Enhanced Action Buttons */}
-          <View style={{ marginBottom: theme.spacing.lg }}>
+          {/* Modern Action Buttons */}
+          <View style={styles.actionButtons}>
             {gameResults.accuracy < 70 && (
               <TouchableOpacity
                 onPress={() => {
-                  /* handle retry */
+                  console.log("🔄 Retrying game...");
+                  // Reset all game state
+                  setGameCompleted(false);
+                  setGameResults(null);
+                  setCurrentSentenceIndex(0);
+                  setScore(0);
+                  setCorrectAnswers(0);
+                  setSelectedWords([]);
+                  setScrambledWords([]);
+                  setIsCorrect(null);
+                  setIsTransitioning(false);
+                  setStartTime(Date.now());
+                  setEndTime(null);
+
+                  // Reset animations
+                  fadeAnim.setValue(1);
+                  slideAnim.setValue(0);
+                  progressAnim.setValue(0);
+
+                  // Reinitialize the game with existing sentences
+                  if (gameSentences.length > 0) {
+                    console.log("🎮 Reinitializing game with existing sentences");
+                    initializeGame(gameSentences);
+                  } else {
+                    console.log("🎮 Loading new content for retry");
+                    // Reload content if no sentences available
+                    if (sentences.length > 0) {
+                      initializeGame(sentences);
+                    } else if (lessonId && lessonId !== "practice") {
+                      loadSentencesFromLesson(lessonId);
+                    } else {
+                      loadContentFromService();
+                    }
+                  }
                 }}
-                style={{
-                  backgroundColor: theme.colors.neutral[100],
-                  borderRadius: 16,
-                  padding: theme.spacing.lg,
-                  alignItems: "center",
-                  marginBottom: theme.spacing.md,
-                  borderWidth: 2,
-                  borderColor: theme.colors.neutral[200],
-                  flexDirection: "row",
-                  justifyContent: "center",
-                }}
+                style={styles.retryButton}
               >
-                <Ionicons
-                  name="refresh"
-                  size={20}
-                  color={theme.colors.neutral[600]}
-                  style={{ marginRight: 8 }}
-                />
-                <Text
-                  style={{
-                    color: theme.colors.neutral[700],
-                    fontSize: 16,
-                    fontFamily: theme.typography.fontFamily.semibold,
-                  }}
-                >
-                  Try Again
-                </Text>
+                <Ionicons name="refresh" size={20} color="#666" />
+                <Text style={styles.retryButtonText}>Try Again</Text>
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              onPress={handleContinue}
-              style={{
-                backgroundColor: theme.colors.brandGreen,
-                borderRadius: 16,
-                padding: theme.spacing.lg,
-                alignItems: "center",
-                flexDirection: "row",
-                justifyContent: "center",
-                shadowColor: theme.colors.brandGreen,
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.3,
-                shadowRadius: 10,
-                elevation: 8,
-              }}
-            >
-              <Text
-                style={{
-                  color: theme.colors.brandWhite,
-                  fontSize: 16,
-                  fontFamily: theme.typography.fontFamily.bold,
-                  marginRight: 8,
-                }}
-              >
-                Continue Learning
-              </Text>
-              <Ionicons
-                name="arrow-forward"
-                size={20}
-                color={theme.colors.brandWhite}
-              />
+            <TouchableOpacity onPress={handleContinue} style={styles.continueButton}>
+              <Text style={styles.continueButtonText}>Continue Learning</Text>
+              <Ionicons name="arrow-forward" size={20} color="white" />
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -1500,5 +1215,202 @@ const SentenceScrambleGame = ({
     </View>
   );
 };
+
+// Modern Results Page Styles
+const styles = StyleSheet.create({
+  // Results Container
+  resultsContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 24,
+    paddingBottom: 100,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 32,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontFamily: 'Montserrat-Bold',
+    color: '#0A2240',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    fontFamily: 'Montserrat-Medium',
+    color: '#666',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Hero Section
+  heroSection: {
+    alignItems: 'center',
+    marginBottom: 40,
+    paddingVertical: 32,
+  },
+  emojiContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#F8FFFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  performanceEmoji: {
+    fontSize: 64,
+  },
+  heroTitle: {
+    fontSize: 32,
+    fontFamily: 'Montserrat-Bold',
+    color: '#0A2240',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    fontFamily: 'Montserrat-Regular',
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  accuracyCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#6FC935',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accuracyPercentage: {
+    fontSize: 24,
+    fontFamily: 'Montserrat-Bold',
+    color: 'white',
+  },
+  accuracyLabel: {
+    fontSize: 12,
+    fontFamily: 'Montserrat-Medium',
+    color: 'white',
+    opacity: 0.9,
+  },
+
+  // Stats Grid
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 32,
+    gap: 16,
+  },
+  statItem: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#FAFAFA',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+  },
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E8F5E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  statValue: {
+    fontSize: 24,
+    fontFamily: 'Montserrat-Bold',
+    color: '#0A2240',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontFamily: 'Montserrat-Medium',
+    color: '#666',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  // Insight Cards
+  insightCard: {
+    backgroundColor: '#FAFAFA',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+  },
+  insightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  insightTitle: {
+    fontSize: 18,
+    fontFamily: 'Montserrat-SemiBold',
+    color: '#0A2240',
+    marginLeft: 12,
+  },
+  insightText: {
+    fontSize: 14,
+    fontFamily: 'Montserrat-Regular',
+    color: '#666',
+    lineHeight: 20,
+  },
+
+  // Action Buttons
+  actionButtons: {
+    gap: 12,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 16,
+    padding: 16,
+    gap: 8,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontFamily: 'Montserrat-SemiBold',
+    color: '#666',
+  },
+  continueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6FC935',
+    borderRadius: 16,
+    padding: 16,
+    gap: 8,
+  },
+  continueButtonText: {
+    fontSize: 16,
+    fontFamily: 'Montserrat-Bold',
+    color: 'white',
+  },
+});
 
 export default SentenceScrambleGame;

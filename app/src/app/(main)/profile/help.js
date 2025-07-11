@@ -14,6 +14,7 @@ import {
   ModernButton 
 } from '../../../shared/components';
 import { Ionicons } from '@expo/vector-icons';
+import { TUTOR_NAME } from '../../../shared/constants/tutorConstants';
 
 /**
  * Help & Support Screen
@@ -28,7 +29,7 @@ export default function HelpScreen() {
     {
       id: 'faq1',
       question: 'How do I start a conversation with the AI tutor?',
-      answer: 'To start a conversation with the AI tutor, go to the Home tab and tap on "Talk with Cooper" or select a learning scenario. You can also start a new conversation from the Chats tab by tapping the "+" button.',
+      answer: `To start a conversation with the AI tutor, go to the Home tab and tap on "Talk with ${TUTOR_NAME}" or select a learning scenario. You can also start a new conversation from the Chats tab by tapping the "+" button.`,
     },
     {
       id: 'faq2',

@@ -18,6 +18,15 @@ export const useWebRTCConversation = () => {
   const [connectionState, setConnectionState] = useState('new');
   const [error, setError] = useState(null);
 
+  // Session control state
+  const [userEndedSession, setUserEndedSession] = useState(false);
+  const [allowAutoRestart, setAllowAutoRestart] = useState(true);
+
+  // Transcription state
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const [currentUserTranscript, setCurrentUserTranscript] = useState("");
+  const [currentAITranscript, setCurrentAITranscript] = useState("");
+
   // Track if service is initialized
   const [isInitialized, setIsInitialized] = useState(false);
   const initializationRef = useRef(false);
@@ -64,6 +73,11 @@ export const useWebRTCConversation = () => {
     setCurrentScenario(serviceState.currentScenario);
     setCurrentLevel(serviceState.currentLevel);
     setCurrentAudioLevel(serviceState.currentAudioLevel);
+    setUserEndedSession(serviceState.userEndedSession);
+    setAllowAutoRestart(serviceState.allowAutoRestart);
+    setConversationHistory(serviceState.conversationHistory || []);
+    setCurrentUserTranscript(serviceState.currentUserTranscript || "");
+    setCurrentAITranscript(serviceState.currentAITranscript || "");
   }, []);
 
   /**
@@ -210,6 +224,22 @@ export const useWebRTCConversation = () => {
       setIsAISpeaking(false);
     };
 
+    // Transcript event handlers
+    const handleUserTranscriptComplete = (transcript) => {
+      console.log("🎯 User transcript complete:", transcript);
+      setConversationHistory(prev => [...prev, transcript]);
+    };
+
+    const handleAITranscriptDelta = ({ delta, transcript }) => {
+      setCurrentAITranscript(transcript);
+    };
+
+    const handleAITranscriptComplete = (transcript) => {
+      console.log("🎯 AI transcript complete:", transcript);
+      setConversationHistory(prev => [...prev, transcript]);
+      setCurrentAITranscript("");
+    };
+
     // Error handler
     const handleError = (errorData) => {
       console.error("🎯 Service error:", errorData);
@@ -235,6 +265,9 @@ export const useWebRTCConversation = () => {
     service.on('userSpeechStopped', handleUserSpeechStopped);
     service.on('aiSpeechStarted', handleAISpeechStarted);
     service.on('aiSpeechEnded', handleAISpeechEnded);
+    service.on('userTranscriptComplete', handleUserTranscriptComplete);
+    service.on('aiTranscriptDelta', handleAITranscriptDelta);
+    service.on('aiTranscriptComplete', handleAITranscriptComplete);
     service.on('error', handleError);
     service.on('initialized', handleInitialized);
 
@@ -250,6 +283,9 @@ export const useWebRTCConversation = () => {
       service.off('userSpeechStopped', handleUserSpeechStopped);
       service.off('aiSpeechStarted', handleAISpeechStarted);
       service.off('aiSpeechEnded', handleAISpeechEnded);
+      service.off('userTranscriptComplete', handleUserTranscriptComplete);
+      service.off('aiTranscriptDelta', handleAITranscriptDelta);
+      service.off('aiTranscriptComplete', handleAITranscriptComplete);
       service.off('error', handleError);
       service.off('initialized', handleInitialized);
     };
@@ -261,6 +297,82 @@ export const useWebRTCConversation = () => {
       initialize();
     }
   }, [initialize]);
+
+  /**
+   * Stop session by user action (prevents auto-restart)
+   */
+  const stopSessionByUser = useCallback(async () => {
+    try {
+      setError(null);
+      console.log("🎯 Stopping session by user action from hook");
+      
+      await webRTCConversationService.stopSessionByUser();
+      
+      // Update local state
+      setIsConnected(false);
+      setIsSessionActive(false);
+      setIsAISpeaking(false);
+      setCurrentScenario(null);
+      setCurrentLevel("beginner");
+      setConnectionState('new');
+      setUserEndedSession(true);
+      setAllowAutoRestart(false);
+      
+    } catch (error) {
+      console.error("🎯 Error stopping session by user:", error);
+      setError(error);
+    }
+  }, []);
+
+  /**
+   * Reset session control flags (allow auto-restart again)
+   */
+  const resetSessionControlFlags = useCallback(() => {
+    try {
+      console.log("🎯 Resetting session control flags from hook");
+      webRTCConversationService.resetSessionControlFlags();
+      setUserEndedSession(false);
+      setAllowAutoRestart(true);
+    } catch (error) {
+      console.error("🎯 Error resetting session control flags:", error);
+    }
+  }, []);
+
+  /**
+   * Clear all data and force disconnect
+   */
+  const clearAllData = useCallback(async () => {
+    try {
+      console.log("🧹 Clearing all WebRTC data and forcing disconnect");
+
+      // Stop session first
+      await webRTCConversationService.stopSession();
+
+      // Force destroy the service to clean up all resources
+      await webRTCConversationService.destroy();
+
+      // Reset all local state
+      setIsConnected(false);
+      setIsSessionActive(false);
+      setIsAISpeaking(false);
+      setCurrentScenario(null);
+      setCurrentLevel("beginner");
+      setConnectionState('new');
+      setError(null);
+      setUserEndedSession(false);
+      setAllowAutoRestart(true);
+      setConversationHistory([]);
+      setCurrentUserTranscript("");
+      setCurrentAITranscript("");
+      setIsInitialized(false);
+      initializationRef.current = false;
+
+      console.log("✅ All WebRTC data cleared and disconnected");
+    } catch (error) {
+      console.error("❌ Error clearing all data:", error);
+      setError(error);
+    }
+  }, []);
 
   return {
     // State
@@ -275,6 +387,11 @@ export const useWebRTCConversation = () => {
     currentAudioLevel,
     connectionState,
     error,
+    userEndedSession,
+    allowAutoRestart,
+    conversationHistory,
+    currentUserTranscript,
+    currentAITranscript,
 
     // Actions
     initialize,
@@ -282,6 +399,9 @@ export const useWebRTCConversation = () => {
     stopSession,
     changeScenario,
     getServiceState,
+    stopSessionByUser,
+    resetSessionControlFlags,
+    clearAllData,
 
     // Computed state
     isConnecting: connectionState === 'connecting',

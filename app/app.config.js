@@ -2,7 +2,7 @@
 const config = {
   name: "UNextDoor",
   slug: "UNextDoor",
-  version: "1.0.1", // bumped version
+  version: "1.0.2", // bumped version for production
   orientation: "portrait",
   icon: "./src/assets/app-logo-square.png",
   userInterfaceStyle: "light",
@@ -25,9 +25,12 @@ const config = {
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSPhotoLibraryUsageDescription: "This app needs access to your photo library to allow you to upload and select photos for your profile and other features.",
+      NSCameraUsageDescription: "Allow UNextDoor to access your camera for video conversations",
+      NSMicrophoneUsageDescription: "Allow UNextDoor to access your microphone for voice conversations",
+      NSLocationWhenInUseUsageDescription: "Allow UNextDoor to access your location for location-based features",
     },
   },
-  runtimeVersion: "1.0.1", // keep in sync with version
+  runtimeVersion: "1.0.2", // keep in sync with version
   android: {
     adaptiveIcon: {
       foregroundImage: "./src/assets/app-logo-square.png",
@@ -47,6 +50,10 @@ const config = {
       "android.permission.MODIFY_AUDIO_SETTINGS",
       "android.permission.INTERNET",
       "android.permission.BLUETOOTH",
+      "android.permission.ACCESS_FINE_LOCATION",
+      "android.permission.ACCESS_COARSE_LOCATION",
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
     ],
   },
   web: {

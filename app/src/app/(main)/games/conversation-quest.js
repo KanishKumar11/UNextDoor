@@ -6,6 +6,7 @@ import { useTheme } from "../../../shared/context/ThemeContext";
 import ConversationQuestGame from "../../../features/games/components/ConversationQuestGame";
 import { useAchievements } from "../../../features/achievements/context/AchievementContext";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
+import { TUTOR_NAME } from "../../../shared/constants/tutorConstants";
 
 /**
  * Conversation Quest Game Screen
@@ -28,7 +29,7 @@ const ConversationQuestGameScreen = () => {
         id: "basic-greetings",
         title: "Basic Greetings",
         description: "Practice saying hello and introducing yourself",
-        systemPrompt: `You are Cooper, a friendly Korean language tutor. Help the student practice basic greetings in Korean.
+        systemPrompt: `You are ${TUTOR_NAME}, a friendly Korean language tutor. Help the student practice basic greetings in Korean.
 
         Guidelines:
         - Start with a simple greeting in Korean
@@ -41,7 +42,7 @@ const ConversationQuestGameScreen = () => {
 
         Scenario: You meet the student for the first time. Greet them and help them practice basic introductions.`,
         initialMessage:
-          "안녕하세요! (Hello!) I'm Cooper, your Korean tutor. What's your name? Try to respond in Korean!",
+          `안녕하세요! (Hello!) I'm ${TUTOR_NAME}, your Korean tutor. What's your name? Try to respond in Korean!`,
         vocabulary: ["안녕하세요", "저는", "이름", "만나서 반갑습니다"],
         xpReward: 40,
         duration: 5, // minutes
@@ -50,7 +51,7 @@ const ConversationQuestGameScreen = () => {
         id: "ordering-food",
         title: "Ordering Food",
         description: "Learn to order food at a Korean restaurant",
-        systemPrompt: `You are Cooper, a friendly Korean language tutor. Help the student practice ordering food in Korean.
+        systemPrompt: `You are ${TUTOR_NAME}, a friendly Korean language tutor. Help the student practice ordering food in Korean.
 
         Guidelines:
         - Act as a restaurant server
@@ -72,7 +73,7 @@ const ConversationQuestGameScreen = () => {
         id: "shopping",
         title: "Shopping",
         description: "Practice shopping conversations in Korean",
-        systemPrompt: `You are Cooper, a friendly Korean language tutor. Help the student practice shopping in Korean.
+        systemPrompt: `You are ${TUTOR_NAME}, a friendly Korean language tutor. Help the student practice shopping in Korean.
 
         Guidelines:
         - Act as a shop clerk
@@ -95,7 +96,7 @@ const ConversationQuestGameScreen = () => {
         id: "asking-directions",
         title: "Asking for Directions",
         description: "Learn to ask for and give directions in Korean",
-        systemPrompt: `You are Cooper, a friendly Korean language tutor. Help the student practice asking for directions in Korean.
+        systemPrompt: `You are ${TUTOR_NAME}, a friendly Korean language tutor. Help the student practice asking for directions in Korean.
 
         Guidelines:
         - Act as a helpful local person
@@ -116,7 +117,7 @@ const ConversationQuestGameScreen = () => {
         id: "job-interview",
         title: "Job Interview",
         description: "Practice job interview conversations",
-        systemPrompt: `You are Cooper, a friendly Korean language tutor. Help the student practice job interview Korean.
+        systemPrompt: `You are ${TUTOR_NAME}, a friendly Korean language tutor. Help the student practice job interview Korean.
 
         Guidelines:
         - Act as an interviewer
@@ -139,7 +140,7 @@ const ConversationQuestGameScreen = () => {
         id: "business-meeting",
         title: "Business Meeting",
         description: "Practice formal business conversations",
-        systemPrompt: `You are Cooper, a friendly Korean language tutor. Help the student practice business Korean.
+        systemPrompt: `You are ${TUTOR_NAME}, a friendly Korean language tutor. Help the student practice business Korean.
 
         Guidelines:
         - Use formal business language

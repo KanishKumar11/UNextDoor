@@ -3,7 +3,7 @@
  */
 
 // AI Tutor name
-export const AI_TUTOR_NAME = "Cooper";
+export const AI_TUTOR_NAME = "Miles";
 
 // Contact information
 export const SUPPORT_EMAIL = "support@UNextDoor.app";

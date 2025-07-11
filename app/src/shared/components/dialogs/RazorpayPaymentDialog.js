@@ -25,7 +25,7 @@ const RazorpayPaymentDialog = ({
 }) => {
   const { theme } = useTheme();
   const [processing, setProcessing] = useState(false);
-  const [paymentStep, setPaymentStep] = useState('webview'); // 'review', 'webview', 'processing', 'success', 'failed'
+  const [paymentStep, setPaymentStep] = useState('webview'); // 'webview', 'processing', 'success', 'failed'
   const [webViewUrl, setWebViewUrl] = useState('');
   const webViewRef = useRef(null);
 
@@ -37,20 +37,37 @@ const RazorpayPaymentDialog = ({
     paymentStep
   });
 
+  console.log('💳 Current webViewUrl:', webViewUrl);
+  console.log('💳 Current paymentStep:', paymentStep);
+
   // Initialize webview URL when component mounts or orderDetails change
   useEffect(() => {
-    if (visible && orderDetails && paymentStep === 'webview') {
+    console.log('🔄 useEffect triggered:', { visible, hasOrderDetails: !!orderDetails, paymentStep });
+    if (visible && orderDetails) {
+      // Always set webview URL when dialog is visible and has order details
       const webUrl = createRazorpayWebCheckout();
       console.log('🌐 Initializing WebView URL:', webUrl?.substring(0, 100) + '...');
       setWebViewUrl(webUrl);
     }
-  }, [visible, orderDetails, paymentStep]);
+  }, [visible, orderDetails]);
+
+  // Reset payment step when dialog opens
+  useEffect(() => {
+    if (visible) {
+      console.log('🔄 Dialog opened, resetting to webview step');
+      setPaymentStep('webview');
+      setProcessing(false);
+    }
+  }, [visible]);
 
   // Safety check - don't render if essential data is missing
   if (!visible || !orderDetails) {
     console.log('❌ Payment dialog not rendering - missing data:', { visible, orderDetails });
     return null;
   }
+
+  // Debug: Log what we're about to render
+  console.log('✅ Payment dialog rendering with paymentStep:', paymentStep, 'webViewUrl:', webViewUrl?.substring(0, 50));
 
   const createRazorpayWebCheckout = () => {
     console.log('🔗 Checking for payment URL:', orderDetails?.paymentUrl);
@@ -300,7 +317,12 @@ const RazorpayPaymentDialog = ({
         case 'payment_success':
           setPaymentStep('success');
           setTimeout(() => {
-            onPaymentSuccess(message.data);
+            // Include plan details and order details in the success callback
+            onPaymentSuccess({
+              ...message.data,
+              planDetails: planDetails,
+              orderDetails: orderDetails
+            });
             onClose();
           }, 2000);
           break;
@@ -315,7 +337,7 @@ const RazorpayPaymentDialog = ({
 
         case 'PAYMENT_CANCELLED':
         case 'payment_cancelled':
-          setPaymentStep('review');
+          onClose(); // Close dialog directly instead of showing review
           break;
 
         default:
@@ -337,204 +359,25 @@ const RazorpayPaymentDialog = ({
     }
   };
 
-  const renderReviewStep = () => (
-    <>
-      {/* Header */}
-      <View style={{ marginBottom: 24 }}>
-        <Row align="center" style={{ marginBottom: 8 }}>
-          <View
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-              backgroundColor: theme.colors.brandGreen + '20',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 12,
-            }}
-          >
-            <Ionicons name="card" size={24} color={theme.colors.brandGreen} />
-          </View>
-          <Column style={{ flex: 1 }}>
-            <Heading level="h3" style={{ color: theme.colors.brandNavy, marginBottom: 4 }}>
-              Complete Payment
-            </Heading>
-            <Text variant="caption" style={{ color: theme.colors.neutral[600] }}>
-              Secure payment powered by Razorpay
-            </Text>
-          </Column>
-        </Row>
-      </View>
-
-      {/* Order Summary */}
-      <View
-        style={{
-          backgroundColor: theme.colors.neutral[50],
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 24,
-        }}
-      >
-        <Text weight="semibold" style={{ color: theme.colors.brandNavy, marginBottom: 12 }}>
-          Order Summary
-        </Text>
-        
-        <Row justify="space-between" align="center" style={{ marginBottom: 8 }}>
-          <Text style={{ color: theme.colors.neutral[700] }}>Plan</Text>
-          <Text weight="semibold" style={{ color: theme.colors.brandNavy }}>
-            {planDetails?.name || 'Subscription Plan'}
+  const renderWebViewStep = () => {
+    console.log('🌐 Rendering WebView step with URL:', webViewUrl);
+    
+    if (!webViewUrl) {
+      return (
+        <View style={{ flex: 1, minHeight: height * 0.7, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={theme.colors.brandGreen} />
+          <Text style={{ marginTop: 12, color: theme.colors.neutral[600] }}>
+            Initializing payment gateway...
           </Text>
-        </Row>
-
-        <Row justify="space-between" align="center" style={{ marginBottom: 8 }}>
-          <Text style={{ color: theme.colors.neutral[700] }}>Duration</Text>
-          <Text style={{ color: theme.colors.neutral[700] }}>
-            {planDetails?.intervalCount === 3 ? 'Quarterly' :
-             planDetails?.intervalCount === 12 ? 'Yearly' : 'Monthly'}
-          </Text>
-        </Row>
-
-        {orderDetails.prorationCredit > 0 && (
-          <Row justify="space-between" align="center" style={{ marginBottom: 8 }}>
-            <Text style={{ color: theme.colors.success.main }}>Credit Applied</Text>
-            <Text style={{ color: theme.colors.success.main }}>
-              -₹{orderDetails.prorationCredit}
-            </Text>
-          </Row>
-        )}
-        
-        <View style={{ height: 1, backgroundColor: theme.colors.neutral[200], marginVertical: 12 }} />
-        
-        <Row justify="space-between" align="center">
-          <Text weight="semibold" style={{ color: theme.colors.brandNavy }}>
-            Total Amount
-          </Text>
-          <Text weight="bold" style={{ color: theme.colors.brandGreen, fontSize: 18 }}>
-            ₹{orderDetails?.amount || 0}
-          </Text>
-        </Row>
-      </View>
-
-      {/* Payment Methods */}
-      <View style={{ marginBottom: 24 }}>
-        <Text weight="semibold" style={{ color: theme.colors.brandNavy, marginBottom: 12 }}>
-          Payment Methods
-        </Text>
-        
-        <View
-          style={{
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: theme.colors.neutral[200],
-            overflow: 'hidden',
-          }}
-        >
-          {[
-            { icon: 'card', label: 'Credit/Debit Card', sublabel: 'Visa, Mastercard, Rupay' },
-            { icon: 'phone-portrait', label: 'UPI', sublabel: 'GPay, PhonePe, Paytm' },
-            { icon: 'business', label: 'Net Banking', sublabel: 'All major banks' },
-            { icon: 'wallet', label: 'Wallets', sublabel: 'Paytm, PhonePe, Amazon Pay' },
-          ].map((method, index) => (
-            <View
-              key={method.label}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                padding: 12,
-                backgroundColor: theme.colors.brandWhite,
-                borderBottomWidth: index < 3 ? 1 : 0,
-                borderBottomColor: theme.colors.neutral[100],
-              }}
-            >
-              <Ionicons
-                name={method.icon}
-                size={20}
-                color={theme.colors.brandGreen}
-                style={{ marginRight: 12 }}
-              />
-              <Column style={{ flex: 1 }}>
-                <Text weight="medium" style={{ color: theme.colors.brandNavy }}>
-                  {method.label}
-                </Text>
-                <Text variant="caption" style={{ color: theme.colors.neutral[600] }}>
-                  {method.sublabel}
-                </Text>
-              </Column>
-              <Ionicons
-                name="chevron-forward"
-                size={16}
-                color={theme.colors.neutral[400]}
-              />
-            </View>
-          ))}
         </View>
-      </View>
+      );
+    }
 
-      {/* Security Notice */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-          backgroundColor: theme.colors.info.main + '10',
-          borderRadius: 8,
-          padding: 12,
-          marginBottom: 24,
-        }}
-      >
-        <Ionicons
-          name="shield-checkmark"
-          size={20}
-          color={theme.colors.info.main}
-          style={{ marginRight: 8, marginTop: 2 }}
-        />
-        <Column style={{ flex: 1 }}>
-          <Text
-            variant="caption"
-            weight="medium"
-            style={{ color: theme.colors.info.main, marginBottom: 2 }}
-          >
-            Secure Payment
-          </Text>
-          <Text variant="caption" style={{ color: theme.colors.neutral[700], lineHeight: 16 }}>
-            Your payment is secured with 256-bit SSL encryption. We don't store your card details.
-          </Text>
-        </Column>
-      </View>
-
-      {/* Action Buttons */}
-      <Row>
-        <ModernButton
-          text="Cancel"
-          variant="outline"
-          size="md"
-          onPress={handleCancel}
-          style={{
-            flex: 1,
-            marginRight: 12,
-            borderColor: theme.colors.neutral[300],
-          }}
-          textStyle={{ color: theme.colors.neutral[600] }}
-        />
-        <ModernButton
-          text="Pay Now"
-          variant="solid"
-          size="md"
-          onPress={handlePayment}
-          style={{
-            flex: 2,
-            backgroundColor: theme.colors.brandGreen,
-          }}
-          textStyle={{ color: theme.colors.brandWhite }}
-        />
-      </Row>
-    </>
-  );
-
-  const renderWebViewStep = () => (
+    return (
     <View style={{ flex: 1, minHeight: height * 0.7 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
         <TouchableOpacity
-          onPress={() => setPaymentStep('review')}
+          onPress={onClose}
           style={{
             padding: 8,
             marginRight: 12,
@@ -578,7 +421,7 @@ const RazorpayPaymentDialog = ({
               'Failed to load payment gateway. Please try again.',
               [
                 { text: 'Retry', onPress: handlePayment },
-                { text: 'Cancel', onPress: () => setPaymentStep('review') }
+                { text: 'Cancel', onPress: onClose }
               ]
             );
           }}
@@ -586,7 +429,8 @@ const RazorpayPaymentDialog = ({
         />
       </View>
     </View>
-  );
+    );
+  };
 
   const renderProcessingStep = () => (
     <View style={{ alignItems: 'center', paddingVertical: 40 }}>
@@ -672,7 +516,7 @@ const RazorpayPaymentDialog = ({
         text="Try Again"
         variant="solid"
         size="md"
-        onPress={() => setPaymentStep('review')}
+        onPress={() => setPaymentStep('webview')}
         style={{
           backgroundColor: theme.colors.brandGreen,
           paddingHorizontal: 32,
@@ -706,7 +550,7 @@ const RazorpayPaymentDialog = ({
           }}
         >
           {/* Close Button */}
-          {!processing && paymentStep === 'review' && (
+          {!processing && (
             <TouchableOpacity
               onPress={handleCancel}
               style={{
@@ -728,11 +572,13 @@ const RazorpayPaymentDialog = ({
             contentContainerStyle={{ padding: 24 }}
             showsVerticalScrollIndicator={false}
           >
-            {paymentStep === 'review' && renderReviewStep()}
             {paymentStep === 'webview' && renderWebViewStep()}
             {paymentStep === 'processing' && renderProcessingStep()}
             {paymentStep === 'success' && renderSuccessStep()}
             {paymentStep === 'failed' && renderFailedStep()}
+            
+            {/* Fallback: if step is 'review' or unknown, show webview */}
+            {!['webview', 'processing', 'success', 'failed'].includes(paymentStep) && renderWebViewStep()}
           </ScrollView>
         </View>
       </View>

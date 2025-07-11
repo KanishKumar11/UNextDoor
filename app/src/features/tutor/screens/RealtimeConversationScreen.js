@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import PersistentConversationView from "../components/PersistentConversationView";
 import modernTheme from "../../../shared/styles/modernTheme";
+import { useWebRTCConversation } from "../hooks/useWebRTCConversation";
 
 /**
  * RealtimeConversationScreen component
@@ -28,6 +29,9 @@ const RealtimeConversationScreen = () => {
   // State
   const [transcripts, setTranscripts] = useState([]);
   const [selectedScenario, setSelectedScenario] = useState(null);
+
+  // Get the resetSessionControlFlags function from the hook
+  const { resetSessionControlFlags } = useWebRTCConversation();
 
   // Available scenarios
   const scenarios = [
@@ -68,9 +72,11 @@ const RealtimeConversationScreen = () => {
 
   // Handle scenario selection
   const handleScenarioSelect = useCallback((scenario) => {
+    // Reset session control flags to allow auto-restart for new scenario
+    resetSessionControlFlags();
     setSelectedScenario(scenario);
     setTranscripts([]);
-  }, []);
+  }, [resetSessionControlFlags]);
 
   // Render scenario selection
   const renderScenarioSelection = () => (
@@ -149,7 +155,8 @@ const RealtimeConversationScreen = () => {
               scenarioId={selectedScenario.id}
               level={selectedScenario.level}
               onSessionEnd={() => {
-                console.log("Session ended");
+                console.log("Session ended - returning to scenario selection");
+                setSelectedScenario(null);
               }}
               style={styles.conversationComponent}
             />

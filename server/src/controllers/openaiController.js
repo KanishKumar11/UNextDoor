@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 import config from "../config/index.js";
 import { realtimeSessionService } from "../services/realtimeSessionService.js";
 import { analyticsService } from "../services/analyticsService.js";
+import { createTeachingPrompt } from "../data/promptTemplates.js";
 
 /**
  * Generate an ephemeral token for OpenAI's Realtime API
@@ -20,20 +21,22 @@ export const getRealtimeToken = async (req, res) => {
   try {
     // Get user ID from authenticated request
     const userId = req.user.id;
-    console.log(userId);
+    console.log(`🎯 Realtime token request from user: ${userId}`);
 
     // Extract options from request body
     const {
-      model = "gpt-4o-mini-realtime-preview-2024-12-17", // Use the correct model name for Realtime API
-      voice = "alloy",
+      model = "gpt-4o-realtime-preview-2025-06-03", // Updated realtime model
+      voice = "alloy-teacher", // Use teacher-style voice
       scenarioId,
-      isScenarioBased,
+      isScenarioBased = false,
+      isLessonBased = false,
+      lessonDetails = "",
       conversationId,
       level,
     } = req.body;
 
     console.log(
-      `OpenAI token request: model=${model}, scenarioId=${
+      `🎯 OpenAI token request: model=${model}, scenarioId=${
         scenarioId || "none"
       }, level=${level || "not specified"}, isScenarioBased=${
         isScenarioBased || false
@@ -43,27 +46,14 @@ export const getRealtimeToken = async (req, res) => {
     // Import scenario prompts
     const { getScenarioPrompt } = await import("../data/scenarioPrompts.js");
 
-    // Determine the appropriate instructions based on scenario
-    let instructions =
-      "You are a helpful AI language tutor specializing in teaching Korean to English speakers. Respond in Korean with English translations when appropriate.";
-
-    // If this is a scenario-based conversation, use the appropriate prompt
-    if (isScenarioBased && scenarioId) {
-      // Get the user's proficiency level (use the provided level or default to beginner)
-      const userLevel = level ? level.toLowerCase() : "beginner";
-
-      // Get the scenario-specific prompt
-      instructions = getScenarioPrompt(scenarioId, userLevel);
-      console.log(
-        `Using scenario prompt for ${scenarioId}, level: ${userLevel}`
-      );
-      console.log(
-        `Prompt instructions (first 100 chars): ${instructions.substring(
-          0,
-          100
-        )}...`
-      );
-    }
+    // Generate prompt instructions using centralized template
+    const instructions = createTeachingPrompt({
+      isScenarioBased,
+      scenarioId,
+      isLessonBased,
+      lessonDetails,
+      level,
+    });
 
     // Call OpenAI API to generate token
     const response = await fetch(

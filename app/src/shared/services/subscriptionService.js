@@ -33,18 +33,42 @@ export class SubscriptionService {
   /**
    * Get upgrade preview for a plan
    * @param {string} planId - The plan ID to upgrade to
+   * @param {object} options - Additional options (currency, etc.)
    */
-  static async getUpgradePreview(planId) {
-    const response = await apiClient.get(`/subscriptions/upgrade-preview/${planId}`);
+  static async getUpgradePreview(planId, options = {}) {
+    const response = await apiClient.post(`/subscriptions/upgrade-preview/${planId}`, options);
     return response.data;
   }
 
   /**
-   * Create a payment order
+   * Create a payment order (legacy one-time payment)
    * @param {string} planId - The plan ID to purchase
    */
   static async createOrder(planId) {
     const response = await apiClient.post('/subscriptions/create-order', { planId });
+    return response.data;
+  }
+
+  /**
+   * Create a recurring subscription
+   * @param {string} planId - The plan ID to subscribe to
+   * @param {Object} options - Additional options (currency, etc.)
+   */
+  static async createRecurringSubscription(planId, options = {}) {
+    console.log('🔄 SubscriptionService.createRecurringSubscription called:', { planId, options });
+
+    // Ensure currency is included in the request
+    const requestData = {
+      planId,
+      currency: options.currency || 'INR', // Default to INR if not specified
+      ...options
+    };
+
+    console.log('📤 Sending recurring subscription request:', requestData);
+
+    const response = await apiClient.post('/subscriptions/create-recurring', requestData);
+
+    console.log('📥 Received recurring subscription response:', response.data);
     return response.data;
   }
 
@@ -99,6 +123,22 @@ export class SubscriptionService {
    */
   static async updateAutoRenewal(autoRenewal) {
     const response = await apiClient.post('/subscriptions/auto-renewal', { autoRenewal });
+    return response.data;
+  }
+
+  /**
+   * Reactivate a cancelled subscription
+   */
+  static async reactivateSubscription() {
+    const response = await apiClient.post('/subscriptions/reactivate');
+    return response.data;
+  }
+
+  /**
+   * Get subscription renewal details
+   */
+  static async getRenewalDetails() {
+    const response = await apiClient.get('/subscriptions/renewal-details');
     return response.data;
   }
 

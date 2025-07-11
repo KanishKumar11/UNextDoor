@@ -24,6 +24,7 @@ export { default as AchievementBadge } from "./AchievementBadge";
 export { default as ConfirmationDialog } from "./dialogs/ConfirmationDialog";
 export { default as RazorpayPaymentDialog } from "./dialogs/RazorpayPaymentDialog";
 export { default as PaymentSuccessDialog } from "./dialogs/PaymentSuccessDialog";
+export { default as UpgradePreviewDialog } from "./dialogs/UpgradePreviewDialog";
 
 // Layout components
 export * from "./layout";

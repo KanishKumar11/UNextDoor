@@ -10,6 +10,7 @@ import {
   getConversationScenario,
   getRecentlyUsedContent,
 } from "../data/gameContent.js";
+import { TUTOR_NAME } from "../constants/tutorConstants.js";
 
 /**
  * Get available games
@@ -59,7 +60,7 @@ export const getAvailableGames = async (req, res) => {
         id: "conversation-quest",
         name: "Conversation Quest",
         description:
-          "Practice real-time conversations with Cooper, your AI language tutor.",
+          `Practice real-time conversations with ${TUTOR_NAME}, your AI language tutor.`,
         icon: "chatbubbles-outline",
         color: "#e74c3c",
         difficulty: "all-levels",

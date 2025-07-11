@@ -1,8 +1,12 @@
 import crypto from 'crypto';
 import PaymentTransaction from '../models/PaymentTransaction.js';
+import PaymentOrder from '../models/PaymentOrder.js';
 import Subscription from '../models/Subscription.js';
 import User from '../models/User.js';
 import RazorpayGateway from '../services/payment/gateways/RazorpayGateway.js';
+import subscriptionRenewalService from '../services/subscriptionRenewalService.js';
+import emailService from '../services/emailService.js';
+import config from '../config/index.js';
 
 class PaymentWebhookController {
   constructor() {
@@ -90,6 +94,10 @@ class PaymentWebhookController {
         case 'subscription.cancelled':
           await this.handleSubscriptionCancelled(event.payload.subscription.entity);
           break;
+
+        case 'subscription.halted':
+          await this.handleSubscriptionHalted(event.payload.subscription.entity);
+          break;
           
         default:
           console.log('Unhandled webhook event:', event.event);
@@ -111,32 +119,65 @@ class PaymentWebhookController {
    */
   async handlePaymentCaptured(payment) {
     try {
+      console.log('✅ Processing payment captured:', payment.id, 'for order:', payment.order_id);
+
+      // First, check for PaymentTransaction (existing flow)
       const transaction = await PaymentTransaction.findOne({
         gatewayOrderId: payment.order_id
       });
 
-      if (!transaction) {
-        console.error('Transaction not found for order:', payment.order_id);
+      if (transaction) {
+        console.log('📋 Found PaymentTransaction, processing existing flow');
+
+        // Update transaction status
+        transaction.gatewayPaymentId = payment.id;
+        transaction.status = 'completed';
+        transaction.completedAt = new Date();
+        transaction.webhookReceivedAt = new Date();
+
+        if (payment.method) {
+          transaction.paymentMethod = payment.method;
+        }
+
+        await transaction.save();
+
+        // If this is a subscription payment and not already processed
+        if (transaction.type.includes('subscription') && transaction.status !== 'completed') {
+          await this.processSubscriptionActivation(transaction);
+        }
         return;
       }
 
-      // Update transaction status
-      transaction.gatewayPaymentId = payment.id;
-      transaction.status = 'completed';
-      transaction.completedAt = new Date();
-      transaction.webhookReceivedAt = new Date();
-      
-      if (payment.method) {
-        transaction.paymentMethod = payment.method;
+      // Check for PaymentOrder (recurring subscription first payment)
+      const paymentOrder = await PaymentOrder.findOne({
+        razorpayOrderId: payment.order_id
+      });
+
+      if (paymentOrder) {
+        console.log('📋 Found PaymentOrder for recurring subscription first payment');
+
+        // Update payment order status
+        paymentOrder.status = 'completed';
+        paymentOrder.gatewayPaymentId = payment.id;
+        paymentOrder.completedAt = new Date();
+        paymentOrder.webhookReceivedAt = new Date();
+
+        if (payment.method) {
+          paymentOrder.paymentMethod = payment.method;
+        }
+
+        await paymentOrder.save();
+
+        // Check if this is a recurring subscription first payment
+        const subscriptionType = paymentOrder.metadata?.get('subscriptionType');
+        if (subscriptionType === 'recurring_first_payment') {
+          console.log('🔄 Processing recurring subscription activation');
+          await this.processRecurringSubscriptionActivation(paymentOrder, payment);
+        }
+        return;
       }
 
-      await transaction.save();
-
-      // If this is a subscription payment and not already processed
-      if (transaction.type.includes('subscription') && transaction.status !== 'completed') {
-        await this.processSubscriptionActivation(transaction);
-      }
-
+      console.error('❌ No transaction or payment order found for order:', payment.order_id);
 
     } catch (error) {
       console.error('Error handling payment captured:', error);
@@ -148,25 +189,42 @@ class PaymentWebhookController {
    */
   async handlePaymentFailed(payment) {
     try {
+      console.log('❌ Processing payment failed:', payment.id);
+
+      // Find the related transaction
       const transaction = await PaymentTransaction.findOne({
-        gatewayOrderId: payment.order_id
+        gatewayPaymentId: payment.id
       });
 
-      if (!transaction) {
-        console.error('Transaction not found for failed payment:', payment.order_id);
-        return;
+      if (transaction) {
+        transaction.status = 'failed';
+        transaction.failureReason = payment.error_description || 'Payment failed';
+        transaction.failedAt = new Date();
+        await transaction.save();
+
+        // If this is a renewal payment, handle the failure
+        if (transaction.type === 'subscription_renewal' && transaction.subscriptionId) {
+          const subscription = await Subscription.findById(transaction.subscriptionId).populate('userId');
+          
+          if (subscription) {
+            subscription.renewalFailedAt = new Date();
+            subscription.renewalFailureCount = (subscription.renewalFailureCount || 0) + 1;
+            await subscription.save();
+
+            // Send payment failed notification
+            await emailService.sendPaymentFailedNotification(
+              subscription.userId,
+              subscription,
+              payment.error_description || 'Payment method was declined'
+            );
+          }
+        }
       }
 
-      transaction.gatewayPaymentId = payment.id;
-      transaction.status = 'failed';
-      transaction.failureReason = payment.error_description || 'Payment failed';
-      transaction.webhookReceivedAt = new Date();
-      
-      await transaction.save();
-
+      console.log('✅ Payment failed processed:', payment.id);
 
     } catch (error) {
-      console.error('Error handling payment failed:', error);
+      console.error('❌ Error handling payment failed:', error);
     }
   }
 
@@ -272,11 +330,44 @@ class PaymentWebhookController {
    */
   async handleSubscriptionCharged(subscription) {
     try {
-      // Handle recurring subscription charges
-      // This would be used if we implement automatic renewals
-      console.log('Subscription charged processed:', subscription.id);
+      console.log('💳 Processing subscription charged:', subscription.id);
+
+      // Find the local subscription record
+      const localSubscription = await Subscription.findOne({
+        razorpaySubscriptionId: subscription.id
+      }).populate('userId');
+
+      if (!localSubscription) {
+        console.error('❌ No local subscription found for Razorpay subscription:', subscription.id);
+        return;
+      }
+
+      // Find the related payment transaction
+      const transaction = await PaymentTransaction.findOne({
+        subscriptionId: localSubscription._id,
+        status: 'processing',
+        type: 'subscription_renewal'
+      }).sort({ createdAt: -1 });
+
+      if (transaction) {
+        // Update transaction status
+        transaction.status = 'completed';
+        transaction.gatewayPaymentId = subscription.latest_invoice?.payment_id || 'auto_charged';
+        transaction.completedAt = new Date();
+        await transaction.save();
+      }
+
+      // Process the successful renewal
+      await subscriptionRenewalService.processSuccessfulRenewal(localSubscription, {
+        paymentId: subscription.latest_invoice?.payment_id || 'auto_charged',
+        amount: subscription.latest_invoice?.amount || localSubscription.amount,
+        currency: subscription.latest_invoice?.currency || localSubscription.currency
+      });
+
+      console.log('✅ Subscription charged processed successfully:', subscription.id);
+
     } catch (error) {
-      console.error('Error handling subscription charged:', error);
+      console.error('❌ Error handling subscription charged:', error);
     }
   }
 
@@ -288,7 +379,7 @@ class PaymentWebhookController {
       // Handle subscription cancellation from Razorpay side
       const userSubscription = await Subscription.findOne({
         gatewaySubscriptionId: subscription.id
-      });
+      }).populate('userId');
 
       if (userSubscription && userSubscription.status === 'active') {
         userSubscription.status = 'cancelled';
@@ -297,15 +388,60 @@ class PaymentWebhookController {
         await userSubscription.save();
 
         // Update user status
-        await User.findByIdAndUpdate(userSubscription.userId, {
+        await User.findByIdAndUpdate(userSubscription.userId._id, {
           subscriptionStatus: 'cancelled'
         });
+
+        // Send cancellation notification
+        await emailService.sendSubscriptionCancelledNotification(
+          userSubscription.userId,
+          userSubscription,
+          'Payment gateway cancellation'
+        );
       }
 
-      console.log('Subscription cancelled processed:', subscription.id);
+      console.log('✅ Subscription cancelled processed:', subscription.id);
 
     } catch (error) {
-      console.error('Error handling subscription cancelled:', error);
+      console.error('❌ Error handling subscription cancelled:', error);
+    }
+  }
+
+  /**
+   * Handle subscription halt
+   */
+  async handleSubscriptionHalted(subscription) {
+    try {
+      console.log('⛔ Processing subscription halted:', subscription.id);
+
+      const localSubscription = await Subscription.findOne({
+        razorpaySubscriptionId: subscription.id
+      }).populate('userId');
+
+      if (localSubscription) {
+        localSubscription.status = 'cancelled';
+        localSubscription.cancelledAt = new Date();
+        localSubscription.cancelReason = 'payment_failures';
+        await localSubscription.save();
+
+        // Update user status
+        await User.findByIdAndUpdate(localSubscription.userId._id, {
+          subscriptionStatus: 'cancelled',
+          subscriptionTier: 'free'
+        });
+
+        // Send cancellation notification
+        await emailService.sendSubscriptionCancelledNotification(
+          localSubscription.userId,
+          localSubscription,
+          'Multiple payment failures'
+        );
+      }
+
+      console.log('✅ Subscription halted processed:', subscription.id);
+
+    } catch (error) {
+      console.error('❌ Error handling subscription halted:', error);
     }
   }
 
@@ -527,6 +663,90 @@ class PaymentWebhookController {
         success: false,
         message: 'Failed to fetch webhook logs'
       });
+    }
+  }
+
+  /**
+   * Process recurring subscription activation after first payment
+   */
+  async processRecurringSubscriptionActivation(paymentOrder, payment) {
+    try {
+      console.log('🔄 Processing recurring subscription activation for payment order:', paymentOrder.orderId);
+
+      // Get subscription ID from metadata
+      const subscriptionId = paymentOrder.metadata?.get('subscriptionId');
+      const razorpaySubscriptionId = paymentOrder.metadata?.get('razorpaySubscriptionId');
+
+      if (!subscriptionId) {
+        console.error('❌ No subscription ID found in payment order metadata');
+        return;
+      }
+
+      // Find and update the subscription
+      const subscription = await Subscription.findById(subscriptionId);
+      if (!subscription) {
+        console.error('❌ Subscription not found:', subscriptionId);
+        return;
+      }
+
+      // Activate the subscription
+      subscription.status = 'active';
+      subscription.lastPaymentId = payment.id;
+      subscription.lastPaymentDate = new Date();
+      subscription.activatedAt = new Date();
+
+      await subscription.save();
+
+      console.log('✅ Recurring subscription activated:', {
+        subscriptionId: subscription._id,
+        razorpaySubscriptionId: razorpaySubscriptionId,
+        userId: subscription.userId,
+        planId: subscription.planId
+      });
+
+      // Create payment transaction record for tracking
+      const paymentTransaction = new PaymentTransaction({
+        userId: subscription.userId,
+        subscriptionId: subscription._id,
+        planId: subscription.planId,
+        orderId: paymentOrder.orderId,
+        gatewayOrderId: paymentOrder.razorpayOrderId,
+        gatewayPaymentId: payment.id,
+        amount: paymentOrder.amount,
+        currency: paymentOrder.currency,
+        status: 'completed',
+        type: 'subscription_first_payment',
+        paymentMethod: payment.method || 'unknown',
+        completedAt: new Date(),
+        webhookReceivedAt: new Date(),
+        metadata: new Map([
+          ['razorpaySubscriptionId', razorpaySubscriptionId],
+          ['subscriptionType', 'recurring_first_payment'],
+          ['paymentOrderId', paymentOrder._id.toString()]
+        ])
+      });
+
+      await paymentTransaction.save();
+
+      // Send confirmation email
+      try {
+        const user = await User.findById(subscription.userId);
+        if (user && user.email) {
+          await emailService.sendSubscriptionActivatedEmail(user.email, {
+            planName: subscription.planName,
+            amount: subscription.amount,
+            currency: subscription.currency,
+            nextBillingDate: subscription.nextBillingDate
+          });
+          console.log('✅ Subscription activation email sent to:', user.email);
+        }
+      } catch (emailError) {
+        console.error('⚠️ Failed to send activation email:', emailError);
+        // Don't fail the whole process for email errors
+      }
+
+    } catch (error) {
+      console.error('❌ Error processing recurring subscription activation:', error);
     }
   }
 }

@@ -338,3 +338,69 @@ export const appleAuth = async (req, res) => {
     return sendError(res, 500, "Server error");
   }
 };
+
+/**
+ * Update user preferences (including currency)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const updateUserPreferences = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currency, language, languageLevel, theme, notifications } = req.body;
+    
+    console.log(`💰 Updating preferences for user ${userId}:`, {
+      currency, language, languageLevel, theme, notifications
+    });
+
+    // Validate currency if provided
+    if (currency && !['INR', 'USD'].includes(currency)) {
+      return sendError(res, 400, "Invalid currency. Supported: INR, USD");
+    }
+
+    const result = await authService.updateUserPreferences(userId, {
+      currency,
+      language,
+      languageLevel,
+      theme,
+      notifications
+    });
+
+    if (result.error) {
+      return sendError(res, 400, result.error);
+    }
+
+    console.log(`💰 Preferences updated successfully for user ${userId}:`, result.preferences);
+
+    return sendSuccess(res, 200, "Preferences updated successfully", {
+      preferences: result.preferences,
+    });
+  } catch (error) {
+    console.error("Controller error updating preferences:", error);
+    return sendError(res, 500, "Server error");
+  }
+};
+
+/**
+ * Get user preferences
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const getUserPreferences = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await authService.getUserPreferences(userId);
+
+    if (result.error) {
+      return sendError(res, 400, result.error);
+    }
+
+    return sendSuccess(res, 200, "Preferences retrieved successfully", {
+      preferences: result.preferences,
+    });
+  } catch (error) {
+    console.error("Controller error getting preferences:", error);
+    return sendError(res, 500, "Server error");
+  }
+};

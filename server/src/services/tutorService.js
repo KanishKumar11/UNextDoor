@@ -6,6 +6,7 @@ import Conversation from "../models/Conversation.js";
 import UserProgress from "../models/UserProgress.js";
 import User from "../models/User.js";
 import { uploadAudio, getAudioUrl } from "../utils/storageUtils.js";
+import { learningScenarios as staticScenarios } from "../data/learningScenarios.js";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -25,7 +26,14 @@ export const getScenarios = async (level) => {
       query.level = level.toLowerCase();
     }
 
-    const scenarios = await Scenario.find(query).sort({ order: 1 });
+    let scenarios = await Scenario.find(query).sort({ order: 1 });
+    // Fallback to static scenarios if none found
+    if (!scenarios || scenarios.length === 0) {
+      console.log("No DB scenarios found, using static scenarios");
+      scenarios = staticScenarios.filter((s) => {
+        return level ? s.level === level.toLowerCase() : true;
+      });
+    }
 
     return {
       success: true,

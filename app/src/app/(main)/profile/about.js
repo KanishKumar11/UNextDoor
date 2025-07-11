@@ -24,6 +24,7 @@ import {
 } from "../../../shared/components";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
+import { TUTOR_NAME } from "./../../../shared/constants/tutorConstants";
 
 const { width } = Dimensions.get("window");
 
@@ -229,7 +230,7 @@ export default function AboutScreen() {
                 >
                   UNextDoor is an innovative language learning app that uses
                   artificial intelligence to help you practice real-world
-                  conversations. Our AI tutor, Cooper, adapts to your learning
+                  conversations. Our AI tutor, {TUTOR_NAME}, adapts to your learning
                   style and provides personalized feedback to help you improve
                   your language skills.
                 </Text>

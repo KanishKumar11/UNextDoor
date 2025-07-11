@@ -3,7 +3,7 @@
  */
 
 // AI Tutor name
-export const AI_TUTOR_NAME = 'Cooper';
+export const AI_TUTOR_NAME = 'Miles';
 
 // User proficiency levels
 export const PROFICIENCY_LEVELS = {

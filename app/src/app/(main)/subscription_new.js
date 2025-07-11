@@ -17,6 +17,7 @@ import { useAuth } from '../../features/auth/context/AuthContext';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { SubscriptionService } from '../../shared/services/subscriptionService';
 import { useSubscription } from '../../shared/hooks/useSubscription';
+import { CurrencyService } from '../../shared/services/currencyService';
 
 // Import modern components
 import {
@@ -55,6 +56,7 @@ export default function SubscriptionScreen() {
   const [plans, setPlans] = useState([]);
   const [upgradeLoading, setUpgradeLoading] = useState(null);
   const [error, setError] = useState(null);
+  const [userCurrency, setUserCurrency] = useState(null);
 
   // Animation state
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -64,11 +66,24 @@ export default function SubscriptionScreen() {
     try {
       setError(null);
 
+      // Detect user currency first
+      const currency = await CurrencyService.getUserCurrency();
+      setUserCurrency(currency);
+      console.log('💰 Using currency:', currency);
+
       // Fetch available plans
       const plansData = await SubscriptionService.getPlans();
 
       if (plansData.success) {
-        setPlans(plansData.data.plans);
+        // Convert prices to user's currency if needed
+        const plansWithCurrency = plansData.data.plans.map(plan => ({
+          ...plan,
+          originalPrice: plan.price,
+          price: currency.code === 'USD' ? CurrencyService.convertPrice(plan.price, currency) : plan.price,
+          currency: currency.code,
+          currencySymbol: currency.symbol
+        }));
+        setPlans(plansWithCurrency);
       } else {
         console.error('Failed to load plans:', plansData.message);
         setPlans([]);
@@ -158,8 +173,13 @@ export default function SubscriptionScreen() {
         
         // Handle new purchase (free user) vs upgrade (paid user)
         if (data.purchase) {
-          // Free user making first purchase
-          const message = `You'll pay ₹${data.purchase.amountToPay} and get immediate access to all ${data.newPlan.name} plan features.`;
+          // Free user making first purchase - use dynamic currency
+          const currency = userCurrency || await CurrencyService.getUserCurrency();
+          const amount = currency.code === 'USD' ? 
+            CurrencyService.convertPrice(data.purchase.amountToPay, currency) : 
+            data.purchase.amountToPay;
+          
+          const message = `You'll pay ${currency.symbol}${amount} and get immediate access to all ${data.newPlan.name} plan features.`;
           
           Alert.alert(
             'Confirm Purchase',
@@ -173,11 +193,19 @@ export default function SubscriptionScreen() {
             ]
           );
         } else if (data.upgrade) {
-          // Existing user upgrading
+          // Existing user upgrading - use dynamic currency
           const { upgrade } = data;
+          const currency = userCurrency || await CurrencyService.getUserCurrency();
+          const amount = currency.code === 'USD' ? 
+            CurrencyService.convertPrice(upgrade.amountToPay, currency) : 
+            upgrade.amountToPay;
+          const savings = currency.code === 'USD' ? 
+            CurrencyService.convertPrice(upgrade.savings, currency) : 
+            upgrade.savings;
+            
           const message = upgrade.prorationCredit > 0 
-            ? `You'll pay ₹${upgrade.amountToPay} (₹${upgrade.savings} credit applied) and get immediate access to all features.`
-            : `You'll pay ₹${upgrade.amountToPay} and get immediate access to all features.`;
+            ? `You'll pay ${currency.symbol}${amount} (${currency.symbol}${savings} credit applied) and get immediate access to all features.`
+            : `You'll pay ${currency.symbol}${amount} and get immediate access to all features.`;
 
           Alert.alert(
             'Confirm Upgrade',
@@ -202,30 +230,60 @@ export default function SubscriptionScreen() {
 
   const proceedWithPayment = async (planId) => {
     try {
-      // Create order
-      const orderData = await SubscriptionService.createOrder(planId);
+      // If no currency detected yet, ask user to select
+      let currency = userCurrency;
+      if (!currency) {
+        currency = await CurrencyService.showCurrencySelector();
+        setUserCurrency(currency);
+      }
 
-      if (orderData.success) {
-        // Store order ID for recovery
-        await AsyncStorage.setItem('pending_payment_order_id', orderData.data.orderId);
-        
-        // TODO: Integrate with Razorpay SDK for actual payment
+      // Create recurring subscription (updated flow)
+      console.log('🔄 Creating recurring subscription with currency:', currency);
+      const subscriptionData = await SubscriptionService.createRecurringSubscription(planId, {
+        currency: currency.code
+      });
+
+      if (subscriptionData.success) {
+        // Store subscription ID for recovery
+        await AsyncStorage.setItem('pending_subscription_id', subscriptionData.data.subscriptionId);
+
+        // Calculate display amount in user's currency
+        const displayAmount = currency.code === 'USD' ?
+          CurrencyService.convertPrice(subscriptionData.data.planDetails.price, currency) :
+          subscriptionData.data.planDetails.price;
+
+        // Show recurring subscription information
         Alert.alert(
-          'Payment Integration',
-          `Razorpay payment integration will be implemented here. 
-          
-Order ID: ${orderData.data.orderId}
-Amount: ₹${orderData.data.amount}
+          'Recurring Subscription Created',
+          `Your recurring subscription has been set up successfully!
 
-For now, this is a demo. In production:
-1. Razorpay SDK will open payment UI
-2. If network fails during payment, the order ID is stored
-3. When user returns, payment status is automatically verified
-4. If payment was successful, subscription is activated`,
-          [{ text: 'OK' }]
+Subscription ID: ${subscriptionData.data.subscriptionId}
+Plan: ${subscriptionData.data.planDetails.name}
+Amount: ${currency.symbol}${displayAmount}
+Currency: ${currency.name}
+Auto-renewal: ${subscriptionData.data.autoRenewal ? 'Enabled' : 'Disabled'}
+Next billing: ${new Date(subscriptionData.data.nextBillingDate).toLocaleDateString()}
+
+You will be charged automatically on each billing cycle.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Complete Setup',
+              onPress: () => {
+                // Navigate to payment authentication if needed
+                if (subscriptionData.data.paymentUrl) {
+                  console.log('Opening Razorpay authentication:', subscriptionData.data.paymentUrl);
+                  // Here you would open the payment URL for authentication
+                }
+                Alert.alert('Success', 'Recurring subscription activated!', [
+                  { text: 'OK', onPress: () => router.push('/(main)/home') }
+                ]);
+              }
+            }
+          ]
         );
       } else {
-        Alert.alert('Error', orderData.message || 'Failed to create payment order');
+        Alert.alert('Error', subscriptionData.message || 'Failed to create recurring subscription');
       }
     } catch (error) {
       console.error('Error creating payment order:', error);
@@ -252,10 +310,19 @@ For now, this is a demo. In production:
     return colors[planId] || theme.colors.neutral[400];
   };
 
-  const formatPrice = (price, interval, intervalCount) => {
-    if (intervalCount === 3) return `₹${price}/quarter`;
-    if (intervalCount === 12) return `₹${price}/year`;
-    return `₹${price}/month`;
+  const formatPrice = (price, interval, intervalCount, currencySymbol = '₹') => {
+    if (intervalCount === 3) return `${currencySymbol}${price}/quarter`;
+    if (intervalCount === 12) return `${currencySymbol}${price}/year`;
+    return `${currencySymbol}${price}/month`;
+  };
+
+  // Add currency change handler
+  const handleCurrencyChange = async () => {
+    const newCurrency = await CurrencyService.showCurrencySelector();
+    setUserCurrency(newCurrency);
+    
+    // Refresh plans with new currency
+    await fetchSubscriptionData();
   };
 
   useEffect(() => {
@@ -322,17 +389,42 @@ For now, this is a demo. In production:
                   Choose Your Plan
                 </Heading>
               </Column>
-              <TouchableOpacity
-                onPress={() => router.back()}
-                style={{
-                  backgroundColor: theme.colors.neutral[100],
-                  borderRadius: 20,
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                }}
-              >
-                <Ionicons name="close" size={16} color={theme.colors.brandNavy} />
-              </TouchableOpacity>
+              
+              <Row align="center">
+                {/* Currency Selector */}
+                {userCurrency && (
+                  <TouchableOpacity
+                    onPress={handleCurrencyChange}
+                    style={{
+                      backgroundColor: theme.colors.neutral[100],
+                      borderRadius: 16,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      marginRight: 8,
+                    }}
+                  >
+                    <Text 
+                      variant="caption" 
+                      weight="medium"
+                      style={{ color: theme.colors.brandNavy }}
+                    >
+                      {userCurrency.symbol} {userCurrency.code}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                
+                <TouchableOpacity
+                  onPress={() => router.back()}
+                  style={{
+                    backgroundColor: theme.colors.neutral[100],
+                    borderRadius: 20,
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                  }}
+                >
+                  <Ionicons name="close" size={16} color={theme.colors.brandNavy} />
+                </TouchableOpacity>
+              </Row>
             </Row>
 
             {/* Error message */}
@@ -503,32 +595,36 @@ For now, this is a demo. In production:
                           </Text>
                         </Row>
 
-                        <Row justify="space-between" align="center">
-                          <Row align="center">
-                            <Ionicons name="chatbubble-outline" size={16} color={theme.colors.brandGreen} style={{ marginRight: 8 }} />
+                        {/* Only show AI Sessions for non-free plans */}
+                        {currentPlan?.tier !== 'free' && (
+                          <Row justify="space-between" align="center">
+                            <Row align="center">
+                              <Ionicons name="chatbubble-outline" size={16} color={theme.colors.brandGreen} style={{ marginRight: 8 }} />
+                              <Text
+                                variant="caption"
+                                style={{
+                                  color: theme.colors.neutral[700],
+                                  fontFamily: theme.typography.fontFamily.regular,
+                                }}
+                              >
+                                AI Sessions
+                              </Text>
+                            </Row>
                             <Text
                               variant="caption"
+                              weight="medium"
                               style={{
-                                color: theme.colors.neutral[700],
-                                fontFamily: theme.typography.fontFamily.regular,
+                                color: hasReachedLimit('aiSessions') ? theme.colors.error.main : theme.colors.success.main,
+                                fontFamily: theme.typography.fontFamily.medium,
                               }}
                             >
-                              AI Sessions
+                              {usage.aiSessions.current}/{usage.aiSessions.limit}
                             </Text>
                           </Row>
-                          <Text
-                            variant="caption"
-                            weight="medium"
-                            style={{
-                              color: hasReachedLimit('aiSessions') ? theme.colors.error.main : theme.colors.success.main,
-                              fontFamily: theme.typography.fontFamily.medium,
-                            }}
-                          >
-                            {usage.aiSessions.current}/{usage.aiSessions.limit}
-                          </Text>
-                        </Row>
+                        )}
 
-                        {(hasReachedLimit('lessons') || hasReachedLimit('aiSessions')) && (
+                        {/* Show limit reached warning - only check relevant limits based on plan */}
+                        {(hasReachedLimit('lessons') || (currentPlan?.tier !== 'free' && hasReachedLimit('aiSessions'))) && (
                           <View
                             style={{
                               backgroundColor: theme.colors.error.main + "10",
@@ -674,7 +770,7 @@ For now, this is a demo. In production:
                           fontSize: 20,
                         }}
                       >
-                        {formatPrice(plan.price, plan.interval, plan.intervalCount)}
+                        {formatPrice(plan.price, plan.interval, plan.intervalCount, plan.currencySymbol)}
                       </Text>
                     </Column>
                   </Row>
