@@ -376,9 +376,10 @@ class SubscriptionController {
 
       await paymentOrder.save();
 
-      // Generate payment URL with token
+      // Generate payment URL with token (use SERVER_URL env or request host fallback)
       const token = req.headers.authorization?.replace('Bearer ', '');
-      const paymentUrl = `${req.protocol}://${req.get('host')}/api/v1/subscriptions/payment-page/${orderId}?token=${encodeURIComponent(token)}`;
+      const baseUrl = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`;
+      const paymentUrl = `${baseUrl}/api/v1/subscriptions/payment-page/${orderId}?token=${encodeURIComponent(token)}`;
 
       res.json({
         success: true,

@@ -55,7 +55,6 @@ export class SubscriptionService {
    * @param {Object} options - Additional options (currency, etc.)
    */
   static async createRecurringSubscription(planId, options = {}) {
-    console.log('🔄 SubscriptionService.createRecurringSubscription called:', { planId, options });
 
     // Ensure currency is included in the request
     const requestData = {
@@ -64,11 +63,9 @@ export class SubscriptionService {
       ...options
     };
 
-    console.log('📤 Sending recurring subscription request:', requestData);
 
     const response = await apiClient.post('/subscriptions/create-recurring', requestData);
 
-    console.log('📥 Received recurring subscription response:', response.data);
     return response.data;
   }
 
