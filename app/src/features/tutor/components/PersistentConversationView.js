@@ -16,6 +16,33 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { useWebRTCConversation } from '../hooks/useWebRTCConversation';
 import { setAudioModeAsync } from '../../../shared/utils/audioUtils';
+import { BRAND_COLORS } from '../../../shared/constants/colors';
+import { useTheme } from '../../../shared/context/ThemeContext';
+import {
+  Text as ThemedText,
+  Row,
+  Column,
+  ModernCard,
+} from '../../../shared/components';
+import characterIconService from '../../../shared/services/characterIconService';
+
+// Helper function for cross-platform font families
+const getFontFamily = (weight = 'regular') => {
+  if (Platform.OS === 'web') {
+    return 'Montserrat, sans-serif';
+  }
+
+  const fontMap = {
+    light: 'Montserrat-Light',
+    regular: 'Montserrat-Regular',
+    medium: 'Montserrat-Medium',
+    semibold: 'Montserrat-SemiBold',
+    bold: 'Montserrat-Bold',
+    extrabold: 'Montserrat-ExtraBold',
+  };
+
+  return fontMap[weight] || fontMap.regular;
+};
 
 /**
  * Enhanced conversation view with streaming AI transcript and modern aesthetics
@@ -26,6 +53,9 @@ const PersistentConversationView = ({
   onSessionEnd,
   style
 }) => {
+  // Theme
+  const theme = useTheme();
+
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -35,7 +65,10 @@ const PersistentConversationView = ({
   const cursorAnim = useRef(new Animated.Value(1)).current;
   const statusPulseAnim = useRef(new Animated.Value(1)).current;
   // const scrollViewRef = useRef(null); // No longer needed for current dialog mode
-  
+
+  // Character state
+  const [currentCharacter, setCurrentCharacter] = useState(null);
+
   // Streaming state
   const [displayedTranscript, setDisplayedTranscript] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -73,29 +106,29 @@ const PersistentConversationView = ({
   // Complete cleanup function
   const performCompleteCleanup = useCallback(async () => {
     console.log("🧹 Performing complete cleanup of conversation data");
-    
+
     try {
       // Clear streaming intervals
       if (streamingIntervalRef.current) {
         clearInterval(streamingIntervalRef.current);
         streamingIntervalRef.current = null;
       }
-      
+
       // Reset local state
       setDisplayedTranscript('');
       setIsStreaming(false);
       transcriptIndexRef.current = 0;
-      
+
       // DON'T reset animations to initial values - let them stay for next session
       // Only reset animations if component is unmounting
-      
+
       // Clear WebRTC data and stop session
       if (clearAllData) {
         await clearAllData();
       } else {
         await stopSession();
       }
-      
+
       console.log("✅ Complete cleanup finished");
     } catch (error) {
       console.error("❌ Error during complete cleanup:", error);
@@ -105,19 +138,19 @@ const PersistentConversationView = ({
   // Cleanup for component unmount only
   const performUnmountCleanup = useCallback(async () => {
     console.log("🧹 Performing unmount cleanup");
-    
+
     try {
       // Clear streaming intervals
       if (streamingIntervalRef.current) {
         clearInterval(streamingIntervalRef.current);
         streamingIntervalRef.current = null;
       }
-      
+
       // Reset local state
       setDisplayedTranscript('');
       setIsStreaming(false);
       transcriptIndexRef.current = 0;
-      
+
       // Reset animations to initial values for unmount
       pulseAnim.setValue(1);
       fadeAnim.setValue(0);
@@ -126,32 +159,58 @@ const PersistentConversationView = ({
       waveAnim.setValue(0);
       cursorAnim.setValue(1);
       statusPulseAnim.setValue(1);
-      
+
       // Clear WebRTC data and stop session
       if (clearAllData) {
         await clearAllData();
       } else {
         await stopSession();
       }
-      
+
       console.log("✅ Unmount cleanup finished");
     } catch (error) {
       console.error("❌ Error during unmount cleanup:", error);
     }
   }, [
-    clearAllData, 
-    stopSession, 
-    pulseAnim, 
-    fadeAnim, 
-    slideAnim, 
-    glowAnim, 
-    waveAnim, 
-    cursorAnim, 
+    clearAllData,
+    stopSession,
+    pulseAnim,
+    fadeAnim,
+    slideAnim,
+    glowAnim,
+    waveAnim,
+    cursorAnim,
     statusPulseAnim
   ]);
 
-  // Entrance animations
+  // Entrance animations and character selection
   useEffect(() => {
+    // Select character based on scenario and context
+    const selectCharacter = () => {
+      let selectedCharacter;
+
+      if (scenarioId) {
+        // Use scenario-based selection
+        selectedCharacter = characterIconService.getCharacterForScenario(
+          scenarioId,
+          `session_${scenarioId}_${Date.now()}`
+        );
+      } else {
+        // Use context-based selection with level
+        selectedCharacter = characterIconService.getCharacterForContext(
+          level,
+          'conversation',
+          `session_${level}_${Date.now()}`
+        );
+      }
+
+      console.log(`🎭 Selected character: ${selectedCharacter.profile.name} for scenario: ${scenarioId || 'general'}`);
+      setCurrentCharacter(selectedCharacter);
+    };
+
+    selectCharacter();
+
+    // Start entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -164,13 +223,13 @@ const PersistentConversationView = ({
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [scenarioId, level]);
 
   // Reset animations when scenario changes (new conversation starts)
   useEffect(() => {
     if (scenarioId && isInitialized) {
       console.log("🎯 Scenario changed, resetting UI animations");
-      
+
       // Ensure animations are visible for new session
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -204,7 +263,7 @@ const PersistentConversationView = ({
           }),
         ])
       );
-      
+
       const glow = Animated.loop(
         Animated.sequence([
           Animated.timing(glowAnim, {
@@ -231,7 +290,7 @@ const PersistentConversationView = ({
       pulse.start();
       glow.start();
       wave.start();
-      
+
       return () => {
         pulse.stop();
         glow.stop();
@@ -322,7 +381,7 @@ const PersistentConversationView = ({
         ])
       );
       cursorBlink.start();
-      
+
       return () => {
         cursorBlink.stop();
       };
@@ -353,7 +412,7 @@ const PersistentConversationView = ({
         ])
       );
       statusPulse.start();
-      
+
       return () => {
         statusPulse.stop();
       };
@@ -378,7 +437,7 @@ const PersistentConversationView = ({
   // Session management
   useEffect(() => {
     if (!isInitialized || !scenarioId) return;
-    
+
     if (userEndedSession || !allowAutoRestart) {
       console.log("🎯 User ended session or auto-restart disabled, not auto-restarting");
       return;
@@ -396,12 +455,12 @@ const PersistentConversationView = ({
           await changeScenario(scenarioId, level);
         } else {
           console.log("🎯 Starting new session for scenario:", scenarioId);
-          
+
           // Reset UI state for new session
           setDisplayedTranscript('');
           setIsStreaming(false);
           transcriptIndexRef.current = 0;
-          
+
           await startSession(scenarioId, level);
         }
       } catch (error) {
@@ -416,15 +475,15 @@ const PersistentConversationView = ({
   const handleEndSession = useCallback(async () => {
     try {
       console.log("🎯 Ending conversation session from component");
-      
+
       // Perform complete cleanup but don't reset animations
       await performCompleteCleanup();
-      
+
       // Reset session control flags to allow restart
       if (resetSessionControlFlags) {
         resetSessionControlFlags();
       }
-      
+
       if (onSessionEnd) {
         onSessionEnd();
       }
@@ -467,7 +526,7 @@ const PersistentConversationView = ({
   useEffect(() => {
     const handleAppStateChange = (nextAppState) => {
       console.log("🎯 App state changed to:", nextAppState);
-      
+
       if (nextAppState === 'background' || nextAppState === 'inactive') {
         console.log("🎯 App going to background - ending session");
         handleEndSession();
@@ -568,7 +627,7 @@ const PersistentConversationView = ({
               {error.error?.message?.includes('429') ? 'Service Busy' : 'Connection Error'}
             </Text>
             <Text style={styles.errorMessage}>
-              {error.error?.message?.includes('429') 
+              {error.error?.message?.includes('429')
                 ? "The conversation service is currently busy. Please wait a moment and try again."
                 : (error.error?.message || "Failed to connect to conversation service")
               }
@@ -591,213 +650,217 @@ const PersistentConversationView = ({
 
   return (
     <Animated.View style={[
-      styles.container, 
-      style, 
-      { 
+      styles.container,
+      style,
+      {
         opacity: fadeAnim,
         transform: [{ translateY: slideAnim }]
       }
     ]}>
       {/* Main Conversation Layout - Redesigned */}
       <View style={styles.modernContainer}>
-        
-       
+
+
         {/* Scrollable Content Area */}
-        <ScrollView 
+        <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           bounces={true}
         >
-           {/* Top Status Bar with End Button */}
-        <View style={styles.modernStatusBar}>
-          <View style={styles.statusLeft}>
-            <Animated.View style={[
-              styles.connectionDot,
-              { 
-                backgroundColor: getConnectionStatusColor(),
-                transform: [{ scale: statusPulseAnim }]
-              }
-            ]} />
-            <Text style={styles.connectionStatus}>{getConnectionStatus()}</Text>
-          </View>
-          
-          <View style={styles.topActions}>
-            <Text style={styles.sessionCounter}>{conversationHistory.length} exchanges</Text>
-            <TouchableOpacity
-              style={styles.topEndButton}
-              onPress={handleEndSession}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="close-circle" size={28} color="#ef4444" />
-            </TouchableOpacity>
-          </View>
-        </View>
+          {/* Top Status Bar with End Button */}
+          <View style={styles.modernStatusBar}>
+            <View style={styles.statusLeft}>
+              <Animated.View style={[
+                styles.connectionDot,
+                {
+                  backgroundColor: getConnectionStatusColor(),
+                  transform: [{ scale: statusPulseAnim }]
+                }
+              ]} />
+              <Text style={styles.connectionStatus}>{getConnectionStatus()}</Text>
+            </View>
 
-          {/* Central Focus Area - Miles Avatar & Streaming Text */}
-          <View style={styles.centralFocusArea}>
-          
-          {/* Miles Avatar - Large and Prominent */}
-          <View style={styles.milesSection}>
-            <Animated.View style={[
-              // styles.milesAvatarContainer,
-              { transform: [{ scale: pulseAnim }] }
-            ]}>
-              {/* Animated Glow Rings when speaking */}
-              {isAISpeaking && (
-                <>
-                  <Animated.View style={[
-                    // styles.glowRing,
-                    // styles.outerGlow,
-                    { 
-                      opacity: glowAnim,
-                      transform: [{ scale: Animated.multiply(glowAnim, 1.2) }]
-                    }
-                  ]} />
-                  <Animated.View style={[
-                    // styles.glowRing,
-                    // styles.middleGlow,
-                    { 
-                      opacity: Animated.multiply(glowAnim, 0.8),
-                      transform: [{ scale: Animated.multiply(glowAnim, 1.1) }]
-                    }
-                  ]} />
-                  <Animated.View style={[
-                    styles.glowRing,
-                    styles.innerGlow,
-                    { 
-                      opacity: Animated.multiply(glowAnim, 0.5),
-                      transform: [{ scale: Animated.multiply(glowAnim, 1.05) }]
-                    }
-                  ]} />
-                </>
-              )}
-              
-              {/* Main Miles Avatar */}
-              <View
-
-                style={styles.milesAvatar}
+            <View style={styles.topActions}>
+              <Text style={styles.sessionCounter}>{conversationHistory.length} exchanges</Text>
+              <TouchableOpacity
+                style={styles.topEndButton}
+                onPress={handleEndSession}
+                activeOpacity={0.8}
               >
-                {/* AI Tutor Avatar - Using app logo */}
-                <View style={{}}>
-                  <Image
-                    source={require('../../../assets/app-logo-square.png')}
-                    style={[
-                      styles.avatarLogo,
-                      {
-                        opacity: isAISpeaking ? 1 : 0.9,
-                        // Remove tintColor to show original logo colors
-                      }
-                    ]}
-                    resizeMode="contain"
-                  />
-                  {/* Add speaking indicator overlay */}
-                  {isAISpeaking && (
-                    <View style={styles.speakingIndicator}>
-                      <View style={[styles.speakingDot, { backgroundColor: 'rgba(255,255,255,0.8)' }]} />
-                    </View>
-                  )}
-                </View>
-              </View>
-            </Animated.View>
-            
-            {/* Miles Label */}
-            <View style={styles.milesInfo}>
-              <Text style={styles.milesName}>Miles</Text>
-              <Text style={styles.milesRole}>Your Korean Conversation Partner</Text>
+                <Ionicons name="close-circle" size={28} color="#ef4444" />
+              </TouchableOpacity>
             </View>
           </View>
 
-          {/* Streaming Text Display - Main Focus */}
-          <View style={styles.streamingTextArea}>
-            {displayedTranscript ? (
-              // Active streaming response
-              <Animated.View 
-                style={[
-                  styles.streamingCard,
-                  { 
-                    opacity: fadeAnim,
-                    transform: [{ translateY: slideAnim }]
-                  }
-                ]}
-              >
-                {/* Speaking Indicator */}
-                <View style={styles.speakingIndicatorBar}>
-                  <View style={styles.speakingDots}>
-                    {isAISpeaking && renderWaveforms()}
-                  </View>
-                  <Text style={styles.speakingLabel}>Speaking...</Text>
-                </View>
-                
-                {/* Main Streaming Text */}
-                <Text style={styles.streamingText}>
-                  {displayedTranscript}
-                  {isStreaming && (
-                    <Animated.Text style={[styles.typingCursor, { opacity: cursorAnim }]}>
-                      |
-                    </Animated.Text>
-                  )}
-                </Text>
-              </Animated.View>
-            ) : conversationHistory.length > 0 ? (
-              // Show the most recent exchange
-              (() => {
-                const lastMessage = conversationHistory[conversationHistory.length - 1];
-                return (
-                  <Animated.View 
-                    style={[
-                      styles.lastMessageCard,
-                      { 
-                        opacity: fadeAnim,
-                        transform: [{ translateY: slideAnim }]
+          {/* Central Focus Area - Miles Avatar & Streaming Text */}
+          <View style={styles.centralFocusArea}>
+
+            {/* Miles Avatar - Large and Prominent */}
+            <View style={styles.milesSection}>
+              <Animated.View style={[
+                // styles.milesAvatarContainer,
+                { transform: [{ scale: pulseAnim }] }
+              ]}>
+                {/* Animated Glow Rings when speaking */}
+                {isAISpeaking && (
+                  <>
+                    <Animated.View style={[
+                      // styles.glowRing,
+                      // styles.outerGlow,
+                      {
+                        opacity: glowAnim,
+                        transform: [{ scale: Animated.multiply(glowAnim, 1.2) }]
                       }
-                    ]}
-                  >
-                    <View style={styles.messageHeader}>
-                      <View style={[
-                        styles.messageTypeIndicator,
-                        { backgroundColor: lastMessage.type === 'user' ? '#3b82f6' : '#10b981' }
-                      ]} />
-                      <Text style={styles.messageType}>
-                        {lastMessage.type === 'user' ? 'You said' : 'Miles responded'}
-                      </Text>
-                    </View>
-                    <Text style={styles.lastMessageText}>
-                      {lastMessage.text}
-                    </Text>
-                  </Animated.View>
-                );
-              })()
-            ) : (
-              // Waiting to start conversation
-              <Animated.View 
-                style={[
-                  styles.waitingCard,
-                  { 
-                    opacity: fadeAnim,
-                    transform: [{ translateY: slideAnim }]
-                  }
-                ]}
-              >
-                <Text style={styles.waitingText}>
-                  {isConnected && isSessionActive 
-                    ? "Miles is starting the conversation..." 
-                    : "Ready to practice Korean conversation?"
-                  }
-                </Text>
-                <Text style={styles.waitingSubtext}>
-                  {isConnected && isSessionActive 
-                    ? "Listen for Miles to greet you and start chatting!" 
-                    : "Miles will greet you first and guide the conversation"
-                  }
-                </Text>
+                    ]} />
+                    <Animated.View style={[
+                      // styles.glowRing,
+                      // styles.middleGlow,
+                      {
+                        opacity: Animated.multiply(glowAnim, 0.8),
+                        transform: [{ scale: Animated.multiply(glowAnim, 1.1) }]
+                      }
+                    ]} />
+                    <Animated.View style={[
+                      styles.glowRing,
+                      styles.innerGlow,
+                      {
+                        opacity: Animated.multiply(glowAnim, 0.5),
+                        transform: [{ scale: Animated.multiply(glowAnim, 1.05) }]
+                      }
+                    ]} />
+                  </>
+                )}
+
+                {/* Main Miles Avatar */}
+                <View
+
+                  style={styles.milesAvatar}
+                >
+                  {/* AI Tutor Avatar - Using dynamic character icons */}
+                  <View style={{}}>
+                    <Image
+                      source={currentCharacter?.icon || characterIconService.getCurrentCharacter().icon}
+                      style={[
+                        styles.avatarLogo,
+                        {
+                          opacity: isAISpeaking ? 1 : 0.9,
+                          // No rounded styling - keep original character design
+                        }
+                      ]}
+                      resizeMode="contain"
+                    />
+                    {/* Add speaking indicator overlay */}
+                    {isAISpeaking && (
+                      <View style={styles.speakingIndicator}>
+                        <View style={[styles.speakingDot, { backgroundColor: 'rgba(255,255,255,0.8)' }]} />
+                      </View>
+                    )}
+                  </View>
+                </View>
               </Animated.View>
-            )}
+
+              {/* Character Label */}
+              <View style={styles.milesInfo}>
+                <Text style={styles.milesName}>
+                  {currentCharacter?.profile?.name || 'Miles'}
+                </Text>
+                <Text style={styles.milesRole}>
+                  {currentCharacter?.profile?.description || 'Your Korean Conversation Partner'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Streaming Text Display - Main Focus */}
+            <View style={styles.streamingTextArea}>
+              {displayedTranscript ? (
+                // Active streaming response
+                <Animated.View
+                  style={[
+                    styles.streamingCard,
+                    {
+                      opacity: fadeAnim,
+                      transform: [{ translateY: slideAnim }]
+                    }
+                  ]}
+                >
+                  {/* Speaking Indicator */}
+                  <View style={styles.speakingIndicatorBar}>
+                    <View style={styles.speakingDots}>
+                      {isAISpeaking && renderWaveforms()}
+                    </View>
+                    <Text style={styles.speakingLabel}>Speaking...</Text>
+                  </View>
+
+                  {/* Main Streaming Text */}
+                  <Text style={styles.streamingText}>
+                    {displayedTranscript}
+                    {isStreaming && (
+                      <Animated.Text style={[styles.typingCursor, { opacity: cursorAnim }]}>
+                        |
+                      </Animated.Text>
+                    )}
+                  </Text>
+                </Animated.View>
+              ) : conversationHistory.length > 0 ? (
+                // Show the most recent exchange
+                (() => {
+                  const lastMessage = conversationHistory[conversationHistory.length - 1];
+                  return (
+                    <Animated.View
+                      style={[
+                        styles.lastMessageCard,
+                        {
+                          opacity: fadeAnim,
+                          transform: [{ translateY: slideAnim }]
+                        }
+                      ]}
+                    >
+                      <View style={styles.messageHeader}>
+                        <View style={[
+                          styles.messageTypeIndicator,
+                          { backgroundColor: lastMessage.type === 'user' ? '#3b82f6' : '#10b981' }
+                        ]} />
+                        <Text style={styles.messageType}>
+                          {lastMessage.type === 'user' ? 'You said' : 'Miles responded'}
+                        </Text>
+                      </View>
+                      <Text style={styles.lastMessageText}>
+                        {lastMessage.text}
+                      </Text>
+                    </Animated.View>
+                  );
+                })()
+              ) : (
+                // Waiting to start conversation
+                <Animated.View
+                  style={[
+                    styles.waitingCard,
+                    {
+                      opacity: fadeAnim,
+                      transform: [{ translateY: slideAnim }]
+                    }
+                  ]}
+                >
+                  <Text style={styles.waitingText}>
+                    {isConnected && isSessionActive
+                      ? "Miles is starting the conversation..."
+                      : "Ready to practice Korean conversation?"
+                    }
+                  </Text>
+                  <Text style={styles.waitingSubtext}>
+                    {isConnected && isSessionActive
+                      ? "Listen for Miles to greet you and start chatting!"
+                      : "Miles will greet you first and guide the conversation"
+                    }
+                  </Text>
+                </Animated.View>
+              )}
+            </View>
           </View>
-        </View>
         </ScrollView>
 
-    
+
       </View>
     </Animated.View>
   );
@@ -806,80 +869,85 @@ const PersistentConversationView = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
-  
+
   // Modern Layout Styles
   modernContainer: {
     flex: 1,
     position: 'relative',
-    // backgroundColor: '#f8fafc',
-    // paddingTop: Platform.OS === 'android' ? 16 : 0,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
-  
+
   modernStatusBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 20,
+    paddingVertical: 16,
+    borderRadius: 16,
     zIndex: 1,
     position: 'relative',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+    borderBottomWidth: 2,
+    borderBottomColor: BRAND_COLORS.EXPLORER_TEAL + '20',
   },
-  
+
   statusLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  
+
   connectionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     marginRight: 8,
   },
-  
+
   connectionStatus: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
+    color: BRAND_COLORS.OCEAN_BLUE,
+    fontFamily: getFontFamily('medium'),
   },
-  
+
   sessionInfo: {
     alignItems: 'flex-end',
   },
-  
+
   topActions: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  
+
   topEndButton: {
     marginLeft: 12,
-    padding: 4,
+    padding: 8,
+    borderRadius: 16,
+    backgroundColor: BRAND_COLORS.WARM_CORAL + '20',
   },
-  
+
   scrollContainer: {
     flex: 1,
     position: 'relative',
   },
-  
+
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 100, // Space for bottom navigation
   },
-  
+
   sessionCounter: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: '#6b7280',
+    fontSize: 12,
+    fontWeight: '500',
+    color: BRAND_COLORS.SHADOW_GREY,
+    fontFamily: getFontFamily('medium'),
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  
+
   centralFocusArea: {
-    // minHeight: 400, // Changed from flex: 1 to a minimum height
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -888,56 +956,56 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     zIndex: 10,
   },
-  
+
   milesSection: {
     alignItems: 'center',
     marginBottom: 48,
   },
-  
+
   milesAvatarContainer: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
-  
-glowRing: {
+
+  glowRing: {
     position: 'absolute',
     borderRadius: 80,
     borderWidth: 2,
   },
-  
+
   outerGlow: {
     width: 160,
     height: 160,
-    borderColor: 'rgba(99, 102, 241, 0.2)',
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + '20',
   },
-  
+
   middleGlow: {
     width: 145,
     height: 145,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + '30',
   },
-  
+
   innerGlow: {
     width: 130,
     height: 130,
-    borderColor: 'rgba(99, 102, 241, 0.4)',
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + '40',
   },
-  
+
   milesAvatar: {
     width: 120,
     height: 120,
     padding: 0,
-    // borderRadius: 60,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: -40,
     zIndex: 10,
-    position: 'relative'
-    
+    position: 'relative',
+    backgroundColor: 'transparent',
+    elevation: 0,
   },
-  
+
   avatarContent: {
     position: 'relative',
     justifyContent: 'center',
@@ -947,6 +1015,7 @@ glowRing: {
   avatarLogo: {
     width: 125,
     height: 125,
+    // Remove borderRadius to keep original character design
   },
 
   speakingIndicator: {
@@ -956,228 +1025,212 @@ glowRing: {
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#34C759',
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: BRAND_COLORS.CARD_BACKGROUND,
   },
 
   speakingDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
-  
+
   avatarMainIcon: {
     marginBottom: 4,
   },
-  
+
   avatarChatIcon: {
     position: 'absolute',
     bottom: -8,
     right: -8,
   },
-  
+
   milesInfo: {
     alignItems: 'center',
   },
-  
+
   milesName: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1f2937',
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginBottom: 4,
+    fontFamily: getFontFamily('bold'),
   },
-  
+
   milesRole: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#6b7280',
+    color: BRAND_COLORS.SHADOW_GREY,
+    fontFamily: getFontFamily('medium'),
   },
-  
+
   streamingTextArea: {
     width: '100%',
-    // minHeight: 200,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   streamingCard: {
     width: '100%',
-    backgroundColor: 'white',
-    borderRadius: 20,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+    borderRadius: 16,
     padding: 24,
     paddingTop: 0,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
+    borderWidth: 2,
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + '20',
+    elevation: 0,
   },
-  
+
   speakingIndicatorBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
   },
-  
+
   speakingDots: {
     flexDirection: 'row',
     alignItems: 'center',
     height: 20,
   },
-  
+
   waveBar: {
     width: 3,
-    backgroundColor: '#10b981',
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     marginHorizontal: 2,
     borderRadius: 2,
   },
-  
+
   speakingLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#10b981',
+    color: BRAND_COLORS.EXPLORER_TEAL,
+    fontFamily: getFontFamily('medium'),
   },
-  
+
   streamingText: {
-    fontSize: 20,
-    lineHeight: 28,
-    color: '#1f2937',
+    fontSize: 18,
+    lineHeight: 26,
+    color: BRAND_COLORS.OCEAN_BLUE,
     fontWeight: '400',
     textAlign: 'left',
+    fontFamily: getFontFamily('regular'),
   },
-  
+
   typingCursor: {
-    color: '#6366f1',
+    color: BRAND_COLORS.EXPLORER_TEAL,
     fontWeight: '700',
-    fontSize: 20,
+    fontSize: 18,
+    fontFamily: getFontFamily('bold'),
   },
-  
+
   lastMessageCard: {
     width: '100%',
-    backgroundColor: 'white',
-    borderRadius: 20,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+    borderRadius: 16,
     padding: 24,
     borderLeftWidth: 4,
-    borderLeftColor: '#10b981',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
+    borderLeftColor: BRAND_COLORS.EXPLORER_TEAL,
+    borderWidth: 2,
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + '20',
+    elevation: 0,
   },
-  
+
   messageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
   },
-  
+
   messageTypeIndicator: {
     width: 12,
     height: 12,
     borderRadius: 6,
     marginRight: 8,
   },
-  
+
   messageType: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6b7280',
+    color: BRAND_COLORS.SHADOW_GREY,
+    fontFamily: getFontFamily('semibold'),
   },
-  
+
   lastMessageText: {
     fontSize: 18,
     lineHeight: 26,
-    color: '#1f2937',
+    color: BRAND_COLORS.OCEAN_BLUE,
     fontWeight: '400',
+    fontFamily: getFontFamily('regular'),
   },
-  
+
   waitingCard: {
     width: '100%',
-    backgroundColor: 'white',
-    borderRadius: 20,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+    borderRadius: 16,
     padding: 32,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#e5e7eb',
+    borderColor: BRAND_COLORS.SHADOW_GREY + '30',
     borderStyle: 'dashed',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+    elevation: 0,
   },
-  
+
   waitingText: {
     fontSize: 18,
     lineHeight: 26,
-    color: '#374151',
+    color: BRAND_COLORS.OCEAN_BLUE,
     fontWeight: '500',
     textAlign: 'center',
     marginBottom: 8,
+    fontFamily: getFontFamily('medium'),
   },
-  
+
   waitingSubtext: {
     fontSize: 15,
     lineHeight: 22,
-    color: '#6b7280',
+    color: BRAND_COLORS.SHADOW_GREY,
     fontWeight: '400',
     textAlign: 'center',
+    fontFamily: getFontFamily('regular'),
   },
-  
+
   debugPanel: {
     position: 'absolute',
-    bottom: 20, // Changed from 80 to 20 since there's no action area
+    bottom: 100, // Space for bottom navigation
     left: 20,
     right: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: BRAND_COLORS.OCEAN_BLUE + 'E6',
     padding: 12,
-    borderRadius: 12,
+    borderRadius: 16,
   },
-  
+
   debugText: {
     fontSize: 11,
     fontWeight: '500',
-    color: 'white',
+    color: BRAND_COLORS.CARD_BACKGROUND,
     marginBottom: 2,
     opacity: 0.9,
+    fontFamily: getFontFamily('medium'),
   },
-  
+
   mainGradient: {
     flex: 1,
-    borderRadius: 24,
+    borderRadius: 16,
     padding: 24,
   },
   errorGradient: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 24,
+    borderRadius: 16,
     margin: 20,
   },
-  
+
   // Error States
   errorContainer: {
     alignItems: 'center',
@@ -1187,7 +1240,7 @@ glowRing: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: BRAND_COLORS.WARM_CORAL + '30',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -1195,26 +1248,27 @@ glowRing: {
   errorTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: 'white',
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginBottom: 8,
+    fontFamily: getFontFamily('bold'),
   },
   errorMessage: {
     fontSize: 16,
     fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: BRAND_COLORS.SHADOW_GREY,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 24,
+    fontFamily: getFontFamily('medium'),
   },
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     paddingHorizontal: 24,
     paddingVertical: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 16,
+    elevation: 0,
   },
   retryIcon: {
     marginRight: 8,
@@ -1222,7 +1276,8 @@ glowRing: {
   retryButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: 'white',
+    color: BRAND_COLORS.CARD_BACKGROUND,
+    fontFamily: getFontFamily('bold'),
   },
 });
 

@@ -2,15 +2,16 @@ import React from 'react';
 import { View, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../shared/context/ThemeContext';
-import { 
-  Text, 
-  Heading, 
-  ModernCard, 
-  ModernButton, 
-  Row, 
-  Column 
+import {
+  Text,
+  Heading,
+  ModernCard,
+  ModernButton,
+  Row,
+  Column
 } from '../../../shared/components';
 import { useRouter } from 'expo-router';
+import { BRAND_COLORS } from '../../../shared/constants/colors';
 
 const ContinueLearningSection = ({ currentLesson, fadeAnim, scaleAnim }) => {
   const { theme } = useTheme();
@@ -30,7 +31,7 @@ const ContinueLearningSection = ({ currentLesson, fadeAnim, scaleAnim }) => {
         level="h3"
         style={{
           marginBottom: theme.spacing.sm,
-          color: theme.colors.brandNavy,
+          color: theme.colors.oceanBlue,
           fontFamily: theme.typography.fontFamily.semibold,
         }}
       >
@@ -39,10 +40,10 @@ const ContinueLearningSection = ({ currentLesson, fadeAnim, scaleAnim }) => {
       <ModernCard
         variant="elevated"
         style={{
-          backgroundColor: theme.colors.brandGreen + "10",
+          backgroundColor: theme.colors.explorerTeal + "10",
           borderRadius: theme.borderRadius.lg,
           borderWidth: 1,
-          borderColor: theme.colors.brandGreen + "20",
+          borderColor: theme.colors.explorerTeal + "20",
         }}
       >
         <Row align="center">
@@ -60,7 +61,7 @@ const ContinueLearningSection = ({ currentLesson, fadeAnim, scaleAnim }) => {
             <Ionicons
               name="book-outline"
               size={28}
-              color={theme.colors.brandGreen}
+              color={BRAND_COLORS.EXPLORER_TEAL}
             />
           </View>
           <Column style={{ flex: 1 }}>
@@ -69,7 +70,7 @@ const ContinueLearningSection = ({ currentLesson, fadeAnim, scaleAnim }) => {
               numberOfLines={1}
               ellipsizeMode="tail"
               style={{
-                color: theme.colors.brandNavy,
+                color: BRAND_COLORS.OCEAN_BLUE,
                 fontFamily: theme.typography.fontFamily.semibold,
                 fontSize: 16,
                 marginBottom: 2,
@@ -82,7 +83,7 @@ const ContinueLearningSection = ({ currentLesson, fadeAnim, scaleAnim }) => {
               weight="medium"
               numberOfLines={1}
               style={{
-                color: theme.colors.neutral[600],
+                color: BRAND_COLORS.SHADOW_GREY,
                 fontFamily: theme.typography.fontFamily.medium,
                 fontSize: 13,
               }}

@@ -1,3 +1,6 @@
+// Import color constants
+import { BRAND_COLORS } from "./src/shared/constants/colors";
+
 // Define the configuration directly
 const config = {
   name: "UNextDoor",
@@ -9,7 +12,7 @@ const config = {
   splash: {
     image: "./src/assets/app-logo-square.png",
     resizeMode: "contain",
-    backgroundColor: "#ffffff",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND, // Using constant
   },
   extra: {
     eas: {
@@ -28,13 +31,23 @@ const config = {
       NSCameraUsageDescription: "Allow UNextDoor to access your camera for video conversations",
       NSMicrophoneUsageDescription: "Allow UNextDoor to access your microphone for voice conversations",
       NSLocationWhenInUseUsageDescription: "Allow UNextDoor to access your location for location-based features",
+      NSAppTransportSecurity: {
+        NSAllowsArbitraryLoads: true,
+        NSExceptionDomains: {
+          localhost: {
+            NSExceptionAllowsInsecureHTTPLoads: true,
+            NSExceptionMinimumTLSVersion: "1.0",
+            NSExceptionRequiresForwardSecrecy: false,
+          },
+        },
+      },
     },
   },
   runtimeVersion: "1.0.2", // keep in sync with version
   android: {
     adaptiveIcon: {
       foregroundImage: "./src/assets/app-logo-square.png",
-      backgroundColor: "#ffffff",
+      backgroundColor: "#FAFAFA", // Whisper White
     },
     package: "com.UNextDoor.app",
     allowBackup: true,
@@ -62,6 +75,8 @@ const config = {
   plugins: [
     "expo-router",
     "expo-secure-store",
+    "expo-apple-authentication",
+    "./plugins/withAppleSignIn",
     [
       "@config-plugins/react-native-webrtc",
       {

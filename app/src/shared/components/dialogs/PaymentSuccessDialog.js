@@ -6,18 +6,40 @@ import {
   Dimensions,
   Animated,
   Easing,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { Text, Heading, ModernButton, Row, Column, Spacer, ModernCard } from '../index';
+import { BRAND_COLORS } from '../../constants/colors';
 
 const { width, height } = Dimensions.get('window');
+
+// Helper function for cross-platform font families
+const getFontFamily = (weight = 'regular') => {
+  if (Platform.OS === 'web') {
+    return 'Montserrat, sans-serif';
+  }
+
+  const fontMap = {
+    light: 'Montserrat-Light',
+    regular: 'Montserrat-Regular',
+    medium: 'Montserrat-Medium',
+    semibold: 'Montserrat-SemiBold',
+    bold: 'Montserrat-Bold',
+    extrabold: 'Montserrat-ExtraBold',
+  };
+
+  return fontMap[weight] || fontMap.regular;
+};
 
 const PaymentSuccessDialog = ({
   visible,
   onClose,
   planName = 'Subscription',
   amount = null,
+  currency = 'INR', // Add currency prop
+  currencySymbol = '₹', // Add currency symbol prop
   originalAmount = null,
   prorationCredit = 0,
   isUpgrade = false,
@@ -26,7 +48,7 @@ const PaymentSuccessDialog = ({
   showConfetti = true,
 }) => {
   const { theme } = useTheme();
-  
+
   // Animation values
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const checkmarkAnim = useRef(new Animated.Value(0)).current;
@@ -101,7 +123,7 @@ const PaymentSuccessDialog = ({
       const randomDelay = Math.random() * 400;
       const randomX = (Math.random() - 0.5) * 200;
       const randomRotation = Math.random() * 360;
-      
+
       return (
         <Animated.View
           key={i}
@@ -111,8 +133,8 @@ const PaymentSuccessDialog = ({
             left: '50%',
             width: 8,
             height: 8,
-            backgroundColor: i % 3 === 0 ? theme.colors.brandGreen : 
-                           i % 3 === 1 ? '#FFD700' : '#FF6B6B',
+            backgroundColor: i % 3 === 0 ? theme.colors.brandGreen :
+              i % 3 === 1 ? '#FFD700' : '#FF6B6B',
             borderRadius: 4,
             transform: [
               {
@@ -161,10 +183,10 @@ const PaymentSuccessDialog = ({
       <Animated.View
         style={{
           flex: 1,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backgroundColor: `${BRAND_COLORS.OCEAN_BLUE}99`, // Using brand navy with opacity
           justifyContent: 'center',
           alignItems: 'center',
-          paddingHorizontal: theme.spacing.lg,
+          paddingHorizontal: 24,
           opacity: fadeAnim,
         }}
       >
@@ -173,7 +195,7 @@ const PaymentSuccessDialog = ({
           activeOpacity={1}
           onPress={handleClose}
         />
-        
+
         <Animated.View
           style={{
             transform: [{ scale: scaleAnim }],
@@ -183,25 +205,25 @@ const PaymentSuccessDialog = ({
         >
           <ModernCard
             style={{
-              padding: theme.spacing.xl,
+              padding: 32,
               alignItems: 'center',
-              backgroundColor: theme.colors.brandWhite,
-              borderRadius: 24,
-              elevation: 20,
-              shadowColor: theme.colors.brandNavy,
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.15,
-              shadowRadius: 24,
+              backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+              borderRadius: 16, // Consistent with design system
+              elevation: 0, // Consistent with design system
+              shadowColor: BRAND_COLORS.SHADOW_GREY,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 16,
             }}
           >
             {/* Success Icon with Animation */}
-            <View style={{ position: 'relative', marginBottom: theme.spacing.lg }}>
+            <View style={{ position: 'relative', marginBottom: 24 }}>
               <Animated.View
                 style={{
                   width: 100,
                   height: 100,
                   borderRadius: 50,
-                  backgroundColor: theme.colors.brandGreen + '20',
+                  backgroundColor: BRAND_COLORS.EXPLORER_TEAL + '20',
                   alignItems: 'center',
                   justifyContent: 'center',
                   transform: [
@@ -227,37 +249,39 @@ const PaymentSuccessDialog = ({
                     ]
                   }}
                 >
-                  <Ionicons 
-                    name="checkmark-circle" 
-                    size={60} 
-                    color={theme.colors.brandGreen} 
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={60}
+                    color={BRAND_COLORS.EXPLORER_TEAL}
                   />
                 </Animated.View>
               </Animated.View>
-              
+
               {renderConfetti()}
             </View>
 
             {/* Success Message */}
-            <Heading 
-              level="h2" 
-              style={{ 
-                color: theme.colors.brandNavy, 
+            <Text
+              style={{
+                fontSize: 24,
+                fontFamily: getFontFamily('bold'),
+                color: BRAND_COLORS.OCEAN_BLUE,
                 textAlign: 'center',
-                marginBottom: theme.spacing.sm,
-                fontFamily: theme.typography.fontFamily.bold,
+                marginBottom: 8,
+                lineHeight: 32,
               }}
             >
               Payment Successful! 🎉
-            </Heading>
+            </Text>
 
             <Text
               style={{
-                color: theme.colors.neutral[600],
+                fontSize: 16,
+                fontFamily: getFontFamily('regular'),
+                color: BRAND_COLORS.SHADOW_GREY,
                 textAlign: 'center',
                 lineHeight: 22,
-                marginBottom: theme.spacing.md,
-                fontFamily: theme.typography.fontFamily.regular,
+                marginBottom: 24,
               }}
             >
               {message}
@@ -267,52 +291,57 @@ const PaymentSuccessDialog = ({
             {(planName || amount) && (
               <View
                 style={{
-                  backgroundColor: theme.colors.brandGreen + '10',
-                  borderRadius: 12,
-                  padding: theme.spacing.md,
-                  marginBottom: theme.spacing.lg,
+                  backgroundColor: BRAND_COLORS.EXPLORER_TEAL + '15',
+                  borderRadius: 16,
+                  padding: 20,
+                  marginBottom: 24,
                   width: '100%',
+                  borderWidth: 1,
+                  borderColor: BRAND_COLORS.EXPLORER_TEAL + '30',
                 }}
               >
                 {planName && (
                   <Row justify="space-between" align="center" style={{ marginBottom: amount ? 8 : 0 }}>
                     <Text
                       style={{
-                        color: theme.colors.neutral[700],
-                        fontFamily: theme.typography.fontFamily.medium,
+                        fontSize: 14,
+                        fontFamily: getFontFamily('medium'),
+                        color: BRAND_COLORS.SHADOW_GREY,
                       }}
                     >
                       Plan:
                     </Text>
                     <Text
                       style={{
-                        color: theme.colors.brandNavy,
-                        fontFamily: theme.typography.fontFamily.semibold,
+                        fontSize: 16,
+                        fontFamily: getFontFamily('semibold'),
+                        color: BRAND_COLORS.OCEAN_BLUE,
                       }}
                     >
                       {planName}
                     </Text>
                   </Row>
                 )}
-                
+
                 {amount && (
                   <Row justify="space-between" align="center" style={{ marginBottom: isUpgrade && prorationCredit > 0 ? 8 : 0 }}>
                     <Text
                       style={{
-                        color: theme.colors.neutral[700],
-                        fontFamily: theme.typography.fontFamily.medium,
+                        fontSize: 14,
+                        fontFamily: getFontFamily('medium'),
+                        color: BRAND_COLORS.SHADOW_GREY,
                       }}
                     >
                       Amount Paid:
                     </Text>
                     <Text
                       style={{
-                        color: theme.colors.brandGreen,
-                        fontFamily: theme.typography.fontFamily.bold,
-                        fontSize: 16,
+                        fontSize: 18,
+                        fontFamily: getFontFamily('bold'),
+                        color: BRAND_COLORS.EXPLORER_TEAL,
                       }}
                     >
-                      ₹{amount}
+                      {currencySymbol}{amount}
                     </Text>
                   </Row>
                 )}
@@ -333,13 +362,13 @@ const PaymentSuccessDialog = ({
                         </Text>
                         <Text
                           style={{
-                            color: theme.colors.neutral[600],
-                            fontFamily: theme.typography.fontFamily.medium,
                             fontSize: 13,
+                            fontFamily: getFontFamily('medium'),
+                            color: BRAND_COLORS.SHADOW_GREY,
                             textDecorationLine: 'line-through',
                           }}
                         >
-                          ₹{originalAmount}
+                          {currencySymbol}{originalAmount}
                         </Text>
                       </Row>
                     )}
@@ -356,12 +385,12 @@ const PaymentSuccessDialog = ({
                       </Text>
                       <Text
                         style={{
-                          color: theme.colors.success.main,
-                          fontFamily: theme.typography.fontFamily.semibold,
                           fontSize: 13,
+                          fontFamily: getFontFamily('semibold'),
+                          color: BRAND_COLORS.EXPLORER_TEAL,
                         }}
                       >
-                        -₹{prorationCredit}
+                        -{currencySymbol}{prorationCredit}
                       </Text>
                     </Row>
 
@@ -398,12 +427,15 @@ const PaymentSuccessDialog = ({
               variant="solid"
               style={{
                 width: '100%',
-                backgroundColor: theme.colors.brandGreen,
-                borderRadius: 12,
+                backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
+                borderRadius: 16,
+                elevation: 0,
+                paddingVertical: 8
               }}
               textStyle={{
-                color: theme.colors.brandWhite,
-                fontFamily: theme.typography.fontFamily.semibold,
+                fontSize: 16,
+                fontFamily: getFontFamily('semibold'),
+                color: BRAND_COLORS.WHISPER_WHITE,
               }}
             />
           </ModernCard>

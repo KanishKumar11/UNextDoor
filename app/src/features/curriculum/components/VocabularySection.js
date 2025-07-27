@@ -9,6 +9,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../../shared/context/ThemeContext";
 import { Text, ModernCard } from "../../../shared/components";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 import ttsService from "../../../shared/services/ttsService";
 
 /**
@@ -175,7 +176,7 @@ const VocabularySection = ({ items = [], title = "Vocabulary" }) => {
             </Text>
             <Text
               variant="caption"
-              color={theme.colors.text?.secondary || "#666"}
+              color={BRAND_COLORS.SHADOW_GREY}
               style={styles.romanizationText}
             >
               {normalizedItem.romanization}
@@ -184,7 +185,7 @@ const VocabularySection = ({ items = [], title = "Vocabulary" }) => {
             {normalizedItem.example && (
               <Text
                 variant="caption"
-                color={theme.colors.text?.secondary || "#666"}
+                color={BRAND_COLORS.SHADOW_GREY}
                 style={styles.exampleText}
               >
                 Example: {normalizedItem.example}
@@ -193,7 +194,7 @@ const VocabularySection = ({ items = [], title = "Vocabulary" }) => {
             {normalizedItem.sound && (
               <Text
                 variant="caption"
-                color={theme.colors.text?.secondary || "#666"}
+                color={BRAND_COLORS.SHADOW_GREY}
                 style={styles.soundText}
               >
                 Sounds like {normalizedItem.sound}
@@ -207,9 +208,9 @@ const VocabularySection = ({ items = [], title = "Vocabulary" }) => {
             disabled={isPlayingAll}
           >
             {isPlaying ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={BRAND_COLORS.WHISPER_WHITE} />
             ) : (
-              <Ionicons name="volume-high" size={20} color="#fff" />
+              <Ionicons name="volume-high" size={20} color={BRAND_COLORS.WHISPER_WHITE} />
             )}
           </TouchableOpacity>
         </View>
@@ -234,11 +235,11 @@ const VocabularySection = ({ items = [], title = "Vocabulary" }) => {
           disabled={!!playingItem}
         >
           {isPlayingAll ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={BRAND_COLORS.WHISPER_WHITE} />
           ) : (
-            <Ionicons name="play" size={16} color="#fff" />
+            <Ionicons name="play" size={16} color={BRAND_COLORS.WHISPER_WHITE} />
           )}
-          <Text color="#fff" style={styles.playAllText}>
+          <Text color={BRAND_COLORS.WHISPER_WHITE} style={styles.playAllText}>
             {isPlayingAll ? "Stop" : "Play All"}
           </Text>
         </TouchableOpacity>
@@ -267,13 +268,13 @@ const styles = StyleSheet.create({
   playAllButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
   },
   playingButton: {
-    backgroundColor: "#e74c3c",
+    backgroundColor: BRAND_COLORS.WARM_CORAL,
   },
   playAllText: {
     fontSize: 12,
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
   },
   vocabularyItem: {
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: BRAND_COLORS.EXPLORER_TEAL + "20",
     paddingBottom: 12,
   },
   vocabularyContent: {
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
   koreanText: {
     fontSize: 20,
     marginBottom: 4,
-    color: "#2c3e50",
+    color: BRAND_COLORS.OCEAN_BLUE,
   },
   romanizationText: {
     fontSize: 14,
@@ -309,7 +310,7 @@ const styles = StyleSheet.create({
   englishText: {
     fontSize: 16,
     marginBottom: 4,
-    color: "#34495e",
+    color: BRAND_COLORS.OCEAN_BLUE,
   },
   exampleText: {
     fontSize: 12,
@@ -325,10 +326,10 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

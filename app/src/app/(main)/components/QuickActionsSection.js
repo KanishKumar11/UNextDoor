@@ -9,6 +9,7 @@ import {
   Column
 } from '../../../shared/components';
 import { useRouter } from 'expo-router';
+import { BRAND_COLORS } from '../../../shared/constants/colors';
 
 const { width } = Dimensions.get("window");
 
@@ -73,7 +74,7 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
           }
           style={{
             flex: 1,
-            backgroundColor: theme.colors.brandGreen,
+            backgroundColor: theme.colors.explorerTeal,
             borderRadius: 16,
             padding: theme.spacing.lg,
             marginRight: theme.spacing.xs,
@@ -83,7 +84,7 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.2,
             shadowRadius: 8,
-            elevation: 4,
+            // elevation: 4,
           }}
         >
           <View
@@ -149,12 +150,12 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
             minHeight: 100,
             justifyContent: "center",
             borderWidth: 2,
-            borderColor: theme.colors.brandNavy + "15",
+            borderColor: BRAND_COLORS.OCEAN_BLUE + "45",
             shadowColor: theme.colors.brandNavy,
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.1,
             shadowRadius: 8,
-            elevation: 2,
+            // elevation: 2,
           }}
         >
           <View
@@ -162,7 +163,7 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: theme.colors.brandNavy + "15",
+              backgroundColor: BRAND_COLORS.OCEAN_BLUE + "15",
               alignItems: "center",
               justifyContent: "center",
               marginBottom: theme.spacing.sm,
@@ -172,7 +173,7 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
             <Ionicons
               name="book"
               size={20}
-              color={theme.colors.brandNavy}
+              color={BRAND_COLORS.OCEAN_BLUE}
             />
           </View>
           <Text
@@ -180,7 +181,7 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
             align="center"
             numberOfLines={1}
             style={{
-              color: theme.colors.brandNavy,
+              color: BRAND_COLORS.OCEAN_BLUE,
               fontFamily: theme.typography.fontFamily.bold,
               fontSize: 16,
               marginBottom: 4,
@@ -213,8 +214,8 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
         }}
         style={{ marginTop: theme.spacing.xs }}
       >
-        {/* Vocabulary */}
-        <TouchableOpacity
+        {/* Vocabulary - Hidden to streamline quick actions interface */}
+        {/* <TouchableOpacity
           onPress={() => router.push("/vocabulary")}
           style={{
             width: (width - 48) * 0.75 / 2, // 75% of main card width
@@ -231,7 +232,7 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.1,
             shadowRadius: 4,
-            elevation: 2,
+            // elevation: 2,
           }}
         >
           <View
@@ -275,7 +276,7 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
           >
             Learn words
           </Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         {/* Games */}
         <TouchableOpacity
@@ -295,7 +296,7 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.1,
             shadowRadius: 4,
-            elevation: 2,
+            // elevation: 2,
           }}
         >
           <View
@@ -359,7 +360,7 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.1,
             shadowRadius: 4,
-            elevation: 2,
+            // elevation: 2,
           }}
         >
           <View
@@ -423,7 +424,7 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.1,
             shadowRadius: 4,
-            elevation: 2,
+            // elevation: 2,
           }}
         >
           <View
@@ -487,7 +488,7 @@ const QuickActionsSection = ({ fadeAnim, scaleAnim, currentLesson }) => {
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.1,
             shadowRadius: 4,
-            elevation: 2,
+            // elevation: 0.1,
           }}
         >
           <View

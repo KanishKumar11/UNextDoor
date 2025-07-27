@@ -3,18 +3,19 @@ import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../../shared/context/ThemeContext';
 import SafeAreaWrapper from '../../../shared/components/SafeAreaWrapper';
-import { 
-  Container, 
-  Row, 
-  Column, 
-  Spacer, 
-  Text, 
-  Heading, 
-  ModernCard, 
-  ModernButton 
+import {
+  Container,
+  Row,
+  Column,
+  Spacer,
+  Text,
+  Heading,
+  ModernCard,
+  ModernButton
 } from '../../../shared/components';
 import { Ionicons } from '@expo/vector-icons';
 import { TUTOR_NAME } from '../../../shared/constants/tutorConstants';
+import { BRAND_COLORS } from '../../../shared/constants/colors';
 
 /**
  * Help & Support Screen
@@ -23,7 +24,7 @@ import { TUTOR_NAME } from '../../../shared/constants/tutorConstants';
 export default function HelpScreen() {
   const router = useRouter();
   const { theme } = useTheme();
-  
+
   // Sample FAQ items
   const faqItems = [
     {
@@ -34,7 +35,7 @@ export default function HelpScreen() {
     {
       id: 'faq2',
       question: 'How do I change my profile picture?',
-      answer: 'To change your profile picture, go to the Profile tab and tap on "Edit Profile". Then tap on your profile picture or the camera icon to select a new image from your device.',
+      answer: 'Profile picture editing is currently not available. You can edit other profile information like your display name, username, and bio by going to the Profile tab and tapping "Edit Profile".',
     },
     {
       id: 'faq3',
@@ -52,7 +53,7 @@ export default function HelpScreen() {
       answer: 'To delete your account, go to the Profile tab, then to Privacy & Security settings, and tap on "Delete Account". Please note that this action is irreversible.',
     },
   ];
-  
+
   // Sample support options
   const supportOptions = [
     {
@@ -77,11 +78,11 @@ export default function HelpScreen() {
       action: () => console.log('Report bug'),
     },
   ];
-  
+
   // Render an FAQ item
   const renderFaqItem = (item, isExpanded, onToggle) => (
-    <ModernCard 
-      key={item.id} 
+    <ModernCard
+      key={item.id}
       style={{ marginBottom: theme.spacing.md }}
       interactive
       onPress={() => onToggle(item.id)}
@@ -90,14 +91,14 @@ export default function HelpScreen() {
         <Text weight="semibold" style={{ flex: 1 }}>
           {item.question}
         </Text>
-        
+
         <Ionicons
           name={isExpanded ? 'chevron-up' : 'chevron-down'}
           size={20}
-          color={theme.colors.neutral[500]}
+          color={BRAND_COLORS.SHADOW_GREY}
         />
       </Row>
-      
+
       {isExpanded && (
         <View style={{ marginTop: theme.spacing.md }}>
           <Text color="neutral.700">{item.answer}</Text>
@@ -105,10 +106,10 @@ export default function HelpScreen() {
       )}
     </ModernCard>
   );
-  
+
   // State for expanded FAQ items
   const [expandedFaqs, setExpandedFaqs] = React.useState([]);
-  
+
   // Toggle FAQ expansion
   const toggleFaq = (id) => {
     if (expandedFaqs.includes(id)) {
@@ -117,7 +118,7 @@ export default function HelpScreen() {
       setExpandedFaqs([...expandedFaqs, id]);
     }
   };
-  
+
   return (
     <SafeAreaWrapper>
       <Container>
@@ -127,20 +128,20 @@ export default function HelpScreen() {
             <Text color="neutral.600" gutterBottom>
               Find answers to common questions or contact our support team
             </Text>
-            
+
             <Spacer size="lg" />
-            
+
             {/* Support options */}
             <Heading level="h2" gutterBottom>Support Options</Heading>
-            
+
             <Row wrap justify="space-between">
               {supportOptions.map(option => (
                 <ModernCard
                   key={option.id}
                   interactive
                   onPress={option.action}
-                  style={{ 
-                    width: '48%', 
+                  style={{
+                    width: '48%',
                     marginBottom: theme.spacing.md,
                     padding: theme.spacing.md,
                   }}
@@ -150,7 +151,7 @@ export default function HelpScreen() {
                       width: 48,
                       height: 48,
                       borderRadius: 24,
-                      backgroundColor: theme.colors.primary[100],
+                      backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginBottom: theme.spacing.sm,
@@ -159,10 +160,10 @@ export default function HelpScreen() {
                     <Ionicons
                       name={option.icon}
                       size={24}
-                      color={theme.colors.primary[500]}
+                      color={BRAND_COLORS.EXPLORER_TEAL}
                     />
                   </View>
-                  
+
                   <Text weight="semibold">{option.title}</Text>
                   <Text variant="caption" color="neutral.600">
                     {option.description}
@@ -170,27 +171,27 @@ export default function HelpScreen() {
                 </ModernCard>
               ))}
             </Row>
-            
+
             <Spacer size="lg" />
-            
+
             {/* FAQ section */}
             <Heading level="h2" gutterBottom>Frequently Asked Questions</Heading>
-            
+
             {faqItems.map(item => renderFaqItem(
-              item, 
+              item,
               expandedFaqs.includes(item.id),
               toggleFaq
             ))}
-            
+
             <Spacer size="lg" />
-            
+
             {/* Documentation */}
             <ModernCard style={{ marginBottom: theme.spacing.lg }}>
               <Heading level="h3" gutterBottom>Documentation</Heading>
               <Text color="neutral.600" gutterBottom>
                 Check out our comprehensive documentation for detailed guides and tutorials
               </Text>
-              
+
               <ModernButton
                 text="View Documentation"
                 variant="outline"
@@ -199,7 +200,7 @@ export default function HelpScreen() {
                 style={{ marginTop: theme.spacing.md }}
               />
             </ModernCard>
-            
+
             <ModernButton
               text="Back to Profile"
               variant="outline"

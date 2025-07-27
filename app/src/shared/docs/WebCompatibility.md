@@ -82,10 +82,13 @@ All brand colors work consistently across platforms:
 
 ```css
 :root {
-  --color-primary: #6FC935;    /* C59 M0 Y100 K0 / R111 G201 B53 */
-  --color-secondary: #003366;  /* C100 M80 Y0 K20 / R0 G51 B102 */
-  --color-tertiary: #000000;   /* C0 M0 Y0 K100 / R0 G0 B0 */
-  --color-white: #FFFFFF;
+  --color-primary: #5BC4B3;    /* Explorer Teal */
+  --color-secondary: #36798A;  /* Ocean Blue */
+  --color-tertiary: #4F4F4F;   /* Shadow Grey */
+  --color-accent: #A3E8DC;     /* Sky Aqua */
+  --color-canvas: #F7E7C1;     /* Canvas Beige */
+  --color-brown: #A46E3E;      /* Rucksack Brown */
+  --color-white: #FAFAFA;      /* Whisper White */
 }
 ```
 

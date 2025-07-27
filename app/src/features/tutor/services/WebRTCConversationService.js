@@ -41,7 +41,7 @@ import { AudioModule } from 'expo-audio';
 import { mediaDevices, RTCPeerConnection, RTCSessionDescription } from 'react-native-webrtc';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../../shared/config/api.js';
-import getScenarioPrompt from '../data/scenarioPrompts';
+// Removed getScenarioPrompt import - now using enhanced prompts from backend
 
 /**
  * Persistent WebRTC Conversation Service
@@ -50,7 +50,7 @@ import getScenarioPrompt from '../data/scenarioPrompts';
 class WebRTCConversationService extends EventEmitter {
   constructor() {
     super();
-    
+
     // Connection state
     this.peerConnection = null;
     this.dataChannel = null;
@@ -58,29 +58,32 @@ class WebRTCConversationService extends EventEmitter {
     this.isConnected = false;
     this.isSessionActive = false;
     this.isAISpeaking = false;
-    
+
     // Audio state
     this.audioOutputDevice = "speaker";
     this.isBluetoothAvailable = false;
-    
+
     // Session configuration
     this.currentScenario = null;
     this.currentLevel = "beginner";
-    
+
     // Session control state
     this.userEndedSession = false; // Flag to prevent auto-restart when user explicitly ends
     this.allowAutoRestart = true; // Global flag to control automatic session restart
-    
+
+    // Timeout management
+    this.aiResponseTimeout = null; // Track AI response trigger timeout
+
     // Transcription state
     this.currentUserTranscript = "";
     this.currentAITranscript = "";
     this.conversationHistory = []; // Array of {type: 'user'|'ai', text: string, timestamp: Date}
-    
+
     // Note: Message queue removed - OpenAI handles conversation flow automatically
-    
+
     // Debounced state management
     this.stateUpdateTimeout = null;
-    
+
     // Note: Audio level detection removed - OpenAI handles VAD automatically
 
     // Rate limiting and cooldown
@@ -96,13 +99,13 @@ class WebRTCConversationService extends EventEmitter {
   async initialize() {
     try {
       console.log("🎯 Initializing WebRTC Conversation Service");
-      
+
       // Set up audio mode for earphone compatibility
       await this.setupAudioMode();
-      
+
       // Detect available audio devices
       await this.detectAudioDevices();
-      
+
       this.emit('initialized');
       return true;
     } catch (error) {
@@ -178,7 +181,7 @@ class WebRTCConversationService extends EventEmitter {
       this.isBluetoothAvailable = false;
       this.audioOutputDevice = "speaker";
       this.emit('audioDeviceChanged', { device: 'speaker', available: false });
-      
+
     } catch (error) {
       console.error("🎧 Error detecting audio devices:", error);
       this.audioOutputDevice = "speaker";
@@ -192,36 +195,34 @@ class WebRTCConversationService extends EventEmitter {
   async startSession(scenarioId, level = "beginner") {
     try {
       console.log(`🎯 Starting conversation session: ${scenarioId}, level: ${level}`);
-      
-      // Check if auto-restart is disabled (user explicitly ended session)
-      if (!this.allowAutoRestart) {
-        console.log("🎯 Auto-restart disabled, user ended session. Use resetSessionControlFlags() to re-enable.");
-        return false;
-      }
-      
+
+      // Reset session control flags for explicit new session start
+      // This allows new conversations even after user ended previous session
+      console.log("🎯 Resetting session control flags for new conversation");
+      this.userEndedSession = false;
+      this.allowAutoRestart = true;
+
       if (this.isSessionActive) {
         console.log("🎯 Session already active, stopping current session first");
         await this.stopSession();
       }
-      
-      // Reset user ended flag when starting a new session
-      this.userEndedSession = false;
-      
+
       this.currentScenario = scenarioId;
       this.currentLevel = level;
-      
+      this.sessionStartTime = Date.now(); // Track session start for persistence
+
       // Create peer connection
       await this.createPeerConnection();
-      
+
       // Set up local media stream
       await this.setupLocalStream();
-      
+
       // Connect to OpenAI Realtime API
       await this.connectToRealtimeAPI();
-      
+
       this.isSessionActive = true;
       this.emit('sessionStarted', { scenarioId, level });
-      
+
       return true;
     } catch (error) {
       console.error("🎯 Error starting session:", error);
@@ -236,16 +237,16 @@ class WebRTCConversationService extends EventEmitter {
   async createPeerConnection() {
     try {
       console.log("🎯 Creating peer connection");
-      
+
       // Clean up existing connection
       if (this.peerConnection) {
         this.peerConnection.close();
       }
-      
+
       this.peerConnection = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
       });
-      
+
       // Set up event handlers with null checks
       this.peerConnection.oniceconnectionstatechange = () => {
         if (this.peerConnection) {
@@ -253,19 +254,19 @@ class WebRTCConversationService extends EventEmitter {
           this.emit('connectionStateChanged', this.peerConnection.iceConnectionState);
         }
       };
-      
+
       this.peerConnection.ontrack = (event) => {
         console.log("🎯 Received remote track");
         this.emit('remoteTrackReceived', event.streams[0]);
       };
-      
+
       // Create data channel for communication with OpenAI
       this.dataChannel = this.peerConnection.createDataChannel('oai-events', {
         ordered: true,
       });
-      
+
       this.setupDataChannelHandlers();
-      
+
     } catch (error) {
       console.error("🎯 Error creating peer connection:", error);
       throw error;
@@ -278,7 +279,7 @@ class WebRTCConversationService extends EventEmitter {
   async setupLocalStream() {
     try {
       console.log("🎯 Setting up local media stream");
-      
+
       const stream = await mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -287,16 +288,16 @@ class WebRTCConversationService extends EventEmitter {
         },
         video: false,
       });
-      
+
       this.localStream = stream;
-      
+
       // Add tracks to peer connection
       stream.getTracks().forEach(track => {
         this.peerConnection.addTrack(track, stream);
       });
-      
+
       console.log("🎯 Local media stream set up successfully");
-      
+
     } catch (error) {
       console.error("🎯 Error setting up local media stream:", error);
       throw error;
@@ -357,68 +358,20 @@ class WebRTCConversationService extends EventEmitter {
   }
 
   /**
-   * Configure the AI session with scenario-specific prompts
+   * Configure the AI session with optimized settings (without overriding prompts)
    */
   async configureSession() {
     try {
-      console.log("🎯 Configuring AI session");
-      
-      // Get scenario-specific prompt
-      // Prepare scenario details
-      const scenarioDetails = this.currentScenario
-        ? `Scenario Details: ${getScenarioPrompt(this.currentScenario, this.currentLevel)}`
-        : '';
-      
-      // Dynamic greeting variations
-      const greetings = [
-        "Hello! How are you today?",
-        "Hi there! How has your day been?",
-        "Good day! What have you been up to today?",
-        "Hey! How is everything going today?",
-        "Hello! How do you feel today?"
-      ];
-      const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
-      
-      // Get improved prompt - use fallback since backend template import is problematic in RN
-      const finalInstructions = `You are Miles, a friendly and experienced Korean language tutor for personalized one-on-one sessions.
-
-🚨 CRITICAL: You MUST speak first immediately when the conversation starts. Begin speaking RIGHT NOW with ONLY your greeting in English. Do not wait for the user to speak first.
-
-CONVERSATION FLOW:
-1. START IMMEDIATELY with ONLY: "${randomGreeting}" (in English only - keep it simple and warm)
-2. Wait for user response, then continue naturally and ask follow-up questions  
-3. After some natural conversation, gradually introduce Korean elements
-4. Maintain an interactive, back-and-forth conversation style like a real video call
-5. Ask questions and wait for responses - don't lecture continuously
-6. Be conversational, warm, and encouraging
-
-${scenarioDetails}
-
-TEACHING STYLE:
-- Start with English ONLY for the greeting and initial conversation
-- Use English primarily for beginners (80-90%), gradually introduce Korean later
-- Only introduce Korean after establishing natural conversation rapport
-- Always provide Korean pronunciation and English translations when you do teach
-- Give positive feedback and gentle corrections
-- Encourage practice and repetition in a supportive way
-- Keep responses conversational length (2-3 sentences max per turn)
-
-INTERACTION PATTERN:
-- Speak naturally as if on a video call with a friend
-- Start with just the greeting - nothing more
-- Pause after questions to let the user respond
-- React authentically to what the user shares
-- Build on their responses to keep conversation flowing
-- Make learning feel effortless and enjoyable
-
-🚨 START NOW with ONLY the greeting: "${randomGreeting}" - Say this and wait for their response!`;
+      console.log("🎯 Configuring AI session settings (prompts already set during token generation)");
 
       // Enhanced session configuration for more natural conversation
+      // NOTE: We do NOT override instructions here - they were already set during token generation
+      // with our enhanced prompts from createContextAwareTeachingPrompt()
       const sessionUpdateEvent = {
         type: "session.update",
         session: {
-          instructions: finalInstructions,
-          voice: "alloy",
+          // instructions: NOT SET HERE - using the enhanced prompts from token generation
+          voice: "shimmer", // Consistent with optimized voice selection
           input_audio_format: "pcm16",
           output_audio_format: "pcm16",
           input_audio_transcription: {
@@ -438,23 +391,25 @@ INTERACTION PATTERN:
       };
 
       this.sendMessage(sessionUpdateEvent);
-      console.log("🎯 Session configured with scenario:", this.currentScenario);
+      console.log("🎯 Session configured with enhanced prompts for scenario:", this.currentScenario);
 
-      // Trigger the AI to start speaking immediately (like Vapi)
-      setTimeout(() => {
-        console.log("🎯 Triggering AI to start conversation with simple greeting only");
-        
+      // Trigger the AI to start speaking immediately using enhanced prompts
+      this.aiResponseTimeout = setTimeout(() => {
+        console.log("🎯 Triggering AI to start conversation using enhanced prompts");
+
         // Use response.create to make AI speak first without any user input
+        // The enhanced prompts already contain the proper starter, so no need to override
         const responseCreateEvent = {
           type: "response.create",
           response: {
-            modalities: ["text", "audio"],
-            instructions: "IMMEDIATELY start the conversation with ONLY your greeting in English as instructed. Say just the greeting and wait for the user's response. This is the very first message - keep it simple and warm."
+            modalities: ["text", "audio"]
+            // No instructions override - let the enhanced prompts handle the conversation start
           }
         };
         this.sendMessage(responseCreateEvent);
+        this.aiResponseTimeout = null; // Clear reference after execution
       }, 2000); // Wait 2 seconds after session update for proper initialization
-      
+
     } catch (error) {
       console.error("🎯 Error configuring session:", error);
       throw error;
@@ -477,7 +432,7 @@ INTERACTION PATTERN:
 
       const requestBody = {
         model: "gpt-4o-realtime-preview-2025-06-03",
-        voice: "alloy",
+        voice: "shimmer", // Optimized voice for educational content
         scenarioId: this.currentScenario,
         isScenarioBased: true,
         level: this.currentLevel,
@@ -498,7 +453,7 @@ INTERACTION PATTERN:
         // Handle rate limiting with exponential backoff
         if (response.status === 429 && retryCount < maxRetries) {
           let delay = baseDelay * Math.pow(2, retryCount); // Default exponential backoff
-          
+
           // Try to get enhanced rate limit info from backend
           try {
             const errorData = await response.json();
@@ -585,12 +540,12 @@ INTERACTION PATTERN:
    */
   setupDataChannelHandlers() {
     if (!this.dataChannel) return;
-    
+
     this.dataChannel.onopen = () => {
       console.log("🎯 Data channel opened");
       this.emit('dataChannelOpened');
     };
-    
+
     this.dataChannel.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
@@ -599,12 +554,12 @@ INTERACTION PATTERN:
         console.error("🎯 Error parsing incoming message:", error);
       }
     };
-    
+
     this.dataChannel.onerror = (error) => {
       console.error("🎯 Data channel error:", error);
       this.emit('error', { type: 'data_channel', error });
     };
-    
+
     this.dataChannel.onclose = () => {
       console.log("🎯 Data channel closed");
       this.emit('dataChannelClosed');
@@ -787,6 +742,16 @@ INTERACTION PATTERN:
     try {
       console.log("🎯 Stopping conversation session");
 
+      // Clear any pending timeouts
+      if (this.aiResponseTimeout) {
+        clearTimeout(this.aiResponseTimeout);
+        this.aiResponseTimeout = null;
+      }
+      if (this.stateUpdateTimeout) {
+        clearTimeout(this.stateUpdateTimeout);
+        this.stateUpdateTimeout = null;
+      }
+
       // Close data channel
       if (this.dataChannel) {
         this.dataChannel.close();
@@ -811,7 +776,7 @@ INTERACTION PATTERN:
       this.isAISpeaking = false;
       this.currentScenario = null;
       this.currentLevel = "beginner";
-      
+
       // Reset transcription state
       this.currentUserTranscript = "";
       this.currentAITranscript = "";
@@ -835,16 +800,16 @@ INTERACTION PATTERN:
   async stopSessionByUser() {
     try {
       console.log("🎯 User ending conversation session - preventing auto-restart");
-      
+
       // Set flags to prevent automatic restart
       this.userEndedSession = true;
       this.allowAutoRestart = false;
-      
+
       // Stop the session
       await this.stopSession();
-      
+
       this.emit('userEndedSession');
-      
+
     } catch (error) {
       console.error("🎯 Error stopping session by user:", error);
       this.emit('error', { type: 'session_stop', error });
@@ -914,6 +879,9 @@ INTERACTION PATTERN:
     // Clear any remaining timeouts
     if (this.stateUpdateTimeout) {
       clearTimeout(this.stateUpdateTimeout);
+    }
+    if (this.aiResponseTimeout) {
+      clearTimeout(this.aiResponseTimeout);
     }
   }
 }

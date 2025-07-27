@@ -17,7 +17,7 @@ export const beginnerModules = [
     requiredXp: 0,
     order: 1,
     icon: "school-outline",
-    color: "#6FC935", // Primary green color
+    color: "#5BC4B3", // Explorer Teal
     lessons: [
       {
         id: "beginner-korean-alphabet",
@@ -446,7 +446,7 @@ export const beginnerModules = [
     requiredXp: 200,
     order: 2,
     icon: "cafe-outline",
-    color: "#3498db", // Blue color
+    color: "#A3E8DC", // Sky Aqua
     lessons: [
       {
         id: "beginner-numbers",
@@ -789,7 +789,7 @@ export const beginnerModules = [
     requiredXp: 400,
     order: 3,
     icon: "library-outline",
-    color: "#9b59b6", // Purple color
+    color: "#A46E3E", // Rucksack Brown
     lessons: [
       {
         id: "beginner-colors",
@@ -1107,7 +1107,7 @@ export const beginnerModules = [
     requiredXp: 600,
     order: 4,
     icon: "compass-outline",
-    color: "#e67e22", // Orange color
+    color: "#FF6B6B", // Warm Coral
     lessons: [
       {
         id: "beginner-shopping",

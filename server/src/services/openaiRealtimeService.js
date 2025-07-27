@@ -7,6 +7,27 @@ import { RealtimeClient } from "@openai/realtime-api-beta";
 import OpenAI from "openai";
 import config from "../config/index.js";
 import { v4 as uuidv4 } from "uuid";
+
+/**
+ * Generate fallback instructions using enhanced prompts
+ * @param {Object} options - Options for prompt generation
+ * @returns {Promise<string>} Enhanced instructions
+ */
+async function generateFallbackInstructions(options = {}) {
+  try {
+    console.log("⚠️ Generating fallback instructions with enhanced prompts");
+    const { createTeachingPrompt } = await import('../data/promptTemplates.js');
+    return createTeachingPrompt({
+      isScenarioBased: options.isScenarioBased || false,
+      scenarioId: options.scenarioId || null,
+      level: options.level || 'beginner'
+    });
+  } catch (error) {
+    console.error("❌ Failed to generate enhanced fallback instructions:", error);
+    return "You are Miles, a helpful AI Korean language tutor. Start with a friendly greeting and teach Korean step by step.";
+  }
+}
+import { webrtcSessionPersistence } from "./webrtcSessionPersistence.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -37,8 +58,11 @@ const activeSessions = new Map();
  */
 export const createSession = async (userId, options = {}) => {
   try {
-    // Generate a unique session ID
-    const sessionId = uuidv4();
+    console.log(`🎯 Creating WebRTC session for user: ${userId}`);
+
+    // Create or resume persistent session
+    const persistentSession = await webrtcSessionPersistence.createOrResumeSession(userId, options);
+    const sessionId = persistentSession.sessionId;
 
     // Create a new Realtime client
     const client = new RealtimeClient({
@@ -49,15 +73,13 @@ export const createSession = async (userId, options = {}) => {
     client.updateSession({
       model: "gpt-4o-realtime-preview",
       voice: options.voice || "alloy",
-      instructions:
-        options.instructions ||
-        "You are a helpful AI language tutor specializing in teaching Korean to English speakers. Respond in Korean with English translations when appropriate.",
+      instructions: options.instructions || await generateFallbackInstructions(options),
       turn_detection: { type: "server_vad" },
       input_audio_transcription: { model: "whisper-1" },
     });
 
     // Set up event handling
-    client.on("conversation.updated", (event) => {
+    client.on("conversation.updated", async (event) => {
       const { item, delta } = event;
       const session = activeSessions.get(sessionId);
 
@@ -84,6 +106,23 @@ export const createSession = async (userId, options = {}) => {
             transcript: delta.transcript,
             isFinal: item.status === "completed",
           });
+
+          // Save completed messages to persistent storage
+          if (item.status === "completed" && item.type === "message") {
+            const messageData = {
+              role: item.role,
+              content: delta.transcript || item.content?.[0]?.transcript,
+              timestamp: new Date(),
+              audioTranscript: delta.transcript,
+              metadata: {
+                itemId: item.id,
+                type: item.type,
+                status: item.status
+              }
+            };
+
+            await webrtcSessionPersistence.saveMessage(sessionId, messageData);
+          }
         }
       }
     });
@@ -205,13 +244,19 @@ export const endSession = async (sessionId) => {
       throw new Error(`Session ${sessionId} not found`);
     }
 
+    console.log(`🏁 Ending WebRTC session: ${sessionId}`);
+
+    // End persistent session and get summary
+    const sessionSummary = await webrtcSessionPersistence.endSession(sessionId);
+
     // Disconnect from the Realtime API
     await session.client.disconnect();
 
-    // Remove session
+    // Remove session from memory
     activeSessions.delete(sessionId);
 
-    return true;
+    console.log(`✅ WebRTC session ended successfully: ${sessionId}`);
+    return { success: true, summary: sessionSummary };
   } catch (error) {
     console.error("Error ending Realtime API session:", error);
     throw error;

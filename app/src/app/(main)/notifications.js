@@ -109,19 +109,19 @@ export default function NotificationsScreen() {
     }
   };
 
-  // Get notification color using brand colors
+  // Get notification color using Miles-inspired brand colors
   const getNotificationColor = (type, category) => {
     switch (type) {
       case "achievement":
-        return "#FFD700"; // Gold for achievements
+        return theme.colors.canvasBeige; // Canvas Beige for achievements
       case "progress":
-        return theme.colors.brandGreen; // Brand green for progress
+        return theme.colors.explorerTeal; // Explorer Teal for progress
       case "streak":
-        return "#FF6B35"; // Orange-red for streaks
+        return theme.colors.rucksackBrown; // Rucksack Brown for streaks
       case "lesson":
-        return theme.colors.brandGreen; // Brand green for lessons
+        return theme.colors.explorerTeal; // Explorer Teal for lessons
       case "system":
-        return theme.colors.brandNavy; // Brand navy for system
+        return theme.colors.oceanBlue; // Ocean Blue for system
       default:
         return theme.colors.neutral[500];
     }
@@ -303,7 +303,7 @@ export default function NotificationsScreen() {
               <Heading
                 level="h3"
                 style={{
-                  color: theme.colors.brandNavy,
+                  color: theme.colors.oceanBlue,
                   fontFamily: theme.typography.fontFamily.bold,
                   fontSize: 20,
                 }}

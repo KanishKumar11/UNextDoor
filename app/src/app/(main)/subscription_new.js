@@ -39,7 +39,7 @@ export default function SubscriptionScreen() {
   const router = useRouter();
   const { user, token } = useAuth();
   const { theme } = useTheme();
-  
+
   // Use the subscription hook for real-time data
   const {
     currentPlan,
@@ -123,19 +123,19 @@ export default function SubscriptionScreen() {
       // Check if there's a pending order ID stored locally
       // This would be set when payment was initiated
       const pendingOrderId = await AsyncStorage.getItem('pending_payment_order_id');
-      
+
       if (pendingOrderId) {
         console.log('Checking pending payment:', pendingOrderId);
-        
+
         const data = await SubscriptionService.verifyPayment(pendingOrderId);
-        
+
         if (data.success) {
           if (data.data.status === 'completed' || data.data.status === 'recovered') {
             // Payment was successful, clear pending order and refresh data
             await AsyncStorage.removeItem('pending_payment_order_id');
             Alert.alert(
-              'Payment Successful!', 
-              data.data.status === 'recovered' 
+              'Payment Successful!',
+              data.data.status === 'recovered'
                 ? 'Your payment was processed successfully. Your subscription is now active!'
                 : 'Your subscription is active!',
               [{ text: 'OK', onPress: () => fetchSubscriptionData() }]
@@ -152,12 +152,12 @@ export default function SubscriptionScreen() {
   const handleRefresh = async () => {
     setRefreshing(true);
     setError(null);
-    
+
     // Refresh subscription data
     if (typeof refreshSubscription === 'function') {
       refreshSubscription();
     }
-    
+
     await fetchSubscriptionData();
     setRefreshing(false);
   };
@@ -170,50 +170,66 @@ export default function SubscriptionScreen() {
 
       if (previewData.success) {
         const data = previewData.data;
-        
+
         // Handle new purchase (free user) vs upgrade (paid user)
         if (data.purchase) {
-          // Free user making first purchase - use dynamic currency
+          // Free user making first purchase - show both display and payment amounts
           const currency = userCurrency || await CurrencyService.getUserCurrency();
-          const amount = currency.code === 'USD' ? 
-            CurrencyService.convertPrice(data.purchase.amountToPay, currency) : 
+          const displayAmount = currency.code === 'USD' ?
+            CurrencyService.convertPrice(data.purchase.amountToPay, currency) :
             data.purchase.amountToPay;
-          
-          const message = `You'll pay ${currency.symbol}${amount} and get immediate access to all ${data.newPlan.name} plan features.`;
-          
+
+          // Calculate actual payment amount in INR (what Razorpay will charge)
+          const paymentAmountINR = CurrencyService.getPaymentAmountINR(displayAmount, currency.code);
+
+          let message = `You'll pay ${currency.symbol}${displayAmount}`;
+          if (currency.code === 'USD') {
+            message += ` (₹${paymentAmountINR} INR will be charged)`;
+          }
+          message += ` and get immediate access to all ${data.newPlan.name} plan features.`;
+
           Alert.alert(
             'Confirm Purchase',
             message,
             [
               { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'Proceed', 
+              {
+                text: 'Proceed',
                 onPress: () => proceedWithPayment(planId)
               }
             ]
           );
         } else if (data.upgrade) {
-          // Existing user upgrading - use dynamic currency
+          // Existing user upgrading - show both display and payment amounts
           const { upgrade } = data;
           const currency = userCurrency || await CurrencyService.getUserCurrency();
-          const amount = currency.code === 'USD' ? 
-            CurrencyService.convertPrice(upgrade.amountToPay, currency) : 
+          const displayAmount = currency.code === 'USD' ?
+            CurrencyService.convertPrice(upgrade.amountToPay, currency) :
             upgrade.amountToPay;
-          const savings = currency.code === 'USD' ? 
-            CurrencyService.convertPrice(upgrade.savings, currency) : 
+          const displaySavings = currency.code === 'USD' ?
+            CurrencyService.convertPrice(upgrade.savings, currency) :
             upgrade.savings;
-            
-          const message = upgrade.prorationCredit > 0 
-            ? `You'll pay ${currency.symbol}${amount} (${currency.symbol}${savings} credit applied) and get immediate access to all features.`
-            : `You'll pay ${currency.symbol}${amount} and get immediate access to all features.`;
+
+          // Calculate actual payment amount in INR (what Razorpay will charge)
+          const paymentAmountINR = CurrencyService.getPaymentAmountINR(displayAmount, currency.code);
+
+          let message = `You'll pay ${currency.symbol}${displayAmount}`;
+          if (currency.code === 'USD') {
+            message += ` (₹${paymentAmountINR} INR will be charged)`;
+          }
+
+          if (upgrade.prorationCredit > 0) {
+            message += ` (${currency.symbol}${displaySavings} credit applied)`;
+          }
+          message += ` and get immediate access to all features.`;
 
           Alert.alert(
             'Confirm Upgrade',
             message,
             [
               { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'Proceed', 
+              {
+                text: 'Proceed',
                 onPress: () => proceedWithPayment(planId)
               }
             ]
@@ -252,14 +268,22 @@ export default function SubscriptionScreen() {
           CurrencyService.convertPrice(subscriptionData.data.planDetails.price, currency) :
           subscriptionData.data.planDetails.price;
 
-        // Show recurring subscription information
+        // Calculate actual payment amount in INR
+        const paymentAmountINR = CurrencyService.getPaymentAmountINR(displayAmount, currency.code);
+
+        // Show recurring subscription information with payment clarity
+        let amountText = `Amount: ${currency.symbol}${displayAmount}`;
+        if (currency.code === 'USD') {
+          amountText += ` (₹${paymentAmountINR} INR will be charged)`;
+        }
+
         Alert.alert(
           'Recurring Subscription Created',
           `Your recurring subscription has been set up successfully!
 
 Subscription ID: ${subscriptionData.data.subscriptionId}
 Plan: ${subscriptionData.data.planDetails.name}
-Amount: ${currency.symbol}${displayAmount}
+${amountText}
 Currency: ${currency.name}
 Auto-renewal: ${subscriptionData.data.autoRenewal ? 'Enabled' : 'Disabled'}
 Next billing: ${new Date(subscriptionData.data.nextBillingDate).toLocaleDateString()}
@@ -320,7 +344,7 @@ You will be charged automatically on each billing cycle.`,
   const handleCurrencyChange = async () => {
     const newCurrency = await CurrencyService.showCurrencySelector();
     setUserCurrency(newCurrency);
-    
+
     // Refresh plans with new currency
     await fetchSubscriptionData();
   };
@@ -389,7 +413,7 @@ You will be charged automatically on each billing cycle.`,
                   Choose Your Plan
                 </Heading>
               </Column>
-              
+
               <Row align="center">
                 {/* Currency Selector */}
                 {userCurrency && (
@@ -403,8 +427,8 @@ You will be charged automatically on each billing cycle.`,
                       marginRight: 8,
                     }}
                   >
-                    <Text 
-                      variant="caption" 
+                    <Text
+                      variant="caption"
                       weight="medium"
                       style={{ color: theme.colors.brandNavy }}
                     >
@@ -412,7 +436,7 @@ You will be charged automatically on each billing cycle.`,
                     </Text>
                   </TouchableOpacity>
                 )}
-                
+
                 <TouchableOpacity
                   onPress={() => router.back()}
                   style={{
@@ -470,14 +494,14 @@ You will be charged automatically on each billing cycle.`,
                 {/* Current Plan Card */}
                 <View
                   style={{
-                    backgroundColor: currentPlan.tier === 'free' 
-                      ? theme.colors.warning.main + "10" 
+                    backgroundColor: currentPlan.tier === 'free'
+                      ? theme.colors.warning.main + "10"
                       : theme.colors.success.main + "10",
                     borderRadius: 12,
                     padding: 16,
                     borderWidth: 2,
-                    borderColor: currentPlan.tier === 'free' 
-                      ? theme.colors.warning.main + "30" 
+                    borderColor: currentPlan.tier === 'free'
+                      ? theme.colors.warning.main + "30"
                       : theme.colors.success.main + "30",
                   }}
                 >
@@ -488,8 +512,8 @@ You will be charged automatically on each billing cycle.`,
                           width: 48,
                           height: 48,
                           borderRadius: 24,
-                          backgroundColor: currentPlan.tier === 'free' 
-                            ? theme.colors.warning.main + "20" 
+                          backgroundColor: currentPlan.tier === 'free'
+                            ? theme.colors.warning.main + "20"
                             : theme.colors.success.main + "20",
                           alignItems: "center",
                           justifyContent: "center",
@@ -527,8 +551,8 @@ You will be charged automatically on each billing cycle.`,
 
                     <View
                       style={{
-                        backgroundColor: currentPlan.tier === 'free' 
-                          ? theme.colors.warning.main 
+                        backgroundColor: currentPlan.tier === 'free'
+                          ? theme.colors.warning.main
                           : theme.colors.success.main,
                         borderRadius: 16,
                         paddingHorizontal: 12,
@@ -562,7 +586,7 @@ You will be charged automatically on each billing cycle.`,
                       >
                         THIS MONTH'S USAGE
                       </Text>
-                      
+
                       <View
                         style={{
                           backgroundColor: theme.colors.brandWhite,

@@ -18,6 +18,7 @@ import {
   verifyGoogleToken,
   verifyAppleToken,
 } from "../utils/socialAuthUtils.js";
+import { clearUserLevelCache } from "./userLevelService.js";
 import {
   isValidEmail,
   isValidUsername,
@@ -157,8 +158,8 @@ export const verifyOTP = async (email, otp, metadata = {}) => {
       const refreshExpiryMs = refreshExpiresIn.endsWith("d")
         ? parseInt(refreshExpiresIn.slice(0, -1)) * 24 * 60 * 60 * 1000
         : refreshExpiresIn.endsWith("h")
-        ? parseInt(refreshExpiresIn.slice(0, -1)) * 60 * 60 * 1000
-        : 30 * 24 * 60 * 60 * 1000; // Default to 30 days
+          ? parseInt(refreshExpiresIn.slice(0, -1)) * 60 * 60 * 1000
+          : 30 * 24 * 60 * 60 * 1000; // Default to 30 days
 
       const refreshExpiresAt = new Date(Date.now() + refreshExpiryMs);
 
@@ -281,8 +282,8 @@ export const registerUser = async (userData, metadata = {}) => {
     const refreshExpiryMs = refreshExpiresIn.endsWith("d")
       ? parseInt(refreshExpiresIn.slice(0, -1)) * 24 * 60 * 60 * 1000
       : refreshExpiresIn.endsWith("h")
-      ? parseInt(refreshExpiresIn.slice(0, -1)) * 60 * 60 * 1000
-      : 30 * 24 * 60 * 60 * 1000; // Default to 30 days
+        ? parseInt(refreshExpiresIn.slice(0, -1)) * 60 * 60 * 1000
+        : 30 * 24 * 60 * 60 * 1000; // Default to 30 days
 
     const refreshExpiresAt = new Date(Date.now() + refreshExpiryMs);
 
@@ -740,8 +741,8 @@ export const authenticateWithGoogle = async (token, metadata = {}) => {
     const refreshExpiryMs = refreshExpiresIn.endsWith("d")
       ? parseInt(refreshExpiresIn.slice(0, -1)) * 24 * 60 * 60 * 1000
       : refreshExpiresIn.endsWith("h")
-      ? parseInt(refreshExpiresIn.slice(0, -1)) * 60 * 60 * 1000
-      : 30 * 24 * 60 * 60 * 1000; // Default to 30 days
+        ? parseInt(refreshExpiresIn.slice(0, -1)) * 60 * 60 * 1000
+        : 30 * 24 * 60 * 60 * 1000; // Default to 30 days
 
     const refreshExpiresAt = new Date(Date.now() + refreshExpiryMs);
 
@@ -866,8 +867,8 @@ export const authenticateWithApple = async (token, metadata = {}) => {
     const refreshExpiryMs = refreshExpiresIn.endsWith("d")
       ? parseInt(refreshExpiresIn.slice(0, -1)) * 24 * 60 * 60 * 1000
       : refreshExpiresIn.endsWith("h")
-      ? parseInt(refreshExpiresIn.slice(0, -1)) * 60 * 60 * 1000
-      : 30 * 24 * 60 * 60 * 1000; // Default to 30 days
+        ? parseInt(refreshExpiresIn.slice(0, -1)) * 60 * 60 * 1000
+        : 30 * 24 * 60 * 60 * 1000; // Default to 30 days
 
     const refreshExpiresAt = new Date(Date.now() + refreshExpiryMs);
 
@@ -914,7 +915,7 @@ export const updateUserPreferences = async (userId, preferences) => {
 
     // Build update object with only provided preferences
     const updateObject = {};
-    
+
     if (preferences.currency !== undefined) {
       updateObject['preferences.currency'] = preferences.currency;
     }
@@ -947,6 +948,12 @@ export const updateUserPreferences = async (userId, preferences) => {
     }
 
     console.log(`Updated preferences for user ${userId}:`, user.preferences);
+
+    // Clear user level cache if language level was updated
+    if (preferences.languageLevel !== undefined) {
+      clearUserLevelCache(userId);
+      console.log(`✅ Cleared user level cache for ${userId} after language level update`);
+    }
 
     return {
       success: true,

@@ -5,10 +5,13 @@ import {
   View,
   StyleSheet,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../../shared/context/ThemeContext";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
+import characterIconService from "../../../shared/services/characterIconService";
 // import * as tutorService from '../services/tutorService';
 
 // Import modern components
@@ -168,11 +171,20 @@ const ModernConversationListScreen = () => {
       >
         <Row align="center">
           <View style={styles.conversationAvatar}>
-            <Ionicons
-              name="chatbubbles-outline"
-              size={20}
-              color={theme.colors.primary[500]}
-            />
+            {(() => {
+              // Get character for this conversation based on scenario or random
+              const conversationCharacter = item.scenarioId
+                ? characterIconService.getCharacterForScenario(item.scenarioId, `conv_${item.id}`)
+                : characterIconService.getCharacterForContext(item.level || 'beginner', 'conversation', `conv_${item.id}`);
+
+              return (
+                <Image
+                  source={conversationCharacter.icon}
+                  style={styles.conversationAvatarIcon}
+                  resizeMode="contain"
+                />
+              );
+            })()}
           </View>
 
           <Column style={{ flex: 1, marginLeft: theme.spacing.md }}>
@@ -184,8 +196,8 @@ const ModernConversationListScreen = () => {
                   item.level === "Beginner"
                     ? "success"
                     : item.level === "Intermediate"
-                    ? "warning"
-                    : "error"
+                      ? "warning"
+                      : "error"
                 }
                 size="sm"
                 style={{ marginLeft: theme.spacing.xs }}
@@ -308,6 +320,7 @@ const ModernConversationListScreen = () => {
 const styles = StyleSheet.create({
   listContent: {
     padding: 16,
+    paddingBottom: 100, // Space for bottom navigation
   },
   conversationCard: {
     marginBottom: 12,
@@ -315,27 +328,36 @@ const styles = StyleSheet.create({
   conversationAvatar: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(0, 123, 255, 0.1)",
+    backgroundColor: 'transparent',
     alignItems: "center",
     justifyContent: "center",
   },
+  conversationAvatarIcon: {
+    width: 36,
+    height: 36,
+  },
   deleteButton: {
-    padding: 4,
+    padding: 8,
     marginTop: 4,
+    borderRadius: 16,
+    backgroundColor: BRAND_COLORS.WARM_CORAL + "20",
   },
   newButton: {
     padding: 8,
+    borderRadius: 16,
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "20",
   },
   retryButton: {
     marginTop: 16,
-    padding: 8,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
   },
   startButton: {
-    backgroundColor: "#007BFF",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: 16,
   },
 });
 

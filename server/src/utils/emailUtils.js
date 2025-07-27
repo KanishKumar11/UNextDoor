@@ -46,7 +46,7 @@ const transporter = nodemailer.createTransport({
 export const sendEmail = async (to, subject, text, html = null) => {
   try {
     const mailOptions = {
-      from: `"Kanish Kumar" <${config.email.user}>`,
+      from: `"UNextDoor" <${config.email.user}>`,
       to, // Supports single email or array of emails
       subject,
       text,
@@ -65,8 +65,8 @@ export const sendEmail = async (to, subject, text, html = null) => {
     }
 
     // Send email
-   const res= await transporter.sendMail(mailOptions);
-   console.log(res);
+    const res = await transporter.sendMail(mailOptions);
+    console.log(res);
     return true;
   } catch (error) {
     console.error("Error sending email:", error.message);

@@ -43,16 +43,16 @@ export const useWebRTCConversation = () => {
     try {
       console.log("🎯 Initializing WebRTC service from hook");
       const success = await webRTCConversationService.initialize();
-      
+
       if (success) {
         initializationRef.current = true;
         setIsInitialized(true);
-        
+
         // Sync initial state
         const state = webRTCConversationService.getState();
         updateStateFromService(state);
       }
-      
+
       return success;
     } catch (error) {
       console.error("🎯 Error initializing service:", error);
@@ -87,14 +87,14 @@ export const useWebRTCConversation = () => {
     try {
       setError(null);
       console.log(`🎯 Starting session from hook: ${scenarioId}, level: ${level}`);
-      
+
       const success = await webRTCConversationService.startSession(scenarioId, level);
-      
+
       if (success) {
         setCurrentScenario(scenarioId);
         setCurrentLevel(level);
       }
-      
+
       return success;
     } catch (error) {
       console.error("🎯 Error starting session:", error);
@@ -110,9 +110,9 @@ export const useWebRTCConversation = () => {
     try {
       setError(null);
       console.log("🎯 Stopping session from hook");
-      
+
       await webRTCConversationService.stopSession();
-      
+
       // Reset local state
       setIsConnected(false);
       setIsSessionActive(false);
@@ -120,7 +120,7 @@ export const useWebRTCConversation = () => {
       setCurrentScenario(null);
       setCurrentLevel("beginner");
       setConnectionState('new');
-      
+
     } catch (error) {
       console.error("🎯 Error stopping session:", error);
       setError(error);
@@ -134,12 +134,12 @@ export const useWebRTCConversation = () => {
     try {
       setError(null);
       console.log(`🎯 Changing scenario from hook: ${scenarioId}, level: ${level}`);
-      
+
       await webRTCConversationService.changeScenario(scenarioId, level);
-      
+
       setCurrentScenario(scenarioId);
       setCurrentLevel(level);
-      
+
     } catch (error) {
       console.error("🎯 Error changing scenario:", error);
       setError(error);
@@ -305,9 +305,9 @@ export const useWebRTCConversation = () => {
     try {
       setError(null);
       console.log("🎯 Stopping session by user action from hook");
-      
+
       await webRTCConversationService.stopSessionByUser();
-      
+
       // Update local state
       setIsConnected(false);
       setIsSessionActive(false);
@@ -317,7 +317,7 @@ export const useWebRTCConversation = () => {
       setConnectionState('new');
       setUserEndedSession(true);
       setAllowAutoRestart(false);
-      
+
     } catch (error) {
       console.error("🎯 Error stopping session by user:", error);
       setError(error);

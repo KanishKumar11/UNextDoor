@@ -19,6 +19,7 @@
   "dependencies": {
     "@openai/realtime-api-beta": "github:openai/openai-realtime-api-beta",
     "@vapi-ai/server-sdk": "^0.7.0",
+    "apple-signin-auth": "^2.0.0",
     "base-64": "^1.0.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -34,6 +35,7 @@
     "nodemailer": "^7.0.3",
     "openai": "^4.100.0",
     "razorpay": "^2.9.2",
+    "redis": "^5.6.1",
     "socket.io": "^4.8.1",
     "uuid": "^9.0.1",
     "ws": "^8.18.2"

@@ -15,9 +15,18 @@ const messageSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    audioTranscript: {
+      type: String,
+      default: null,
+    },
     timestamp: {
       type: Date,
       default: Date.now,
+    },
+    metadata: {
+      type: Map,
+      of: mongoose.Schema.Types.Mixed,
+      default: {}
     },
   },
   { _id: false }
@@ -127,6 +136,58 @@ const conversationSchema = new mongoose.Schema(
     performance: {
       type: Number, // Overall performance score (0-100)
       default: 0,
+    },
+    analytics: {
+      qualityScore: {
+        type: Number,
+        min: 0,
+        max: 100,
+        default: 0
+      },
+      engagementScore: {
+        type: Number,
+        min: 0,
+        max: 1,
+        default: 0
+      },
+      messageCount: {
+        type: Number,
+        default: 0
+      },
+      duration: {
+        type: Number, // Duration in milliseconds
+        default: 0
+      },
+      learningOutcomes: {
+        conceptsLearned: [String],
+        skillsImproved: [String],
+        weaknessesIdentified: [String]
+      },
+      conversationFlow: {
+        breaksSuggested: { type: Number, default: 0 },
+        breaksAccepted: { type: Number, default: 0 },
+        practiceSessionsTriggered: { type: Number, default: 0 },
+        stateTransitions: [{
+          from: String,
+          to: String,
+          timestamp: Date
+        }]
+      },
+      modelUsage: {
+        type: Map,
+        of: Number,
+        default: {}
+      },
+      cachePerformance: {
+        hits: { type: Number, default: 0 },
+        misses: { type: Number, default: 0 },
+        hitRate: { type: Number, default: 0 }
+      }
+    },
+    metadata: {
+      type: Map,
+      of: mongoose.Schema.Types.Mixed,
+      default: {}
     },
   },
   {

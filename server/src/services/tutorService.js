@@ -7,6 +7,11 @@ import UserProgress from "../models/UserProgress.js";
 import User from "../models/User.js";
 import { uploadAudio, getAudioUrl } from "../utils/storageUtils.js";
 import { learningScenarios as staticScenarios } from "../data/learningScenarios.js";
+import { getUserLevelCached } from "./userLevelService.js";
+import { getScenarioPrompt, getLevelBasedPrompt } from "../data/scenarioPrompts.js";
+import { createOptimizedCompletion, USE_CASES, logModelUsage } from "./aiModelService.js";
+import { conversationFlowManager, enhanceResponseWithFlow } from "./conversationFlowService.js";
+import { conversationAnalytics, trackMessageAnalytics } from "./conversationAnalyticsService.js";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -211,6 +216,8 @@ export const sendMessage = async (
   audioUrl
 ) => {
   try {
+    const messageStartTime = Date.now(); // Track response time for flow management
+
     if (!conversationId || !userId) {
       return { error: "Conversation ID and user ID are required" };
     }
@@ -256,15 +263,38 @@ export const sendMessage = async (
       content: msg.content,
     }));
 
-    // Generate AI response using OpenAI
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: messageHistory,
-      temperature: 0.7,
-      max_tokens: 500,
+    // Get user for model selection
+    const user = await User.findById(userId).select('subscriptionTier');
+
+    // Generate AI response using optimized model selection
+    const result = await createOptimizedCompletion(
+      openai,
+      USE_CASES.EDUCATIONAL_CHAT,
+      messageHistory,
+      user
+    );
+
+    let aiResponse = result.completion.choices[0].message.content;
+
+    // Log model usage for analytics
+    logModelUsage(
+      userId,
+      result.modelUsed,
+      result.useCase,
+      result.completion.usage?.total_tokens || 0
+    );
+
+    // Update conversation flow metrics
+    conversationFlowManager.updateMetrics(userId, {
+      newMessage: true,
+      responseTime: Date.now() - messageStartTime
     });
 
-    const aiResponse = completion.choices[0].message.content;
+    // Enhance response with flow management
+    aiResponse = enhanceResponseWithFlow(userId, aiResponse, {
+      responseType: "educational_response",
+      userPerformance: { /* TODO: Add user performance data */ }
+    });
 
     // Add AI response to conversation
     conversation.messages.push({
@@ -275,11 +305,36 @@ export const sendMessage = async (
     conversation.lastMessageAt = new Date();
     await conversation.save();
 
+    // Track analytics for both user and AI messages
+    trackMessageAnalytics(conversationId, {
+      role: "user",
+      content: message,
+      responseTime: Date.now() - messageStartTime,
+      modelUsed: result.modelUsed,
+      fromCache: result.fromCache
+    });
+
+    trackMessageAnalytics(conversationId, {
+      role: "assistant",
+      content: aiResponse,
+      modelUsed: result.modelUsed,
+      fromCache: result.fromCache
+    });
+
     // Generate feedback on user's message
     const feedback = await generateFeedback(userMessage);
 
-    // Update user progress
+    // Update user progress and flow metrics if there are mistakes
     await updateUserProgressFromMessage(userId, userMessage, feedback);
+
+    if (feedback.corrections && feedback.corrections.length > 0) {
+      conversationFlowManager.updateMetrics(userId, {
+        mistake: {
+          type: "grammar_or_pronunciation",
+          content: feedback.corrections[0]
+        }
+      });
+    }
 
     return {
       success: true,
@@ -325,14 +380,16 @@ const generateFeedback = async (message) => {
       }
     `;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-      response_format: { type: "json_object" },
-    });
+    // Use optimized model selection for feedback analysis
+    const result = await createOptimizedCompletion(
+      openai,
+      USE_CASES.CONVERSATION_FEEDBACK,
+      [{ role: "user", content: prompt }],
+      null, // No user context for feedback
+      { response_format: { type: "json_object" } }
+    );
 
-    const feedbackText = completion.choices[0].message.content;
+    const feedbackText = result.completion.choices[0].message.content;
     return JSON.parse(feedbackText);
   } catch (error) {
     console.error("Error generating feedback:", error);
@@ -587,19 +644,21 @@ export const analyzeGrammar = async (text, language = "ko") => {
       }
     `;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-      response_format: { type: "json_object" },
-    });
+    // Use optimized model selection for grammar analysis
+    const result = await createOptimizedCompletion(
+      openai,
+      USE_CASES.GRAMMAR_ANALYSIS,
+      [{ role: "user", content: prompt }],
+      null, // No user context for analysis
+      { response_format: { type: "json_object" } }
+    );
 
-    const result = JSON.parse(completion.choices[0].message.content);
+    const analysisResult = JSON.parse(result.completion.choices[0].message.content);
 
     return {
       success: true,
-      corrections: result.corrections,
-      score: result.score,
+      corrections: analysisResult.corrections,
+      score: analysisResult.score,
     };
   } catch (error) {
     console.error("Error analyzing grammar:", error);
@@ -643,20 +702,22 @@ export const analyzeVocabulary = async (text, language = "ko") => {
       }
     `;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-      response_format: { type: "json_object" },
-    });
+    // Use optimized model selection for vocabulary analysis
+    const vocabResult = await createOptimizedCompletion(
+      openai,
+      USE_CASES.GRAMMAR_ANALYSIS, // Using grammar analysis for vocabulary too
+      [{ role: "user", content: prompt }],
+      null, // No user context for analysis
+      { response_format: { type: "json_object" } }
+    );
 
-    const result = JSON.parse(completion.choices[0].message.content);
+    const vocabAnalysis = JSON.parse(vocabResult.completion.choices[0].message.content);
 
     return {
       success: true,
-      words: result.words,
-      suggestions: result.suggestions,
-      level: result.level,
+      words: vocabAnalysis.words,
+      suggestions: vocabAnalysis.suggestions,
+      level: vocabAnalysis.level,
     };
   } catch (error) {
     console.error("Error analyzing vocabulary:", error);

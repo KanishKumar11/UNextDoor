@@ -24,6 +24,7 @@ import {
 } from "../../../shared/components";
 import { curriculumService } from "../../../features/curriculum/services/curriculumService";
 import * as achievementService from "../../../features/achievements/services/achievementService";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 
 /**
  * Progress Details Page
@@ -269,29 +270,36 @@ export default function ProgressDetails() {
   return (
     <SafeAreaWrapper>
       <Container>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Clean Personalized Greeting */}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={{ backgroundColor: BRAND_COLORS.CARD_BACKGROUND }}
+          contentContainerStyle={{ backgroundColor: BRAND_COLORS.CARD_BACKGROUND }}
+        >
+          {/* Enhanced Personalized Greeting */}
           <View
             style={{
               padding: theme.spacing.lg,
               paddingBottom: theme.spacing.xl,
+              backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
             }}
           >
             <Text
               variant="caption"
               style={{
-                color: theme.colors.neutral[500],
+                color: BRAND_COLORS.SHADOW_GREY,
                 fontFamily: theme.typography.fontFamily.medium,
                 fontSize: 12,
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
                 marginBottom: 4,
               }}
             >
-              Welcome back!
+              Progress Dashboard
             </Text>
             <Heading
               level="h2"
               style={{
-                color: theme.colors.brandNavy,
+                color: BRAND_COLORS.OCEAN_BLUE,
                 fontFamily: theme.typography.fontFamily.bold,
                 fontSize: 24,
                 marginBottom: 8,
@@ -302,140 +310,173 @@ export default function ProgressDetails() {
             <Text
               variant="body"
               style={{
-                color: theme.colors.neutral[600],
+                color: BRAND_COLORS.SHADOW_GREY,
                 fontFamily: theme.typography.fontFamily.regular,
                 fontSize: 14,
+                lineHeight: 20,
               }}
             >
-              Keep up the great work on your Korean learning journey!
+              Keep up the great work on your Korean learning journey! Track your achievements and see how far you've come.
             </Text>
           </View>
 
           <View style={{ paddingHorizontal: theme.spacing.lg }}>
-            {/* Clean Level Progress Section */}
-            <View style={{ marginBottom: theme.spacing.xl }}>
-              <Row
-                justify="space-between"
-                align="center"
-                style={{ marginBottom: theme.spacing.md }}
-              >
+            {/* Simplified Level Progress Card */}
+            <View
+              style={{
+                backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+                borderRadius: 16,
+                padding: theme.spacing.lg,
+                marginBottom: theme.spacing.xl,
+                borderWidth: 1,
+                borderColor: BRAND_COLORS.EXPLORER_TEAL + "20",
+                shadowColor: BRAND_COLORS.OCEAN_BLUE,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 8,
+                elevation: 0,
+              }}
+            >
+              <Row justify="space-between" align="center" style={{ marginBottom: theme.spacing.md }}>
                 <Column>
                   <Text
                     variant="caption"
                     weight="medium"
                     style={{
-                      color: theme.colors.neutral[500],
+                      color: BRAND_COLORS.SHADOW_GREY,
                       fontFamily: theme.typography.fontFamily.medium,
                       textTransform: "uppercase",
                       letterSpacing: 0.5,
-                      fontSize: 12,
+                      fontSize: 11,
+                      marginBottom: 2,
                     }}
                   >
                     Current Level
                   </Text>
-                  <Heading
-                    level="h1"
+                  <Text
+                    weight="bold"
                     style={{
-                      color: theme.colors.brandNavy,
+                      color: BRAND_COLORS.OCEAN_BLUE,
                       fontFamily: theme.typography.fontFamily.bold,
-                      fontSize: 28,
-                      marginTop: 4,
+                      fontSize: 24,
                     }}
                   >
                     {stats.currentLevel}
-                  </Heading>
+                  </Text>
                 </Column>
 
                 <Column align="end">
                   <Text
-                    variant="caption"
+                    weight="bold"
                     style={{
-                      color: theme.colors.neutral[500],
-                      fontFamily: theme.typography.fontFamily.medium,
-                      fontSize: 12,
-                    }}
-                  >
-                    {stats.currentLevelXP} /{" "}
-                    {stats.currentLevelNumber === 3
-                      ? "∞"
-                      : stats.currentLevelNumber === 2
-                      ? "4000"
-                      : "2000"}{" "}
-                    XP
-                  </Text>
-                  <Text
-                    weight="semibold"
-                    style={{
-                      color: theme.colors.brandGreen,
-                      fontFamily: theme.typography.fontFamily.semibold,
-                      fontSize: 16,
-                      marginTop: 2,
+                      color: BRAND_COLORS.EXPLORER_TEAL,
+                      fontFamily: theme.typography.fontFamily.bold,
+                      fontSize: 18,
+                      marginBottom: 2,
                     }}
                   >
                     {stats.levelProgress}%
                   </Text>
+                  <Text
+                    style={{
+                      color: BRAND_COLORS.SHADOW_GREY,
+                      fontFamily: theme.typography.fontFamily.medium,
+                      fontSize: 11,
+                    }}
+                  >
+                    Progress
+                  </Text>
                 </Column>
               </Row>
 
-              <ModernProgressBar
-                value={stats.levelProgress}
-                max={100}
-                height={6}
-                rounded
+              {/* Progress Bar */}
+              <View
                 style={{
-                  backgroundColor: theme.colors.neutral[200],
-                  marginBottom: theme.spacing.xs,
-                }}
-                color={theme.colors.brandGreen}
-              />
-
-              <Text
-                variant="caption"
-                style={{
-                  color: theme.colors.neutral[500],
-                  fontFamily: theme.typography.fontFamily.regular,
-                  fontSize: 12,
+                  height: 8,
+                  backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "20",
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  marginBottom: theme.spacing.sm,
                 }}
               >
-                {stats.currentLevelNumber === 3
-                  ? "Maximum level reached!"
-                  : `${stats.xpToNextLevel} XP to reach ${
-                      stats.currentLevelNumber === 1
-                        ? "Intermediate"
-                        : "Advanced"
-                    }`}
-              </Text>
+                <View
+                  style={{
+                    height: "100%",
+                    width: `${stats.levelProgress || 0}%`,
+                    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
+                    borderRadius: 4,
+                  }}
+                />
+              </View>
+
+              {/* XP Information */}
+              <Row justify="space-between" align="center">
+                <Text
+                  style={{
+                    color: BRAND_COLORS.SHADOW_GREY,
+                    fontFamily: theme.typography.fontFamily.medium,
+                    fontSize: 12,
+                  }}
+                >
+                  {stats.currentLevelXP} / {stats.currentLevelNumber === 3 ? "∞" : stats.currentLevelNumber === 2 ? "4000" : "2000"} XP
+                </Text>
+                <Text
+                  style={{
+                    color: BRAND_COLORS.EXPLORER_TEAL,
+                    fontFamily: theme.typography.fontFamily.semibold,
+                    fontSize: 12,
+                  }}
+                >
+                  {stats.currentLevelNumber === 3
+                    ? "Max level! 🎉"
+                    : `${stats.xpToNextLevel} XP to next`}
+                </Text>
+              </Row>
             </View>
 
-            {/* Clean Statistics Section */}
-            <View style={{ marginBottom: theme.spacing.xl }}>
+            {/* Enhanced Statistics Grid */}
+            <View
+              style={{
+                backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+                borderRadius: 16,
+                padding: theme.spacing.lg,
+                marginBottom: theme.spacing.xl,
+                borderWidth: 1,
+                borderColor: BRAND_COLORS.EXPLORER_TEAL + "15",
+                shadowColor: BRAND_COLORS.OCEAN_BLUE,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 8,
+                elevation: 0,
+              }}
+            >
               <Text
                 variant="caption"
                 weight="medium"
                 style={{
-                  color: theme.colors.neutral[500],
+                  color: BRAND_COLORS.SHADOW_GREY,
                   fontFamily: theme.typography.fontFamily.medium,
                   textTransform: "uppercase",
                   letterSpacing: 0.5,
-                  fontSize: 12,
-                  marginBottom: theme.spacing.lg,
+                  fontSize: 11,
+                  marginBottom: theme.spacing.md,
                 }}
               >
-                Your Progress
+                Your Progress Stats
               </Text>
 
-              {/* Statistics Grid - Clean Layout */}
-              <View style={{ gap: theme.spacing.lg }}>
+              {/* Statistics Grid */}
+              <View style={{ gap: theme.spacing.md }}>
                 {/* First Row */}
                 <Row justify="space-between" align="center">
                   <Column align="center" style={{ flex: 1 }}>
                     <Text
                       weight="bold"
                       style={{
-                        color: theme.colors.brandNavy,
+                        color: BRAND_COLORS.OCEAN_BLUE,
                         fontFamily: theme.typography.fontFamily.bold,
-                        fontSize: 32,
-                        lineHeight: 36,
+                        fontSize: 28,
+                        lineHeight: 32,
                       }}
                     >
                       {stats.totalXP}
@@ -443,10 +484,10 @@ export default function ProgressDetails() {
                     <Text
                       variant="caption"
                       style={{
-                        color: theme.colors.neutral[500],
+                        color: BRAND_COLORS.SHADOW_GREY,
                         fontFamily: theme.typography.fontFamily.medium,
-                        fontSize: 13,
-                        marginTop: 4,
+                        fontSize: 12,
+                        marginTop: 2,
                       }}
                     >
                       Total XP
@@ -457,8 +498,8 @@ export default function ProgressDetails() {
                   <View
                     style={{
                       width: 1,
-                      height: 60,
-                      backgroundColor: theme.colors.neutral[200],
+                      height: 50,
+                      backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "25",
                       marginHorizontal: theme.spacing.md,
                     }}
                   />
@@ -467,10 +508,10 @@ export default function ProgressDetails() {
                     <Text
                       weight="bold"
                       style={{
-                        color: theme.colors.brandNavy,
+                        color: BRAND_COLORS.OCEAN_BLUE,
                         fontFamily: theme.typography.fontFamily.bold,
-                        fontSize: 32,
-                        lineHeight: 36,
+                        fontSize: 28,
+                        lineHeight: 32,
                       }}
                     >
                       {stats.lessonsCompleted}
@@ -478,23 +519,23 @@ export default function ProgressDetails() {
                     <Text
                       variant="caption"
                       style={{
-                        color: theme.colors.neutral[500],
+                        color: BRAND_COLORS.SHADOW_GREY,
                         fontFamily: theme.typography.fontFamily.medium,
-                        fontSize: 13,
-                        marginTop: 4,
+                        fontSize: 12,
+                        marginTop: 2,
                       }}
                     >
-                      Lessons Completed
+                      Lessons Done
                     </Text>
                   </Column>
                 </Row>
 
-                {/* Divider */}
+                {/* Horizontal Divider */}
                 <View
                   style={{
                     height: 1,
-                    backgroundColor: theme.colors.neutral[200],
-                    marginVertical: theme.spacing.sm,
+                    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
+                    marginVertical: theme.spacing.xs,
                   }}
                 />
 
@@ -504,10 +545,10 @@ export default function ProgressDetails() {
                     <Text
                       weight="bold"
                       style={{
-                        color: theme.colors.brandNavy,
+                        color: BRAND_COLORS.OCEAN_BLUE,
                         fontFamily: theme.typography.fontFamily.bold,
-                        fontSize: 32,
-                        lineHeight: 36,
+                        fontSize: 28,
+                        lineHeight: 32,
                       }}
                     >
                       {stats.practiceTimeFormatted}
@@ -515,10 +556,10 @@ export default function ProgressDetails() {
                     <Text
                       variant="caption"
                       style={{
-                        color: theme.colors.neutral[500],
+                        color: BRAND_COLORS.SHADOW_GREY,
                         fontFamily: theme.typography.fontFamily.medium,
-                        fontSize: 13,
-                        marginTop: 4,
+                        fontSize: 12,
+                        marginTop: 2,
                       }}
                     >
                       Practice Time
@@ -529,8 +570,8 @@ export default function ProgressDetails() {
                   <View
                     style={{
                       width: 1,
-                      height: 60,
-                      backgroundColor: theme.colors.neutral[200],
+                      height: 50,
+                      backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "25",
                       marginHorizontal: theme.spacing.md,
                     }}
                   />
@@ -539,10 +580,10 @@ export default function ProgressDetails() {
                     <Text
                       weight="bold"
                       style={{
-                        color: theme.colors.brandNavy,
+                        color: BRAND_COLORS.OCEAN_BLUE,
                         fontFamily: theme.typography.fontFamily.bold,
-                        fontSize: 32,
-                        lineHeight: 36,
+                        fontSize: 28,
+                        lineHeight: 32,
                       }}
                     >
                       {stats.streak}
@@ -550,10 +591,10 @@ export default function ProgressDetails() {
                     <Text
                       variant="caption"
                       style={{
-                        color: theme.colors.neutral[500],
+                        color: BRAND_COLORS.SHADOW_GREY,
                         fontFamily: theme.typography.fontFamily.medium,
-                        fontSize: 13,
-                        marginTop: 4,
+                        fontSize: 12,
+                        marginTop: 2,
                       }}
                     >
                       Day Streak
@@ -563,25 +604,22 @@ export default function ProgressDetails() {
               </View>
             </View>
 
-            {/* Learning Insights */}
-            <ModernCard
-              style={{
-                marginBottom: theme.spacing.lg,
-                backgroundColor: theme.colors.brandWhite,
-                borderWidth: 1,
-                borderColor: theme.colors.brandNavy + "20",
-              }}
-            >
-              <Heading
-                level="h4"
+            {/* Simplified Learning Insights */}
+            <View style={{ marginBottom: theme.spacing.xl }}>
+              <Text
+                variant="caption"
+                weight="medium"
                 style={{
-                  marginBottom: theme.spacing.md,
-                  color: theme.colors.brandNavy,
-                  fontFamily: theme.typography.fontFamily.semibold,
+                  color: BRAND_COLORS.SHADOW_GREY,
+                  fontFamily: theme.typography.fontFamily.medium,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  fontSize: 12,
+                  marginBottom: theme.spacing.lg,
                 }}
               >
                 Learning Insights
-              </Heading>
+              </Text>
 
               <Row
                 justify="space-between"
@@ -695,7 +733,7 @@ export default function ProgressDetails() {
                   XP
                 </Text>
               </Row>
-            </ModernCard>
+            </View>
 
             {/* Learning Progress Overview */}
             <ModernCard
@@ -1094,7 +1132,7 @@ export default function ProgressDetails() {
                         {Math.round(
                           (achievements.filter((a) => a.earned).length /
                             achievements.length) *
-                            100
+                          100
                         )}
                         %
                       </Text>

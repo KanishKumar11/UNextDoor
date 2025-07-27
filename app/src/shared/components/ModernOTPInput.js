@@ -9,6 +9,7 @@ import {
   AccessibilityInfo,
 } from "react-native";
 import modernTheme from "../styles/modernTheme";
+import { BRAND_COLORS } from "../constants/colors";
 
 /**
  * ModernOTPInput component
@@ -173,12 +174,10 @@ const ModernOTPInput = ({
             editable={!isDisabled}
             autoFocus={autoFocus && index === 0}
             accessible={true}
-            accessibilityLabel={`OTP digit ${index + 1} of ${length}${
-              digit ? `, ${digit} entered` : ", empty"
-            }`}
-            accessibilityHint={`Enter digit ${
-              index + 1
-            } of your verification code`}
+            accessibilityLabel={`OTP digit ${index + 1} of ${length}${digit ? `, ${digit} entered` : ", empty"
+              }`}
+            accessibilityHint={`Enter digit ${index + 1
+              } of your verification code`}
             accessibilityRole="keyboardKey"
           />
         </View>
@@ -197,17 +196,20 @@ const styles = StyleSheet.create({
   inputWrapper: {
     width: "15%",
     aspectRatio: 1,
+    elevation: 0,
+
     maxWidth: 60,
     maxHeight: 60,
   },
   input: {
     flex: 1,
-    backgroundColor: modernTheme.colors.background.card,
+    backgroundColor: BRAND_COLORS.WHISPER_WHITE,
     borderRadius: modernTheme.borderRadius.md,
     fontSize: modernTheme.typography.fontSize.xl,
     fontWeight: modernTheme.typography.fontWeight.bold,
     color: modernTheme.colors.text.primary,
     textAlign: "center",
+    elevation: 0,
     paddingVertical: modernTheme.spacing.xs,
     borderWidth: 1,
     borderColor: modernTheme.colors.neutral[300],

@@ -13,6 +13,8 @@ import { useRouter } from "expo-router";
 import { IMAGES } from "../../assets/index";
 import modernTheme from "../styles/modernTheme";
 import { Text, Heading } from "./typography";
+import { BRAND } from "zod";
+import { BRAND_COLORS } from "../constants/colors";
 
 /**
  * ModernAuthLayout component
@@ -131,6 +133,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   scrollContent: {
     flexGrow: 1,

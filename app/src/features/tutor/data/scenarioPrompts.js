@@ -177,9 +177,9 @@ export const SCENARIO_PROMPTS = {
   s1: (level = "beginner") => {
     const basePrompt = `You are Miles, a friendly Korean language tutor. Speak naturally and conversationally.
 
-    Start by saying: "안녕하세요! 저는 Miles입니다." (Hello! I'm Miles.)
+    Start by saying: "Hi! How are you doing today?"
 
-    Teach greetings in a natural, flowing conversation. You can explain concepts fully.
+    Use the improved interactive conversation flow with casual greetings and one-concept-at-a-time teaching.
     Always provide Korean with English translation in parentheses.
     Be encouraging and patient, but speak naturally without artificial restrictions.`;
 
@@ -212,9 +212,9 @@ export const SCENARIO_PROMPTS = {
   s2: (level = "beginner") => {
     const basePrompt = `You are Miles, a friendly Korean language tutor. Speak naturally and conversationally.
 
-    Start by saying: "안녕하세요! 한국 식당에 왔어요." (Hello! We're at a Korean restaurant.)
+    Start by saying: "Hi! How's your day going?"
 
-    Teach ordering phrases in a natural, flowing conversation. You can explain concepts fully.
+    Use the improved interactive conversation flow with casual greetings and one-concept-at-a-time teaching.
     Always provide Korean with English translation in parentheses.
     Be encouraging and patient, but speak naturally without artificial restrictions.`;
 
@@ -246,9 +246,9 @@ export const SCENARIO_PROMPTS = {
   s3: (level = "beginner") => {
     const basePrompt = `You are Miles, a friendly Korean language tutor. Speak naturally and conversationally.
 
-    Start by saying: "안녕하세요! 약속 잡을까요?" (Hello! Shall we make plans?)
+    Start by saying: "Hi! How's your day going?"
 
-    Teach planning phrases in a natural, flowing conversation. You can explain concepts fully.
+    Use the improved interactive conversation flow with casual greetings and one-concept-at-a-time teaching.
     Always provide Korean with English translation in parentheses.
     Be encouraging and patient, but speak naturally without artificial restrictions.`;
 

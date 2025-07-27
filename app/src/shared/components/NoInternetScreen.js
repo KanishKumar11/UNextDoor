@@ -16,7 +16,7 @@ export const NoInternetScreen = ({ onRetry, isRetrying = false }) => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: "#fff",
+      backgroundColor: theme.colors.background.default,
       justifyContent: "center",
       alignItems: "center",
       position: "relative",
@@ -32,7 +32,7 @@ export const NoInternetScreen = ({ onRetry, isRetrying = false }) => {
     circle: {
       position: "absolute",
       borderRadius: 999,
-      backgroundColor: theme.colors.brandGreen + "08",
+      backgroundColor: theme.colors.explorerTeal + "08",
     },
     circle1: {
       width: 200,
@@ -84,7 +84,7 @@ export const NoInternetScreen = ({ onRetry, isRetrying = false }) => {
     title: {
       fontSize: 24,
       fontFamily: theme.typography.fontFamily.bold,
-      color: theme.colors.brandNavy,
+      color: theme.colors.oceanBlue,
       textAlign: "center",
       marginBottom: theme.spacing.md,
     },
@@ -106,7 +106,7 @@ export const NoInternetScreen = ({ onRetry, isRetrying = false }) => {
     tipsTitle: {
       fontSize: 14,
       fontFamily: theme.typography.fontFamily.semibold,
-      color: theme.colors.brandNavy,
+      color: theme.colors.oceanBlue,
       marginBottom: theme.spacing.sm,
     },
     tipItem: {
@@ -166,7 +166,7 @@ export const NoInternetScreen = ({ onRetry, isRetrying = false }) => {
             <Ionicons
               name="checkmark"
               size={16}
-              color={theme.colors.brandGreen}
+              color={theme.colors.explorerTeal}
             />
             <Text style={styles.tipText}>Check your Wi-Fi connection</Text>
           </View>
@@ -174,7 +174,7 @@ export const NoInternetScreen = ({ onRetry, isRetrying = false }) => {
             <Ionicons
               name="checkmark"
               size={16}
-              color={theme.colors.brandGreen}
+              color={theme.colors.explorerTeal}
             />
             <Text style={styles.tipText}>Turn mobile data on/off</Text>
           </View>
@@ -182,7 +182,7 @@ export const NoInternetScreen = ({ onRetry, isRetrying = false }) => {
             <Ionicons
               name="checkmark"
               size={16}
-              color={theme.colors.brandGreen}
+              color={theme.colors.explorerTeal}
             />
             <Text style={styles.tipText}>Restart your router</Text>
           </View>

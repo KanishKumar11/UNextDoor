@@ -2,17 +2,73 @@ import React from 'react';
 import { View, TouchableOpacity, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../shared/context/ThemeContext';
-import { 
-  Text, 
-  Heading, 
-  Row, 
-  Column 
+import {
+  Text,
+  Heading,
+  Row,
+  Column
 } from '../../../shared/components';
 import { useRouter } from 'expo-router';
+import { BRAND_COLORS } from '../../../shared/constants/colors';
 
 const ScenarioPracticeCards = ({ fadeAnim, scaleAnim }) => {
   const { theme } = useTheme();
   const router = useRouter();
+
+  // Define scenario data array
+  const scenarios = [
+    {
+      scenarioId: 'restaurant-ordering',
+      title: 'Restaurant Ordering',
+      level: 'Beginner',
+      duration: '5-10 min',
+      description: 'Practice ordering food and drinks in Korean restaurants',
+      icon: 'restaurant-outline',
+      bgColor: theme.colors.whisperWhite,
+      borderColor: theme.colors.explorerTeal + '20',
+      iconBackground: theme.colors.explorerTeal + '15',
+      iconColor: theme.colors.explorerTeal,
+      shadowColor: theme.colors.oceanBlue,
+      textColor: theme.colors.oceanBlue,
+      levelColor: theme.colors.brandGreen,
+      levelBackground: theme.colors.brandGreen + '10',
+      durationColor: theme.colors.neutral[500],
+    },
+    {
+      scenarioId: 'shopping-assistance',
+      title: 'Shopping Assistance',
+      level: 'Intermediate',
+      duration: '8-12 min',
+      description: 'Learn to ask for help and find items while shopping',
+      icon: 'bag-outline',
+      bgColor: theme.colors.brandWhite,
+      borderColor: BRAND_COLORS.SKY_AQUA + '20',
+      iconBackground: BRAND_COLORS.SKY_AQUA + '15',
+      iconColor: BRAND_COLORS.SKY_AQUA,
+      shadowColor: theme.colors.brandNavy,
+      textColor: theme.colors.brandNavy,
+      levelColor: BRAND_COLORS.SKY_AQUA,
+      levelBackground: BRAND_COLORS.SKY_AQUA + '10',
+      durationColor: theme.colors.neutral[500],
+    },
+    {
+      scenarioId: 'travel-directions',
+      title: 'Travel & Directions',
+      level: 'Intermediate',
+      duration: '10-15 min',
+      description: 'Navigate and ask for directions in Korean cities',
+      icon: 'map-outline',
+      bgColor: theme.colors.whisperWhite,
+      borderColor: theme.colors.rucksackBrown + '20',
+      iconBackground: BRAND_COLORS.RUCKSACK_BROWN + '15',
+      iconColor: BRAND_COLORS.RUCKSACK_BROWN,
+      shadowColor: theme.colors.oceanBlue,
+      textColor: theme.colors.brandNavy,
+      levelColor: BRAND_COLORS.RUCKSACK_BROWN,
+      levelBackground: BRAND_COLORS.RUCKSACK_BROWN + '10',
+      durationColor: theme.colors.neutral[500],
+    },
+  ];
 
   return (
     <Animated.View
@@ -45,7 +101,7 @@ const ScenarioPracticeCards = ({ fadeAnim, scaleAnim }) => {
           <Heading
             level="h3"
             style={{
-              color: theme.colors.brandNavy,
+              color: theme.colors.oceanBlue,
               fontFamily: theme.typography.fontFamily.bold,
               fontSize: 20,
             }}
@@ -56,23 +112,23 @@ const ScenarioPracticeCards = ({ fadeAnim, scaleAnim }) => {
         <TouchableOpacity
           onPress={() => router.push("/tutor/scenarios")}
           style={{
-            backgroundColor: theme.colors.brandGreen + "15",
+            backgroundColor: theme.colors.explorerTeal + "15",
             paddingHorizontal: 12,
             paddingVertical: 6,
             borderRadius: 16,
             borderWidth: 1,
-            borderColor: theme.colors.brandGreen + "30",
+            borderColor: theme.colors.explorerTeal + "30",
           }}
         >
           <Text
             weight="semibold"
             style={{
-              color: theme.colors.brandGreen,
+              color: theme.colors.explorerTeal,
               fontFamily: theme.typography.fontFamily.semibold,
               fontSize: 12,
             }}
           >
-            See All
+            View All
           </Text>
         </TouchableOpacity>
       </Row>
@@ -86,308 +142,108 @@ const ScenarioPracticeCards = ({ fadeAnim, scaleAnim }) => {
         }}
         style={{ marginTop: theme.spacing.xs }}
       >
-        {/* Restaurant Scenario */}
-        <TouchableOpacity
-          onPress={() =>
-            router.push({
-              pathname: "/tutor/standalone-conversation",
-              params: {
-                scenarioId: "restaurant-ordering",
-                title: "Restaurant Ordering",
-                level: "Beginner",
-              },
-            })
-          }
-          style={{
-            width: 280,
-            backgroundColor: theme.colors.brandWhite,
-            borderRadius: 20,
-            marginRight: theme.spacing.md,
-            padding: theme.spacing.lg,
-            borderWidth: 1,
-            borderColor: theme.colors.brandGreen + "20",
-            shadowColor: theme.colors.brandNavy,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
-            elevation: 2,
-          }}
-        >
-          <View
+        {scenarios.map((scenario) => (
+          <TouchableOpacity
+            key={scenario.scenarioId}
+            onPress={() =>
+              router.push({
+                pathname: "/tutor/standalone-conversation",
+                params: {
+                  scenarioId: scenario.scenarioId,
+                  title: scenario.title,
+                  level: scenario.level,
+                },
+              })
+            }
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: 28,
-              backgroundColor: theme.colors.brandGreen + "15",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: theme.spacing.md,
+              width: 280,
+              backgroundColor: scenario.bgColor,
+              borderRadius: 20,
+              marginRight: theme.spacing.md,
+              padding: theme.spacing.lg,
+              borderWidth: 1,
+              borderColor: scenario.borderColor,
+              shadowColor: scenario.shadowColor,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 8,
+              // elevation: 2,
             }}
           >
-            <Ionicons
-              name="restaurant-outline"
-              size={28}
-              color={theme.colors.brandGreen}
-            />
-          </View>
-          <Text
-            weight="semibold"
-            style={{
-              color: theme.colors.brandNavy,
-              fontFamily: theme.typography.fontFamily.semibold,
-              fontSize: 18,
-              marginBottom: 8,
-              lineHeight: 22,
-            }}
-          >
-            Restaurant Ordering
-          </Text>
-          <Text
-            style={{
-              color: theme.colors.neutral[600],
-              fontFamily: theme.typography.fontFamily.regular,
-              fontSize: 14,
-              lineHeight: 20,
-              marginBottom: theme.spacing.md,
-            }}
-          >
-            Practice ordering food and drinks in Korean restaurants
-          </Text>
-          <Row justify="space-between" align="center">
             <View
               style={{
-                backgroundColor: theme.colors.brandGreen + "10",
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderRadius: 12,
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                backgroundColor: scenario.iconBackground,
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: theme.spacing.md,
               }}
             >
-              <Text
-                variant="caption"
-                weight="medium"
-                style={{
-                  color: theme.colors.brandGreen,
-                  fontFamily: theme.typography.fontFamily.medium,
-                  fontSize: 11,
-                }}
-              >
-                Beginner
-              </Text>
+              <Ionicons
+                name={scenario.icon}
+                size={28}
+                color={scenario.iconColor}
+              />
             </View>
             <Text
-              variant="caption"
+              weight="semibold"
               style={{
-                color: theme.colors.neutral[500],
-                fontFamily: theme.typography.fontFamily.medium,
-                fontSize: 12,
+                color: scenario.textColor,
+                fontFamily: theme.typography.fontFamily.semibold,
+                fontSize: 18,
+                marginBottom: 8,
+                lineHeight: 22,
               }}
             >
-              5-10 min
+              {scenario.title}
             </Text>
-          </Row>
-        </TouchableOpacity>
-
-        {/* Shopping Scenario */}
-        <TouchableOpacity
-          onPress={() =>
-            router.push({
-              pathname: "/tutor/standalone-conversation",
-              params: {
-                scenarioId: "shopping-assistance",
-                title: "Shopping Assistance",
-                level: "Intermediate",
-              },
-            })
-          }
-          style={{
-            width: 280,
-            backgroundColor: theme.colors.brandWhite,
-            borderRadius: 20,
-            marginRight: theme.spacing.md,
-            padding: theme.spacing.lg,
-            borderWidth: 1,
-            borderColor: "#2196F3" + "20",
-            shadowColor: theme.colors.brandNavy,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
-            elevation: 2,
-          }}
-        >
-          <View
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 28,
-              backgroundColor: "#2196F3" + "15",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: theme.spacing.md,
-            }}
-          >
-            <Ionicons
-              name="bag-outline"
-              size={28}
-              color="#2196F3"
-            />
-          </View>
-          <Text
-            weight="semibold"
-            style={{
-              color: theme.colors.brandNavy,
-              fontFamily: theme.typography.fontFamily.semibold,
-              fontSize: 18,
-              marginBottom: 8,
-              lineHeight: 22,
-            }}
-          >
-            Shopping Assistance
-          </Text>
-          <Text
-            style={{
-              color: theme.colors.neutral[600],
-              fontFamily: theme.typography.fontFamily.regular,
-              fontSize: 14,
-              lineHeight: 20,
-              marginBottom: theme.spacing.md,
-            }}
-          >
-            Learn to ask for help and find items while shopping
-          </Text>
-          <Row justify="space-between" align="center">
-            <View
+            <Text
               style={{
-                backgroundColor: "#2196F3" + "10",
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderRadius: 12,
+                color: theme.colors.neutral[600],
+                fontFamily: theme.typography.fontFamily.regular,
+                fontSize: 14,
+                lineHeight: 20,
+                marginBottom: theme.spacing.md,
               }}
             >
-              <Text
-                variant="caption"
-                weight="medium"
+              {scenario.description}
+            </Text>
+            <Row justify="space-between" align="center">
+              <View
                 style={{
-                  color: "#2196F3",
-                  fontFamily: theme.typography.fontFamily.medium,
-                  fontSize: 11,
+                  backgroundColor: scenario.levelBackground,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 12,
                 }}
               >
-                Intermediate
-              </Text>
-            </View>
-            <Text
-              variant="caption"
-              style={{
-                color: theme.colors.neutral[500],
-                fontFamily: theme.typography.fontFamily.medium,
-                fontSize: 12,
-              }}
-            >
-              8-12 min
-            </Text>
-          </Row>
-        </TouchableOpacity>
-
-        {/* Travel Scenario */}
-        <TouchableOpacity
-          onPress={() =>
-            router.push({
-              pathname: "/tutor/standalone-conversation",
-              params: {
-                scenarioId: "travel-directions",
-                title: "Travel & Directions",
-                level: "Intermediate",
-              },
-            })
-          }
-          style={{
-            width: 280,
-            backgroundColor: theme.colors.brandWhite,
-            borderRadius: 20,
-            marginRight: theme.spacing.md,
-            padding: theme.spacing.lg,
-            borderWidth: 1,
-            borderColor: "#FF9800" + "20",
-            shadowColor: theme.colors.brandNavy,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
-            elevation: 2,
-          }}
-        >
-          <View
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 28,
-              backgroundColor: "#FF9800" + "15",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: theme.spacing.md,
-            }}
-          >
-            <Ionicons
-              name="map-outline"
-              size={28}
-              color="#FF9800"
-            />
-          </View>
-          <Text
-            weight="semibold"
-            style={{
-              color: theme.colors.brandNavy,
-              fontFamily: theme.typography.fontFamily.semibold,
-              fontSize: 18,
-              marginBottom: 8,
-              lineHeight: 22,
-            }}
-          >
-            Travel & Directions
-          </Text>
-          <Text
-            style={{
-              color: theme.colors.neutral[600],
-              fontFamily: theme.typography.fontFamily.regular,
-              fontSize: 14,
-              lineHeight: 20,
-              marginBottom: theme.spacing.md,
-            }}
-          >
-            Navigate and ask for directions in Korean cities
-          </Text>
-          <Row justify="space-between" align="center">
-            <View
-              style={{
-                backgroundColor: "#FF9800" + "10",
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderRadius: 12,
-              }}
-            >
+                <Text
+                  variant="caption"
+                  weight="medium"
+                  style={{
+                    color: scenario.levelColor,
+                    fontFamily: theme.typography.fontFamily.medium,
+                    fontSize: 11,
+                  }}
+                >
+                  {scenario.level}
+                </Text>
+              </View>
               <Text
                 variant="caption"
-                weight="medium"
                 style={{
-                  color: "#FF9800",
+                  color: scenario.durationColor,
                   fontFamily: theme.typography.fontFamily.medium,
-                  fontSize: 11,
+                  fontSize: 12,
                 }}
               >
-                Intermediate
+                {scenario.duration}
               </Text>
-            </View>
-            <Text
-              variant="caption"
-              style={{
-                color: theme.colors.neutral[500],
-                fontFamily: theme.typography.fontFamily.medium,
-                fontSize: 12,
-              }}
-            >
-              10-15 min
-            </Text>
-          </Row>
-        </TouchableOpacity>
+            </Row>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     </Animated.View>
   );

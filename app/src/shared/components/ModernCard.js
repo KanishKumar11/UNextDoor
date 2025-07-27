@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import modernTheme from "../styles/modernTheme";
+import { BRAND_COLORS, BORDER_COLORS } from "../constants/colors";
 
 /**
  * ModernCard component
@@ -23,26 +24,26 @@ const ModernCard = ({
   style,
   ...props
 }) => {
-  // Define variant styles
+  // Define variant styles with Miles-inspired colors
   const variantStyles = {
     default: {
-      backgroundColor: modernTheme.colors.background.paper,
+      backgroundColor: BRAND_COLORS.CARD_BACKGROUND, // Using constant for card background
       borderWidth: 0,
       ...modernTheme.shadows.sm,
     },
     outlined: {
-      backgroundColor: modernTheme.colors.background.paper,
+      backgroundColor: BRAND_COLORS.CARD_BACKGROUND, // Using constant for card background
       borderWidth: 1,
-      borderColor: modernTheme.colors.neutral[200],
+      borderColor: BORDER_COLORS.DARK, // Using constant for border
       ...modernTheme.shadows.none,
     },
     elevated: {
-      backgroundColor: modernTheme.colors.background.paper,
+      backgroundColor: BRAND_COLORS.CARD_BACKGROUND, // Using constant for card background
       borderWidth: 0,
       ...modernTheme.shadows.md,
     },
     flat: {
-      backgroundColor: modernTheme.colors.background.card,
+      backgroundColor: BRAND_COLORS.CARD_BACKGROUND, // Using constant for card background
       borderWidth: 0,
       ...modernTheme.shadows.none,
     },
@@ -91,6 +92,7 @@ const styles = StyleSheet.create({
     borderRadius: modernTheme.borderRadius.lg,
     padding: modernTheme.spacing.md,
     marginVertical: modernTheme.spacing.sm,
+    backgroundColor: BRAND_COLORS.DEEP_PURPLE, // Using constant for card background
   },
   interactive: {
     // Additional styles for interactive cards

@@ -12,7 +12,7 @@ import {
   Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
+// import * as ImagePicker from "expo-image-picker"; // Removed - profile picture editing disabled
 import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { useTheme } from "../../../shared/context/ThemeContext";
 import { updateUserProfile } from "../../../shared/api/authApi";
@@ -28,6 +28,7 @@ import {
   ModernButton,
 } from "../../../shared/components";
 import { Ionicons } from "@expo/vector-icons";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 
 const { width } = Dimensions.get("window");
 
@@ -71,23 +72,23 @@ export default function EditProfileScreen() {
     ]).start();
   }, []);
 
-  // Convert image to base64
-  const convertImageToBase64 = async (uri) => {
-    try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
+  // Convert image to base64 - DISABLED (profile picture editing disabled)
+  // const convertImageToBase64 = async (uri) => {
+  //   try {
+  //     const response = await fetch(uri);
+  //     const blob = await response.blob();
 
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (error) {
-      console.error("Error converting image to base64:", error);
-      throw error;
-    }
-  };
+  //     return new Promise((resolve, reject) => {
+  //       const reader = new FileReader();
+  //       reader.onload = () => resolve(reader.result);
+  //       reader.onerror = reject;
+  //       reader.readAsDataURL(blob);
+  //     });
+  //   } catch (error) {
+  //     console.error("Error converting image to base64:", error);
+  //     throw error;
+  //   }
+  // };
 
   // Handle save profile
   const handleSaveProfile = async () => {
@@ -110,10 +111,7 @@ export default function EditProfileScreen() {
         bio: bio.trim(),
       };
 
-      // Add profile picture if it's been changed
-      if (profilePicture && profilePicture !== user?.profilePicture) {
-        profileData.profilePicture = profilePicture;
-      }
+      // Profile picture editing disabled - no longer included in save data
 
       const updatedUser = await updateUserProfile(profileData);
 
@@ -133,41 +131,41 @@ export default function EditProfileScreen() {
     }
   };
 
-  // Handle select profile picture
-  const handleSelectProfilePicture = async () => {
-    try {
-      // Request permission
-      const permissionResult =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+  // Handle select profile picture - DISABLED (profile picture editing disabled)
+  // const handleSelectProfilePicture = async () => {
+  //   try {
+  //     // Request permission
+  //     const permissionResult =
+  //       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-      if (permissionResult.granted === false) {
-        Alert.alert(
-          "Permission Required",
-          "Permission to access camera roll is required!"
-        );
-        return;
-      }
+  //     if (permissionResult.granted === false) {
+  //       Alert.alert(
+  //         "Permission Required",
+  //         "Permission to access camera roll is required!"
+  //       );
+  //       return;
+  //     }
 
-      // Launch image picker
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
+  //     // Launch image picker
+  //     const result = await ImagePicker.launchImageLibraryAsync({
+  //       mediaTypes: ["images"],
+  //       allowsEditing: true,
+  //       aspect: [1, 1],
+  //       quality: 0.8,
+  //     });
 
-      if (!result.canceled && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
+  //     if (!result.canceled && result.assets[0]) {
+  //       const imageUri = result.assets[0].uri;
 
-        // Convert to base64
-        const base64Image = await convertImageToBase64(imageUri);
-        setProfilePicture(base64Image);
-      }
-    } catch (error) {
-      console.error("Error selecting image:", error);
-      Alert.alert("Error", "Failed to select image. Please try again.");
-    }
-  };
+  //       // Convert to base64
+  //       const base64Image = await convertImageToBase64(imageUri);
+  //       setProfilePicture(base64Image);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error selecting image:", error);
+  //     Alert.alert("Error", "Failed to select image. Please try again.");
+  //   }
+  // };
 
   return (
     <SafeAreaWrapper>
@@ -189,7 +187,7 @@ export default function EditProfileScreen() {
               align="center"
               style={{
                 padding: theme.spacing.md,
-                backgroundColor: theme.colors.brandWhite,
+                backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
               }}
             >
               <Column>
@@ -199,7 +197,7 @@ export default function EditProfileScreen() {
                 <Heading
                   level="h2"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontFamily: theme.typography.fontFamily.bold,
                   }}
                 >
@@ -210,7 +208,7 @@ export default function EditProfileScreen() {
                 onPress={() => router.back()}
                 disabled={isLoading}
                 style={{
-                  backgroundColor: theme.colors.neutral[100],
+                  backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                   borderRadius: 20,
                   paddingHorizontal: 16,
                   paddingVertical: 8,
@@ -220,7 +218,7 @@ export default function EditProfileScreen() {
                 <Text
                   weight="semibold"
                   style={{
-                    color: theme.colors.neutral[600],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontSize: 12,
                     fontFamily: theme.typography.fontFamily.semibold,
                   }}
@@ -236,7 +234,7 @@ export default function EditProfileScreen() {
             <View style={{ paddingHorizontal: theme.spacing.md }}>
               <ModernCard
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   elevation: 0,
 
@@ -248,13 +246,13 @@ export default function EditProfileScreen() {
                 <View style={{ position: "relative" }}>
                   <View
                     style={{
-                      shadowColor: theme.colors.brandNavy,
+                      shadowColor: BRAND_COLORS.OCEAN_BLUE,
                       shadowOffset: { width: 0, height: 4 },
                       shadowOpacity: 0.15,
                       shadowRadius: 12,
                       borderRadius: 60,
                       borderWidth: 3,
-                      borderColor: theme.colors.brandWhite,
+                      borderColor: BRAND_COLORS.WHISPER_WHITE,
                     }}
                   >
                     {profilePicture ? (
@@ -272,7 +270,7 @@ export default function EditProfileScreen() {
                           width: 120,
                           height: 120,
                           borderRadius: 60,
-                          backgroundColor: theme.colors.brandGreen,
+                          backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
                           alignItems: "center",
                           justifyContent: "center",
                         }}
@@ -280,7 +278,7 @@ export default function EditProfileScreen() {
                         <Text
                           style={{
                             fontSize: 48,
-                            color: theme.colors.brandWhite,
+                            color: BRAND_COLORS.WHISPER_WHITE,
                             fontFamily: theme.typography.fontFamily.bold,
                           }}
                         >
@@ -290,43 +288,10 @@ export default function EditProfileScreen() {
                     )}
                   </View>
 
-                  <TouchableOpacity
-                    style={{
-                      position: "absolute",
-                      bottom: 0,
-                      right: 0,
-                      backgroundColor: theme.colors.brandGreen,
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderWidth: 3,
-                      borderColor: theme.colors.brandWhite,
-                    }}
-                    onPress={handleSelectProfilePicture}
-                  >
-                    <Ionicons
-                      name="camera-outline"
-                      size={20}
-                      color={theme.colors.brandWhite}
-                    />
-                  </TouchableOpacity>
+                  {/* Camera button removed - profile picture editing disabled */}
                 </View>
 
-                <TouchableOpacity
-                  onPress={handleSelectProfilePicture}
-                  style={{ marginTop: theme.spacing.md }}
-                >
-                  <Text
-                    style={{
-                      color: theme.colors.brandGreen,
-                      fontFamily: theme.typography.fontFamily.medium,
-                    }}
-                  >
-                    Change Profile Picture
-                  </Text>
-                </TouchableOpacity>
+                {/* "Change Profile Picture" button removed - profile picture editing disabled */}
               </ModernCard>
             </View>
 
@@ -335,9 +300,10 @@ export default function EditProfileScreen() {
               <ModernCard
                 variant="outlined"
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   padding: theme.spacing.lg,
+                  elevation: 0,
                   marginBottom: theme.spacing.md,
                 }}
               >
@@ -345,7 +311,7 @@ export default function EditProfileScreen() {
                   variant="caption"
                   weight="medium"
                   style={{
-                    color: theme.colors.neutral[600],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontFamily: theme.typography.fontFamily.medium,
                     marginBottom: 8,
                   }}
@@ -358,7 +324,7 @@ export default function EditProfileScreen() {
                   <Text
                     weight="medium"
                     style={{
-                      color: theme.colors.brandNavy,
+                      color: BRAND_COLORS.OCEAN_BLUE,
                       fontFamily: theme.typography.fontFamily.medium,
                       marginBottom: 8,
                     }}
@@ -368,16 +334,16 @@ export default function EditProfileScreen() {
                   <TextInput
                     style={{
                       borderWidth: 1,
-                      borderColor: theme.colors.neutral[200],
+                      borderColor: BRAND_COLORS.EXPLORER_TEAL + "30",
                       borderRadius: 12,
                       padding: theme.spacing.md,
                       fontSize: 16,
                       fontFamily: theme.typography.fontFamily.regular,
-                      color: theme.colors.brandNavy,
-                      backgroundColor: theme.colors.neutral[50],
+                      color: BRAND_COLORS.OCEAN_BLUE,
+                      backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                     }}
                     placeholder="Enter your display name"
-                    placeholderTextColor={theme.colors.neutral[400]}
+                    placeholderTextColor={BRAND_COLORS.SHADOW_GREY}
                     value={displayName}
                     onChangeText={setDisplayName}
                   />
@@ -388,7 +354,7 @@ export default function EditProfileScreen() {
                   <Text
                     weight="medium"
                     style={{
-                      color: theme.colors.brandNavy,
+                      color: BRAND_COLORS.OCEAN_BLUE,
                       fontFamily: theme.typography.fontFamily.medium,
                       marginBottom: 8,
                     }}
@@ -398,16 +364,16 @@ export default function EditProfileScreen() {
                   <TextInput
                     style={{
                       borderWidth: 1,
-                      borderColor: theme.colors.neutral[200],
+                      borderColor: BRAND_COLORS.EXPLORER_TEAL + "30",
                       borderRadius: 12,
                       padding: theme.spacing.md,
                       fontSize: 16,
                       fontFamily: theme.typography.fontFamily.regular,
-                      color: theme.colors.brandNavy,
-                      backgroundColor: theme.colors.neutral[50],
+                      color: BRAND_COLORS.OCEAN_BLUE,
+                      backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                     }}
                     placeholder="Enter your username"
-                    placeholderTextColor={theme.colors.neutral[400]}
+                    placeholderTextColor={BRAND_COLORS.SHADOW_GREY}
                     value={username}
                     onChangeText={setUsername}
                   />
@@ -418,7 +384,7 @@ export default function EditProfileScreen() {
                   <Text
                     weight="medium"
                     style={{
-                      color: theme.colors.brandNavy,
+                      color: BRAND_COLORS.OCEAN_BLUE,
                       fontFamily: theme.typography.fontFamily.medium,
                       marginBottom: 8,
                     }}
@@ -428,18 +394,18 @@ export default function EditProfileScreen() {
                   <TextInput
                     style={{
                       borderWidth: 1,
-                      borderColor: theme.colors.neutral[200],
+                      borderColor: BRAND_COLORS.EXPLORER_TEAL + "30",
                       borderRadius: 12,
                       padding: theme.spacing.md,
                       fontSize: 16,
                       fontFamily: theme.typography.fontFamily.regular,
-                      color: theme.colors.brandNavy,
-                      backgroundColor: theme.colors.neutral[50],
+                      color: BRAND_COLORS.OCEAN_BLUE,
+                      backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                       height: 100,
                       textAlignVertical: "top",
                     }}
                     placeholder="Tell us about yourself"
-                    placeholderTextColor={theme.colors.neutral[400]}
+                    placeholderTextColor={BRAND_COLORS.SHADOW_GREY}
                     value={bio}
                     onChangeText={setBio}
                     multiline
@@ -454,7 +420,7 @@ export default function EditProfileScreen() {
                 onPress={handleSaveProfile}
                 disabled={isLoading}
                 style={{
-                  backgroundColor: theme.colors.brandGreen,
+                  backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
                   borderRadius: 16,
                   padding: theme.spacing.lg,
                   alignItems: "center",
@@ -466,20 +432,20 @@ export default function EditProfileScreen() {
                   {isLoading ? (
                     <ActivityIndicator
                       size="small"
-                      color={theme.colors.brandWhite}
+                      color={BRAND_COLORS.WHISPER_WHITE}
                     />
                   ) : (
                     <Ionicons
                       name="save-outline"
                       size={20}
-                      color={theme.colors.brandWhite}
+                      color={BRAND_COLORS.WHISPER_WHITE}
                       style={{ marginRight: 8 }}
                     />
                   )}
                   <Text
                     weight="semibold"
                     style={{
-                      color: theme.colors.brandWhite,
+                      color: BRAND_COLORS.WHISPER_WHITE,
                       fontFamily: theme.typography.fontFamily.semibold,
                     }}
                   >
@@ -499,7 +465,7 @@ export default function EditProfileScreen() {
                 <Text
                   variant="caption"
                   style={{
-                    color: theme.colors.neutral[600],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontFamily: theme.typography.fontFamily.regular,
                   }}
                 >

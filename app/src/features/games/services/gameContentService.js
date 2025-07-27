@@ -1,10 +1,30 @@
 /**
  * Game Content Service
  * Handles fetching game content from the backend with rich content support
+ * Includes retry logic and comprehensive error handling
  */
 
 import { apiClient } from "../../../shared/api/apiClient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+/**
+ * Retry utility for API calls
+ * @param {Function} fn - Function to retry
+ * @param {number} retries - Number of retries
+ * @param {number} delay - Delay between retries in ms
+ */
+const retryWithDelay = async (fn, retries = 2, delay = 1000) => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries > 0 && !error.message.includes('API_ENDPOINT_NOT_FOUND')) {
+      console.log(`🔄 Retrying API call... (${retries} attempts remaining)`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return retryWithDelay(fn, retries - 1, delay * 1.5);
+    }
+    throw error;
+  }
+};
 
 /**
  * Get available games list
@@ -12,7 +32,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
  */
 export const getAvailableGames = async () => {
   try {
-    const response = await apiClient.get("/api/games");
+    const response = await apiClient.get("/games");
     return response.data;
   } catch (error) {
     console.error("Error fetching available games:", error);
@@ -42,13 +62,45 @@ export const getGameContent = async (gameType, options = {}) => {
     if (category) params.append("category", category);
     if (focus) params.append("focus", focus);
 
-    const response = await apiClient.get(
-      `/api/games/content/${gameType}?${params}`
-    );
+    const endpoint = `/games/content/${gameType}?${params}`;
+
+    console.log(`🔍 API Request Details:`);
+    console.log(`   - Endpoint: ${endpoint}`);
+    console.log(`   - Base URL: ${apiClient.defaults.baseURL}`);
+    console.log(`   - Full URL: ${apiClient.defaults.baseURL}${endpoint}`);
+    console.log(`   - Game Type: ${gameType}`);
+    console.log(`   - Options:`, { level, count, category, focus });
+
+    const response = await apiClient.get(endpoint);
+
+    console.log(`✅ API Response Success:`, {
+      status: response.status,
+      contentCount: response.data?.data?.content?.length || 0
+    });
+
     return response.data;
   } catch (error) {
-    console.error(`Error fetching ${gameType} content:`, error);
-    throw error;
+    console.error(`❌ Error fetching ${gameType} content:`, {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      baseURL: error.config?.baseURL,
+      fullURL: `${error.config?.baseURL}${error.config?.url}`,
+      headers: error.config?.headers,
+      responseData: error.response?.data
+    });
+
+    // Differentiate error types for better handling
+    if (error.response?.status === 404) {
+      throw new Error(`API_ENDPOINT_NOT_FOUND: ${gameType} content endpoint not available`);
+    } else if (error.response?.status === 401) {
+      throw new Error(`API_AUTH_ERROR: Authentication required for ${gameType} content`);
+    } else if (error.code === 'NETWORK_ERROR' || !error.response) {
+      throw new Error(`API_NETWORK_ERROR: Cannot connect to game content service`);
+    } else {
+      throw new Error(`API_SERVER_ERROR: Server error ${error.response?.status} for ${gameType} content`);
+    }
   }
 };
 
@@ -73,7 +125,7 @@ export const getLessonGameContent = async (
     });
 
     const response = await apiClient.get(
-      `/api/games/lesson-content/${gameType}/${lessonId}?${params}`
+      `/games/lesson-content/${gameType}/${lessonId}?${params}`
     );
     return response.data;
   } catch (error) {
@@ -95,7 +147,7 @@ export const getLessonGameContent = async (
  */
 export const saveGameResults = async (gameData) => {
   try {
-    const response = await apiClient.post("/api/games/results", gameData);
+    const response = await apiClient.post("/games/results", gameData);
     return response.data;
   } catch (error) {
     console.error("Error saving game results:", error);
@@ -109,7 +161,7 @@ export const saveGameResults = async (gameData) => {
  */
 export const getUserGameProgress = async () => {
   try {
-    const response = await apiClient.get("/api/games/progress");
+    const response = await apiClient.get("/games/progress");
     return response.data;
   } catch (error) {
     console.error("Error fetching user game progress:", error);
@@ -124,7 +176,7 @@ export const getUserGameProgress = async () => {
  */
 export const getGameLeaderboard = async (gameType) => {
   try {
-    const response = await apiClient.get(`/api/games/leaderboard/${gameType}`);
+    const response = await apiClient.get(`/games/leaderboard/${gameType}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching ${gameType} leaderboard:`, error);
@@ -133,13 +185,28 @@ export const getGameLeaderboard = async (gameType) => {
 };
 
 /**
- * Get Match Word Game content with smart selection
+ * Get Match Word Game content with smart selection and fallback
  * @param {Object} options - Content options
  * @returns {Promise<Array>} Array of word objects
  */
 export const getMatchWordContent = async (options = {}) => {
-  const response = await getGameContent("match-word", options);
-  return response.data.content;
+  try {
+    console.log(`🎮 Requesting Match Word content with options:`, options);
+    const response = await getGameContent("match-word", options);
+
+    if (response?.data?.content && Array.isArray(response.data.content)) {
+      console.log(`✅ Successfully loaded ${response.data.content.length} words from API`);
+      return response.data.content;
+    } else {
+      console.warn(`⚠️ API returned invalid content format:`, response?.data);
+      throw new Error('Invalid content format from API');
+    }
+  } catch (error) {
+    console.error(`❌ getMatchWordContent failed:`, error.message);
+
+    // Re-throw with more context for the calling component to handle
+    throw new Error(`MATCH_WORD_CONTENT_ERROR: ${error.message}`);
+  }
 };
 
 /**
@@ -217,6 +284,38 @@ export const getContentStatistics = () => {
   };
 };
 
+/**
+ * Test API connectivity for debugging
+ * @returns {Promise<Object>} Connection test results
+ */
+export const testApiConnection = async () => {
+  try {
+    console.log(`🔍 Testing API connection...`);
+    console.log(`   Base URL: ${apiClient.defaults.baseURL}`);
+
+    const response = await apiClient.get("/games");
+    console.log(`✅ API Connection Test: SUCCESS`);
+    console.log(`   Status: ${response.status}`);
+    console.log(`   Available Games: ${response.data?.data?.length || 0}`);
+
+    return {
+      success: true,
+      status: response.status,
+      gamesCount: response.data?.data?.length || 0
+    };
+  } catch (error) {
+    console.error(`❌ API Connection Test: FAILED`);
+    console.error(`   Error: ${error.message}`);
+    console.error(`   Status: ${error.response?.status}`);
+
+    return {
+      success: false,
+      error: error.message,
+      status: error.response?.status
+    };
+  }
+};
+
 export default {
   getAvailableGames,
   getGameContent,
@@ -230,4 +329,5 @@ export default {
   getConversationScenario,
   trackContentUsage,
   getContentStatistics,
+  testApiConnection,
 };

@@ -8,11 +8,13 @@ import {
   ScrollView,
   Easing,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { useTheme } from "../../../shared/context/ThemeContext";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 import {
   Text,
   Heading,
@@ -26,8 +28,27 @@ import { gameService } from "../services/gameService";
 import { xpService } from "../../../shared/services/xpService";
 import gameContentService from "../services/gameContentService";
 import { useAuth } from "../../auth/hooks/useAuth";
+import GameResultsPage from "./GameResultsPage";
 
 const { width, height } = Dimensions.get("window");
+
+// Helper function for cross-platform font families
+const getFontFamily = (weight = 'regular') => {
+  if (Platform.OS === 'web') {
+    return 'Montserrat, sans-serif';
+  }
+
+  const fontMap = {
+    light: 'Montserrat-Light',
+    regular: 'Montserrat-Regular',
+    medium: 'Montserrat-Medium',
+    semibold: 'Montserrat-SemiBold',
+    bold: 'Montserrat-Bold',
+    extrabold: 'Montserrat-ExtraBold',
+  };
+
+  return fontMap[weight] || fontMap.regular;
+};
 
 /**
  * Sentence Scramble Game Component
@@ -76,6 +97,17 @@ const SentenceScrambleGame = ({
 
   // Initialize game
   useEffect(() => {
+    // Reset game state when component mounts to ensure fresh start
+    setGameCompleted(false);
+    setGameResults(null);
+    setCurrentSentenceIndex(0);
+    setScrambledWords([]);
+    setSelectedWords([]);
+    setScore(0);
+    setCorrectAnswers(0);
+    setIsTransitioning(false);
+    setStartTime(Date.now());
+
     if (sentences.length > 0) {
       initializeGame(sentences);
     } else if (lessonId && lessonId !== "practice") {
@@ -572,346 +604,105 @@ const SentenceScrambleGame = ({
     }
   };
 
-  // Render game results screen
+  // Render game results screen with standardized GameResultsPage
   if (gameCompleted && gameResults) {
+    // Prepare data for the GameResultsPage component
+    const resultsData = {
+      score: gameResults.score,
+      correctAnswers: gameResults.correctAnswers,
+      totalQuestions: gameResults.totalQuestions,
+      accuracy: gameResults.accuracy,
+      timeSpent: gameResults.timeSpent || 120,
+      xpEarned: Math.floor(gameResults.score * 0.15), // Calculate XP based on score
+      incorrectAnswers: gameResults.totalQuestions - gameResults.correctAnswers,
+    };
+
+    console.log("🎮 SentenceScramble - Results data for GameResultsPage:", resultsData);
+    console.log("🎮 SentenceScramble - Original gameResults:", gameResults);
+
+    // Custom metrics specific to Sentence Scramble Game
+    const customMetrics = {
+      averageResponseTime: `${(gameResults.timeSpent / gameResults.totalQuestions).toFixed(1)}s`,
+      sentenceStructureLevel: user?.preferences?.languageLevel || "Beginner",
+      sentencesCompleted: gameResults.correctAnswers,
+      grammarAccuracy: `${gameResults.accuracy}%`,
+    };
+
+    // Mock achievements for demonstration (replace with real achievement system)
+    const achievements = [];
+    if (gameResults.accuracy === 100) {
+      achievements.push({
+        id: "perfect_scramble",
+        name: "Sentence Master!",
+        icon: "trophy-outline",
+        description: "Got 100% accuracy in sentence scrambling"
+      });
+    }
+    if (gameResults.timeSpent < 90) {
+      achievements.push({
+        id: "speed_scrambler",
+        name: "Speed Scrambler",
+        icon: "flash-outline",
+        description: "Completed in under 90 seconds"
+      });
+    }
+    if (gameResults.correctAnswers >= 8) {
+      achievements.push({
+        id: "grammar_guru",
+        name: "Grammar Guru",
+        icon: "school-outline",
+        description: "Excellent sentence structure understanding"
+      });
+    }
+
     return (
-      <View style={styles.resultsContainer}>
-        {/* Confetti for celebrations */}
-        {gameResults.accuracy >= 70 && (
-          <ConfettiCannon
-            ref={confettiRef}
-            count={150}
-            origin={{ x: width / 2, y: height * 0.1 }}
-            autoStart={false}
-            fadeOut={true}
-            explosionSpeed={350}
-            fallSpeed={1200}
-            colors={["#6FC935", "#FFD700", "#FF6B35", "#3498DB"]}
-          />
-        )}
+      <GameResultsPage
+        results={resultsData}
+        gameType="sentence-scramble"
+        onPlayAgain={() => {
+          console.log("🔄 Retrying game...");
+          // Reset all game state
+          setGameCompleted(false);
+          setGameResults(null);
+          setCurrentSentenceIndex(0);
+          setScore(0);
+          setCorrectAnswers(0);
+          setSelectedWords([]);
+          setScrambledWords([]);
+          setIsCorrect(null);
+          setIsTransitioning(false);
+          setStartTime(Date.now());
+          setEndTime(null);
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Modern Header */}
-          <View style={styles.header}>
-            <View style={styles.headerContent}>
-              <Text style={styles.headerTitle}>Game Complete!</Text>
-              <Text style={styles.headerSubtitle}>Sentence Scramble</Text>
-            </View>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
+          // Reset animations
+          fadeAnim.setValue(1);
+          slideAnim.setValue(0);
+          progressAnim.setValue(0);
 
-          {/* Modern Hero Section */}
-          <View style={styles.heroSection}>
-            {/* Performance Emoji */}
-            <View style={styles.emojiContainer}>
-              <Text style={styles.performanceEmoji}>
-                {gameResults.accuracy >= 90
-                  ? "🏆"
-                  : gameResults.accuracy >= 70
-                  ? "🎉"
-                  : gameResults.accuracy >= 50
-                  ? "👏"
-                  : "💪"}
-              </Text>
-            </View>
-
-            {/* Main Message */}
-            <Text style={styles.heroTitle}>
-              {gameResults.accuracy >= 90
-                ? "Outstanding!"
-                : gameResults.accuracy >= 70
-                ? "Excellent Work!"
-                : gameResults.accuracy >= 50
-                ? "Well Done!"
-                : "Keep Practicing!"}
-            </Text>
-
-            <Text style={styles.heroSubtitle}>
-              {gameResults.accuracy >= 90
-                ? "Perfect performance! You're a sentence master!"
-                : gameResults.accuracy >= 70
-                ? "Great job mastering sentence scrambling!"
-                : gameResults.accuracy >= 50
-                ? "Good progress! Keep practicing to improve!"
-                : "Every attempt makes you better. Try again!"}
-            </Text>
-
-            {/* Accuracy Circle */}
-            <View style={styles.accuracyCircle}>
-              <Text style={styles.accuracyPercentage}>{gameResults.accuracy}%</Text>
-              <Text style={styles.accuracyLabel}>Accuracy</Text>
-            </View>
-          </View>
-
-          {/* Modern Stats Grid */}
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <View style={styles.statIconContainer}>
-                <Ionicons name="star" size={20} color="#6FC935" />
-              </View>
-              <Text style={styles.statValue}>{gameResults.score}</Text>
-              <Text style={styles.statLabel}>Score</Text>
-            </View>
-
-            <View style={styles.statItem}>
-              <View style={styles.statIconContainer}>
-                <Ionicons name="checkmark-circle" size={20} color="#6FC935" />
-              </View>
-              <Text style={styles.statValue}>
-                {gameResults.correctAnswers}/{gameResults.totalQuestions}
-              </Text>
-              <Text style={styles.statLabel}>Correct</Text>
-            </View>
-
-            <View style={styles.statItem}>
-              <View style={styles.statIconContainer}>
-                <Ionicons name="time" size={20} color="#6FC935" />
-              </View>
-              <Text style={styles.statValue}>{Math.round(gameResults.timeSpent || 120)}s</Text>
-              <Text style={styles.statLabel}>Time</Text>
-            </View>
-
-            <View style={styles.statItem}>
-              <View style={styles.statIconContainer}>
-                <Ionicons name="trophy" size={20} color="#6FC935" />
-              </View>
-              <Text style={styles.statValue}>+{Math.floor(gameResults.score * 0.15)}</Text>
-              <Text style={styles.statLabel}>XP Earned</Text>
-            </View>
-          </View>
-
-          {/* Performance Insights */}
-          {gameResults.accuracy >= 90 && (
-            <View style={styles.insightCard}>
-              <View style={styles.insightHeader}>
-                <Ionicons name="trophy" size={24} color="#FFD700" />
-                <Text style={styles.insightTitle}>Perfect Performance!</Text>
-              </View>
-              <Text style={styles.insightText}>
-                You've mastered sentence scrambling! Your accuracy shows excellent understanding of Korean sentence structure.
-              </Text>
-            </View>
-          )}
-
-          {gameResults.accuracy >= 70 && gameResults.accuracy < 90 && (
-            <View style={styles.insightCard}>
-              <View style={styles.insightHeader}>
-                <Ionicons name="checkmark-circle" size={24} color="#6FC935" />
-                <Text style={styles.insightTitle}>Great Progress!</Text>
-              </View>
-              <Text style={styles.insightText}>
-                You're doing well with sentence structure. Keep practicing to reach perfect accuracy!
-              </Text>
-            </View>
-          )}
-
-          {gameResults.accuracy < 70 && (
-            <View style={styles.insightCard}>
-              <View style={styles.insightHeader}>
-                <Ionicons name="bulb" size={24} color="#FF6B35" />
-                <Text style={styles.insightTitle}>Learning Opportunity</Text>
-              </View>
-              <Text style={styles.insightText}>
-                Focus on understanding Korean word order patterns. Practice makes perfect!
-              </Text>
-            </View>
-          )}
-
-          {/* Enhanced Rewards Section */}
-          {gameResults.rewards && gameResults.rewards.length > 0 && (
-            <ModernCard
-              style={{
-                padding: theme.spacing.lg,
-                marginBottom: theme.spacing.lg,
-                backgroundColor: theme.colors.brandWhite,
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: theme.colors.neutral[200],
-                shadowColor: theme.colors.neutral[300],
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.08,
-                shadowRadius: 12,
-                elevation: 3,
-              }}
-            >
-              <Row align="center" style={{ marginBottom: theme.spacing.md }}>
-                <Text
-                  style={{
-                    fontSize: 18,
-                    fontFamily: theme.typography.fontFamily.bold,
-                    color: theme.colors.brandNavy,
-                    flex: 1,
-                  }}
-                >
-                  🎁 Rewards Earned
-                </Text>
-                <View
-                  style={{
-                    backgroundColor: theme.colors.brandGreen + "15",
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: theme.colors.brandGreen + "30",
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      color: theme.colors.brandGreen,
-                      fontFamily: theme.typography.fontFamily.bold,
-                    }}
-                  >
-                    +
-                    {gameResults.rewards.reduce(
-                      (sum, reward) => sum + reward.points,
-                      0
-                    )}{" "}
-                    pts
-                  </Text>
-                </View>
-              </Row>
-
-              {gameResults.rewards.map((reward, index) => (
-                <View
-                  key={index}
-                  style={{
-                    backgroundColor: theme.colors.neutral[50],
-                    borderRadius: 16,
-                    padding: theme.spacing.md,
-                    marginBottom:
-                      index < gameResults.rewards.length - 1 ? 12 : 0,
-                    borderWidth: 1,
-                    borderColor: theme.colors.neutral[100],
-                  }}
-                >
-                  <Row align="center">
-                    <View
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 24,
-                        backgroundColor: theme.colors.brandGreen + "20",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginRight: 16,
-                        borderWidth: 2,
-                        borderColor: theme.colors.brandGreen + "30",
-                      }}
-                    >
-                      <Ionicons
-                        name={reward.icon || "trophy"}
-                        size={24}
-                        color={theme.colors.brandGreen}
-                      />
-                    </View>
-                    <Column style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          fontFamily: theme.typography.fontFamily.bold,
-                          color: theme.colors.brandNavy,
-                          marginBottom: 4,
-                        }}
-                      >
-                        {reward.type}
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 14,
-                          color: theme.colors.neutral[600],
-                          fontFamily: theme.typography.fontFamily.medium,
-                        }}
-                      >
-                        Earned +{reward.points} points
-                      </Text>
-                    </Column>
-                    <View
-                      style={{
-                        backgroundColor: theme.colors.brandGreen,
-                        borderRadius: 12,
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: theme.colors.brandWhite,
-                          fontSize: 14,
-                          fontFamily: theme.typography.fontFamily.bold,
-                        }}
-                      >
-                        +{reward.points}
-                      </Text>
-                    </View>
-                  </Row>
-                </View>
-              ))}
-            </ModernCard>
-          )}
-
-          {/* Modern Action Buttons */}
-          <View style={styles.actionButtons}>
-            {gameResults.accuracy < 70 && (
-              <TouchableOpacity
-                onPress={() => {
-                  console.log("🔄 Retrying game...");
-                  // Reset all game state
-                  setGameCompleted(false);
-                  setGameResults(null);
-                  setCurrentSentenceIndex(0);
-                  setScore(0);
-                  setCorrectAnswers(0);
-                  setSelectedWords([]);
-                  setScrambledWords([]);
-                  setIsCorrect(null);
-                  setIsTransitioning(false);
-                  setStartTime(Date.now());
-                  setEndTime(null);
-
-                  // Reset animations
-                  fadeAnim.setValue(1);
-                  slideAnim.setValue(0);
-                  progressAnim.setValue(0);
-
-                  // Reinitialize the game with existing sentences
-                  if (gameSentences.length > 0) {
-                    console.log("🎮 Reinitializing game with existing sentences");
-                    initializeGame(gameSentences);
-                  } else {
-                    console.log("🎮 Loading new content for retry");
-                    // Reload content if no sentences available
-                    if (sentences.length > 0) {
-                      initializeGame(sentences);
-                    } else if (lessonId && lessonId !== "practice") {
-                      loadSentencesFromLesson(lessonId);
-                    } else {
-                      loadContentFromService();
-                    }
-                  }
-                }}
-                style={styles.retryButton}
-              >
-                <Ionicons name="refresh" size={20} color="#666" />
-                <Text style={styles.retryButtonText}>Try Again</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity onPress={handleContinue} style={styles.continueButton}>
-              <Text style={styles.continueButtonText}>Continue Learning</Text>
-              <Ionicons name="arrow-forward" size={20} color="white" />
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </View>
+          // Reinitialize the game with existing sentences
+          if (gameSentences.length > 0) {
+            console.log("🎮 Reinitializing game with existing sentences");
+            initializeGame(gameSentences);
+          } else {
+            console.log("🎮 Loading new content for retry");
+            // Reload content if no sentences available
+            if (sentences.length > 0) {
+              initializeGame(sentences);
+            } else if (lessonId && lessonId !== "practice") {
+              loadSentencesFromLesson(lessonId);
+            } else {
+              loadContentFromService();
+            }
+          }
+        }}
+        onContinue={handleContinue}
+        onBackToGames={handleClose}
+        achievements={achievements}
+        customMetrics={customMetrics}
+      />
     );
   }
+
   // Render loading state
   if (isLoading) {
     return (
@@ -920,16 +711,42 @@ const SentenceScrambleGame = ({
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: theme.colors.brandWhite,
+          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
         }}
       >
-        <ActivityIndicator size="large" color={theme.colors.brandGreen} />
+        <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
         <Text
           style={{
             marginTop: 16,
             fontSize: 16,
-            color: theme.colors.neutral[600],
-            fontFamily: theme.typography.fontFamily.medium,
+            color: BRAND_COLORS.SHADOW_GREY,
+            fontFamily: getFontFamily('medium'),
+          }}
+        >
+          Loading game...
+        </Text>
+      </View>
+    );
+  }
+
+  // Render loading state
+  if (isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+        }}
+      >
+        <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
+        <Text
+          style={{
+            marginTop: 16,
+            fontSize: 16,
+            color: BRAND_COLORS.SHADOW_GREY,
+            fontFamily: getFontFamily('medium'),
           }}
         >
           Loading game...
@@ -946,15 +763,15 @@ const SentenceScrambleGame = ({
     <View
       style={{
         flex: 1,
-        backgroundColor: theme.colors.brandWhite,
+        backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
       }}
     >
       {/* Modern Progress Section */}
       <View
         style={{
-          paddingHorizontal: theme.spacing.md,
-          paddingVertical: theme.spacing.sm,
-          backgroundColor: theme.colors.brandWhite,
+          paddingHorizontal: 16, // theme.spacing.md
+          paddingVertical: 8,    // theme.spacing.sm
+          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
         }}
       >
         {/* Game Title */}
@@ -1041,7 +858,7 @@ const SentenceScrambleGame = ({
         style={{
           flex: 1,
           paddingHorizontal: theme.spacing.md,
-          paddingTop: theme.spacing.lg,
+          // paddingTop: theme.spacing.lg,
           opacity: fadeAnim,
           transform: [{ translateX: slideAnim }],
         }}
@@ -1051,9 +868,9 @@ const SentenceScrambleGame = ({
           style={{
             backgroundColor: theme.colors.brandWhite,
             borderRadius: 16,
-            padding: theme.spacing.xl,
+            // padding: theme.spacing.xl,
             alignItems: "center",
-            marginBottom: theme.spacing.lg,
+            // marginBottom: theme.spacing.lg,
             elevation: 0,
           }}
         >
@@ -1243,13 +1060,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontFamily: 'Montserrat-Bold',
+    fontFamily: getFontFamily('bold'),
     color: '#0A2240',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,
-    fontFamily: 'Montserrat-Medium',
+    fontFamily: getFontFamily('medium'),
     color: '#666',
   },
   closeButton: {
@@ -1281,14 +1098,14 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 32,
-    fontFamily: 'Montserrat-Bold',
+    fontFamily: getFontFamily('bold'),
     color: '#0A2240',
     textAlign: 'center',
     marginBottom: 12,
   },
   heroSubtitle: {
     fontSize: 16,
-    fontFamily: 'Montserrat-Regular',
+    fontFamily: getFontFamily('regular'),
     color: '#666',
     textAlign: 'center',
     lineHeight: 24,
@@ -1305,12 +1122,12 @@ const styles = StyleSheet.create({
   },
   accuracyPercentage: {
     fontSize: 24,
-    fontFamily: 'Montserrat-Bold',
+    fontFamily: getFontFamily('bold'),
     color: 'white',
   },
   accuracyLabel: {
     fontSize: 12,
-    fontFamily: 'Montserrat-Medium',
+    fontFamily: getFontFamily('medium'),
     color: 'white',
     opacity: 0.9,
   },
@@ -1342,13 +1159,13 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 24,
-    fontFamily: 'Montserrat-Bold',
+    fontFamily: getFontFamily('bold'),
     color: '#0A2240',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    fontFamily: 'Montserrat-Medium',
+    fontFamily: getFontFamily('medium'),
     color: '#666',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1368,13 +1185,13 @@ const styles = StyleSheet.create({
   },
   insightTitle: {
     fontSize: 18,
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: getFontFamily('semibold'),
     color: '#0A2240',
     marginLeft: 12,
   },
   insightText: {
     fontSize: 14,
-    fontFamily: 'Montserrat-Regular',
+    fontFamily: getFontFamily('regular'),
     color: '#666',
     lineHeight: 20,
   },
@@ -1394,7 +1211,7 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     fontSize: 16,
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: getFontFamily('semibold'),
     color: '#666',
   },
   continueButton: {
@@ -1408,7 +1225,7 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     fontSize: 16,
-    fontFamily: 'Montserrat-Bold',
+    fontFamily: getFontFamily('bold'),
     color: 'white',
   },
 });

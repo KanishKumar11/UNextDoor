@@ -5,7 +5,6 @@ import { Text } from "../../../shared/components";
 import { useTheme } from "../../../shared/context/ThemeContext";
 import SafeAreaWrapper from "../../../shared/components/SafeAreaWrapper";
 import MatchWordGame from "../../../features/games/components/MatchWordGame";
-import { curriculumService } from "../../../features/curriculum/services/curriculumService";
 import { useAchievements } from "../../../features/achievements/context/AchievementContext";
 
 /**
@@ -23,59 +22,21 @@ const MatchWordGameScreen = () => {
 
   // Load words for the game
   useEffect(() => {
+    // Reset state when component mounts
+    setWords([]);
+    setIsLoading(true);
+
     const loadWords = async () => {
       try {
         setIsLoading(true);
 
         if (lessonId === "practice") {
-          // Load practice words from beginner curriculum
-          const response = await curriculumService.getCurriculum("beginner");
-          const curriculum = response.data.curriculum;
-
-          // Extract vocabulary from first few lessons
-          const vocabularyItems = [];
-
-          // Get first 3 lessons
-          const firstLessons = curriculum.lessons.slice(0, 3);
-
-          for (const lesson of firstLessons) {
-            const lessonResponse = await curriculumService.getLesson(lesson.id);
-            const lessonData = lessonResponse.data.lesson;
-
-            lessonData.content.sections.forEach((section) => {
-              if (section.type === "vocabulary") {
-                section.items.forEach((item) => {
-                  vocabularyItems.push({
-                    korean: item.korean,
-                    english: item.english,
-                    romanization: item.romanization,
-                  });
-                });
-              }
-            });
-          }
-
-          setWords(vocabularyItems);
+          // For practice mode, let the MatchWordGame component handle content loading
+          setWords([]); // Empty array will trigger content service in MatchWordGame
         } else {
-          // Load words from specific lesson
-          const response = await curriculumService.getLesson(lessonId);
-          const lesson = response.data.lesson;
-
-          // Extract vocabulary from lesson
-          const vocabularyItems = [];
-          lesson.content.sections.forEach((section) => {
-            if (section.type === "vocabulary") {
-              section.items.forEach((item) => {
-                vocabularyItems.push({
-                  korean: item.korean,
-                  english: item.english,
-                  romanization: item.romanization,
-                });
-              });
-            }
-          });
-
-          setWords(vocabularyItems);
+          // For lesson-specific games, also let MatchWordGame handle the loading
+          // This ensures consistent behavior and proper error handling
+          setWords([]);
         }
       } catch (error) {
         console.error("Error loading words for game:", error);
@@ -143,10 +104,10 @@ const MatchWordGameScreen = () => {
             flex: 1,
             justifyContent: "center",
             alignItems: "center",
-            backgroundColor: theme.colors.brandWhite,
+            backgroundColor: theme.colors.whisperWhite,
           }}
         >
-          <ActivityIndicator size="large" color={theme.colors.brandGreen} />
+          <ActivityIndicator size="large" color={theme.colors.explorerTeal} />
           <Text
             style={{
               marginTop: 16,
@@ -167,10 +128,11 @@ const MatchWordGameScreen = () => {
       <View
         style={{
           flex: 1,
-          backgroundColor: theme.colors.brandWhite,
+          backgroundColor: theme.colors.whisperWhite,
         }}
       >
         <MatchWordGame
+          key={`match-word-${lessonId}-${Date.now()}`} // Force remount on each navigation
           lessonId={lessonId}
           words={words}
           onComplete={handleGameComplete}

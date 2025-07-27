@@ -1,144 +1,141 @@
 /**
  * Modern Theme Configuration
- * A comprehensive theme with modern colors, typography, and spacing
- * Based on UNextDoor brand guidelines
+ * A comprehensive theme with Miles-inspired colors, typography, and spacing
+ * Based on UNextDoor brand guidelines and Miles mascot character
  *
- * Brand Colors:
- * - Primary Green: C59 M0 Y100 K0 / R111 G201 B53 (#6FC935)
- * - Secondary Navy Blue: C100 M80 Y0 K20 / R0 G51 B102 (#003366)
- * - Tertiary Black: C0 M0 Y0 K100 / R0 G0 B0 (#000000)
- * - White: #FFFFFF
+ * Miles-Inspired Brand Colors:
+ * - Explorer Teal: #5BC4B3 (Primary brand highlight, app accents, key buttons)
+ * - Sky Aqua: #A3E8DC (Backgrounds, UI containers, hover effects)
+ * - Ocean Blue: #36798A (Headings, text highlights, overlays)
+ * - Rucksack Brown: #A46E3E (Borders, shadows, accent details)
+ * - Shadow Grey: #4F4F4F (Text, outlines, icons)
+ * - Whisper White: #FAFAFA (Background base, UI space, feed balance)
  * - Font: Montserrat (Light, Regular, Medium, SemiBold, Bold, ExtraBold)
  */
 
 import { FONTS } from "../utils/fontUtils";
 import { Dimensions } from "react-native";
+import {
+  BRAND_COLORS,
+  NEUTRAL_COLORS,
+  SEMANTIC_COLORS,
+  BACKGROUND_COLORS,
+  TEXT_COLORS,
+  BORDER_COLORS
+} from "../constants/colors";
 import { getBreakpoints } from "../utils/webConfig";
 import { responsiveTypography } from "../utils/responsiveFonts";
 
-// Color palette based on UNextDoor brand guidelines
+// Miles-Inspired Color Palette for UNextDoor
 const colors = {
-  // Primary colors - Green from brand guidelines
+  // Primary colors - Explorer Teal
   primary: {
-    50: "#E9F7E0",
-    100: "#D3EFC2",
-    200: "#BDE7A3",
-    300: "#A7DF85",
-    400: "#91D766",
-    500: "#6FC935", // Main primary color - C59 M0 Y100 K0 / R111 G201 B53
-    600: "#5BA82C",
-    700: "#478623",
-    800: "#34651A",
-    900: "#204311",
+    50: "#E8F8F6",
+    100: "#D1F1ED",
+    200: "#A3E3DB",
+    300: "#75D5C9",
+    400: "#47C7B7",
+    500: BRAND_COLORS.EXPLORER_TEAL, // Main primary color - Explorer Teal
+    600: "#4A9D90",
+    700: "#38766D",
+    800: "#264E4A",
+    900: "#132727",
   },
 
-  // Secondary colors - Navy Blue from brand guidelines (C100 M80 Y0 K20)
+  // Secondary colors - Ocean Blue
   secondary: {
-    50: "#E6F0FF",
-    100: "#CCE0FF",
-    200: "#99C2FF",
-    300: "#66A3FF",
-    400: "#3385FF",
-    500: "#003366", // Main secondary color - Navy Blue from brand guidelines
-    600: "#002952",
-    700: "#001F3D",
-    800: "#001429",
-    900: "#000A14",
+    50: "#E9F2F4",
+    100: "#D3E5E9",
+    200: "#A7CBD3",
+    300: "#7BB1BD",
+    400: "#4F97A7",
+    500: BRAND_COLORS.OCEAN_BLUE, // Main secondary color - Ocean Blue
+    600: "#2B616E",
+    700: "#204953",
+    800: "#153137",
+    900: "#0A181C",
   },
 
-  // Tertiary colors - Black from brand guidelines (C0 M0 Y0 K100)
+  // Tertiary colors - Shadow Grey
   tertiary: {
-    50: "#F5F5F5",
-    100: "#E0E0E0",
-    200: "#BDBDBD",
-    300: "#9E9E9E",
-    400: "#757575",
-    500: "#000000", // Main tertiary color - Black from brand guidelines
-    600: "#000000",
-    700: "#000000",
-    800: "#000000",
-    900: "#000000",
+    50: "#F7F7F7",
+    100: "#EFEFEF",
+    200: "#DFDFDF",
+    300: "#CFCFCF",
+    400: "#BFBFBF",
+    500: BRAND_COLORS.SHADOW_GREY, // Main tertiary color - Shadow Grey
+    600: "#3F3F3F",
+    700: "#2F2F2F",
+    800: "#1F1F1F",
+    900: "#0F0F0F",
   },
 
-  // Accent colors - Using primary green
+  // Accent colors - Sky Aqua
   accent: {
-    50: "#E9F7E0",
-    100: "#D3EFC2",
-    200: "#BDE7A3",
-    300: "#A7DF85",
-    400: "#91D766",
-    500: "#6FC935", // Main accent color - Same as primary
-    600: "#5BA82C",
-    700: "#478623",
-    800: "#34651A",
-    900: "#204311",
+    50: "#F4FDFC",
+    100: "#E9FBF9",
+    200: "#D3F7F3",
+    300: "#BDF3ED",
+    400: "#A7EFE7",
+    500: BRAND_COLORS.SKY_AQUA, // Main accent color - Sky Aqua
+    600: "#82BAB0",
+    700: "#628B84",
+    800: "#415D58",
+    900: "#212E2C",
   },
 
-  // Neutral colors
-  neutral: {
-    50: "#FAFAFA",
-    100: "#F5F5F5",
-    200: "#EEEEEE",
-    300: "#E0E0E0",
-    400: "#BDBDBD",
-    500: "#9E9E9E",
-    600: "#757575",
-    700: "#616161",
-    800: "#424242",
-    900: "#212121",
-  },
+  // Neutral colors - Using constants
+  neutral: NEUTRAL_COLORS,
 
-  // Semantic colors
+  // Semantic colors - Using constants
   success: {
-    light: "#A7DF85",
-    main: "#6FC935", // Using brand green for success
-    dark: "#5BA82C",
+    light: BRAND_COLORS.SKY_AQUA,
+    main: SEMANTIC_COLORS.SUCCESS,
+    dark: "#38766D",
   },
 
   warning: {
-    light: "#FFB74D",
-    main: "#FF9800",
-    dark: "#F57C00",
+    light: BRAND_COLORS.CARD_BACKGROUND + "20",
+    main: SEMANTIC_COLORS.WARNING,
+    dark: "#836B39",
   },
 
   error: {
-    light: "#E57373",
-    main: "#F44336",
-    dark: "#D32F2F",
+    light: "#FFB3B3",
+    main: SEMANTIC_COLORS.ERROR,
+    dark: "#E55555",
   },
 
   info: {
-    light: "#99C2FF",
-    main: "#003366", // Using secondary navy blue for info
-    dark: "#001F3D",
+    light: BRAND_COLORS.SKY_AQUA,
+    main: SEMANTIC_COLORS.INFO,
+    dark: "#204953",
   },
 
-  // Text colors
+  // Text colors - Using constants
   text: {
-    primary: "#000000", // Black text from brand guidelines
-    secondary: "#003366", // Navy blue for secondary text
-    tertiary: "#757575", // Gray for tertiary text
-    disabled: "#9E9E9E",
-    hint: "#9E9E9E",
-    white: "#FFFFFF",
+    primary: TEXT_COLORS.PRIMARY,
+    secondary: TEXT_COLORS.SECONDARY,
+    tertiary: TEXT_COLORS.TERTIARY,
+    disabled: TEXT_COLORS.DISABLED,
+    hint: TEXT_COLORS.DISABLED,
+    white: TEXT_COLORS.WHITE,
   },
 
-  // Background colors
-  background: {
-    default: "#FFFFFF", // White background from brand guidelines
-    paper: "#FFFFFF",
-    card: "#F8F9FA",
-    dark: "#003366", // Navy blue for dark backgrounds
-  },
+  // Background colors - Using constants
+  background: BACKGROUND_COLORS,
 
   // Divider color
-  divider: "#E0E0E0", // Light gray for dividers
+  divider: BORDER_COLORS.LIGHT,
 
-  // Brand-specific colors
-  brandGreen: "#6FC935", // Primary Green from brand guidelines
-  brandNavy: "#003366", // Secondary Navy Blue from brand guidelines
-  brandBlack: "#000000", // Tertiary Black from brand guidelines
-  brandWhite: "#FFFFFF", // White from brand guidelines
+  // Miles-inspired brand colors - Using constants
+  explorerTeal: BRAND_COLORS.EXPLORER_TEAL,
+  skyAqua: BRAND_COLORS.SKY_AQUA,
+  oceanBlue: BRAND_COLORS.OCEAN_BLUE,
+  cardBackground: BRAND_COLORS.CARD_BACKGROUND, // Your new coral red color
+  rucksackBrown: BRAND_COLORS.RUCKSACK_BROWN,
+  shadowGrey: BRAND_COLORS.SHADOW_GREY,
+  whisperWhite: BRAND_COLORS.WHISPER_WHITE,
 };
 
 // Typography scale with proper hierarchy - Using Montserrat from brand guidelines
@@ -209,50 +206,56 @@ const borderRadius = {
   full: 9999,
 };
 
-// Shadows for elevation - Using navy blue for branded shadows
+// Shadows for elevation - Using ocean blue for branded shadows with elevation 0
 const shadows = {
-  none: "none",
+  none: {
+    shadowColor: "transparent",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
   xs: {
-    shadowColor: "#003366", // Navy blue shadow
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
+    shadowRadius: 2,
+    elevation: 0,
   },
   sm: {
-    shadowColor: "#003366", // Navy blue shadow
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 0,
   },
   md: {
-    shadowColor: "#003366", // Navy blue shadow
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 0,
   },
   lg: {
-    shadowColor: "#003366", // Navy blue shadow
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 0,
   },
   xl: {
-    shadowColor: "#003366", // Navy blue shadow
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
     shadowRadius: 16,
-    elevation: 5,
+    elevation: 0,
   },
   "2xl": {
-    shadowColor: "#003366", // Navy blue shadow
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 6,
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 0,
   },
 };
 

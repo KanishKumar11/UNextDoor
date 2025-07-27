@@ -10,7 +10,7 @@ export const levels = [
     description: 'Just starting your Korean language journey',
     xpRequired: 0,
     icon: 'leaf-outline',
-    color: '#6FC935', // Primary green color
+    color: '#5BC4B3', // Explorer Teal - Miles-inspired brand color
     rewards: [
       {
         type: 'feature_unlock',
@@ -27,7 +27,7 @@ export const levels = [
     description: 'Learning the basics of Korean',
     xpRequired: 100,
     icon: 'seedling-outline',
-    color: '#6FC935',
+    color: '#5BC4B3', // Explorer Teal - Miles-inspired brand color
     rewards: [
       {
         type: 'badge',
@@ -44,7 +44,7 @@ export const levels = [
     description: 'Building your Korean foundation',
     xpRequired: 300,
     icon: 'flower-outline',
-    color: '#6FC935',
+    color: '#5BC4B3', // Explorer Teal - Miles-inspired brand color
     rewards: [
       {
         type: 'feature_unlock',
@@ -61,7 +61,7 @@ export const levels = [
     description: 'Expanding your Korean vocabulary',
     xpRequired: 600,
     icon: 'nutrition-outline',
-    color: '#F39C12', // Orange color
+    color: '#A46E3E', // Rucksack Brown - Miles-inspired brand color
     rewards: [
       {
         type: 'badge',
@@ -78,7 +78,7 @@ export const levels = [
     description: 'Conversing in everyday Korean',
     xpRequired: 1000,
     icon: 'tree-outline',
-    color: '#F39C12',
+    color: '#A46E3E', // Rucksack Brown - Miles-inspired brand color
     rewards: [
       {
         type: 'feature_unlock',
@@ -95,7 +95,7 @@ export const levels = [
     description: 'Handling complex Korean conversations',
     xpRequired: 1500,
     icon: 'planet-outline',
-    color: '#F39C12',
+    color: '#A46E3E', // Rucksack Brown - Miles-inspired brand color
     rewards: [
       {
         type: 'badge',
@@ -112,7 +112,7 @@ export const levels = [
     description: 'Speaking Korean with confidence',
     xpRequired: 2200,
     icon: 'rocket-outline',
-    color: '#E74C3C', // Red color
+    color: '#FF6B6B', // Warm Coral - Miles-inspired brand color
     rewards: [
       {
         type: 'feature_unlock',
@@ -129,7 +129,7 @@ export const levels = [
     description: 'Near-native Korean proficiency',
     xpRequired: 3000,
     icon: 'star-outline',
-    color: '#E74C3C',
+    color: '#FF6B6B', // Warm Coral - Miles-inspired brand color
     rewards: [
       {
         type: 'badge',
@@ -146,7 +146,7 @@ export const levels = [
     description: 'Mastering the nuances of Korean',
     xpRequired: 4000,
     icon: 'diamond-outline',
-    color: '#9B59B6', // Purple color
+    color: '#8B5A96', // Deep Purple - Miles-inspired brand color
     rewards: [
       {
         type: 'feature_unlock',
@@ -163,7 +163,7 @@ export const levels = [
     description: 'Fluent in Korean language and culture',
     xpRequired: 5000,
     icon: 'infinite-outline',
-    color: '#9B59B6',
+    color: '#8B5A96', // Deep Purple - Miles-inspired brand color
     rewards: [
       {
         type: 'badge',

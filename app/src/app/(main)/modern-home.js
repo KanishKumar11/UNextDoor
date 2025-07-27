@@ -37,6 +37,7 @@ import QuickActionsSection from "./components/QuickActionsSection";
 import ScenarioPracticeCards from "./components/ScenarioPracticeCards";
 import ContinueLearningSection from "./components/ContinueLearningSection";
 import GamesSection from "./components/GamesSection"; // Hidden for now
+import { BRAND_COLORS } from "../../shared/constants/colors";
 
 export default function ModernHome() {
   const router = useRouter();
@@ -375,7 +376,7 @@ export default function ModernHome() {
     let xpToNextLevel = 100;
     let currentLevelXP = totalXP;
     let currentLevelIcon = "leaf-outline";
-    let currentLevelColor = "#6FC935";
+    let currentLevelColor = BRAND_COLORS.EXPLORER_TEAL; // Using constant
 
     // Find current level based on XP using the full level system
     if (allLevels.length > 0) {
@@ -501,7 +502,7 @@ export default function ModernHome() {
               text="Try Again"
               variant="solid"
               onPress={fetchAllData}
-              style={{ backgroundColor: theme.colors.primary[500] }}
+              style={{ backgroundColor: theme.colors.primary[500], elevation: 0 }}
             />
           </Column>
         </Container>
@@ -520,7 +521,7 @@ export default function ModernHome() {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: "rgba(255, 255, 255, 0.95)",
+              backgroundColor: BRAND_COLORS.CARD_BACKGROUND + "F2", // Using constant with transparency
               zIndex: theme.zIndex.overlay,
               alignItems: "center",
               justifyContent: "center",
@@ -536,12 +537,16 @@ export default function ModernHome() {
 
         <ScrollView
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            flexGrow: 1,
+            backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+          }}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.brandGreen]}
-              tintColor={theme.colors.brandGreen}
+              colors={[theme.colors.explorerTeal]}
+              tintColor={theme.colors.explorerTeal}
               title="Pull to refresh"
               titleColor={theme.colors.neutral[600]}
             />
@@ -550,6 +555,7 @@ export default function ModernHome() {
           <Animated.View
             style={{
               opacity: fadeAnim,
+              backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
               transform: [{ scale: scaleAnim }],
             }}
           >
@@ -558,7 +564,7 @@ export default function ModernHome() {
               align="center"
               style={{
                 padding: theme.spacing.md,
-                backgroundColor: theme.colors.brandWhite,
+                backgroundColor: BRAND_COLORS.CARD_BACKGROUND, // Using constant
               }}
             >
               <Column>
@@ -569,7 +575,7 @@ export default function ModernHome() {
                   level="h2"
                   numberOfLines={1}
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: theme.colors.oceanBlue,
                     fontFamily: theme.typography.fontFamily.semibold,
                   }}
                 >
@@ -579,14 +585,14 @@ export default function ModernHome() {
                   <Ionicons
                     name="flame"
                     size={16}
-                    color={theme.colors.brandGreen}
+                    color={theme.colors.explorerTeal}
                   />
                   <Text
                     variant="caption"
                     weight="semibold"
                     style={{
                       marginLeft: 4,
-                      color: theme.colors.brandGreen,
+                      color: theme.colors.explorerTeal,
                       fontFamily: theme.typography.fontFamily.semibold,
                     }}
                   >
@@ -596,14 +602,15 @@ export default function ModernHome() {
               </Column>
               <View
                 style={{
-                  shadowColor: theme.colors.brandNavy,
+                  backgroundColor: BRAND_COLORS.GOLDEN_AMBER,
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.15,
+                  padding: 2,
                   shadowRadius: 8,
-                  // elevation: 4,
-                  borderRadius: 32,
+                  elevation: 0,
+                  borderRadius: 400,
                   borderWidth: 2,
-                  borderColor: theme.colors.brandWhite,
+                  borderColor: theme.colors.whisperWhite,
                 }}
               >
                 <ModernAvatar
@@ -626,19 +633,20 @@ export default function ModernHome() {
                 transform: [{ scale: scaleAnim }],
                 paddingHorizontal: theme.spacing.md,
                 marginBottom: theme.spacing.sm,
+                backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
               }}
             >
               <TouchableOpacity onPress={() => router.push("/subscription")}>
                 <View
                   style={{
                     backgroundColor: currentPlan.tier === 'free'
-                      ? theme.colors.brandGreen + "08"
-                      : theme.colors.brandNavy + "08",
+                      ? theme.colors.explorerTeal + "08"
+                      : theme.colors.oceanBlue + "08",
                     borderRadius: theme.borderRadius.md,
                     borderWidth: 1,
                     borderColor: currentPlan.tier === 'free'
-                      ? theme.colors.brandGreen + "20"
-                      : theme.colors.brandNavy + "20",
+                      ? theme.colors.explorerTeal + "20"
+                      : theme.colors.oceanBlue + "20",
                     paddingHorizontal: theme.spacing.sm,
                     paddingVertical: theme.spacing.xs,
                   }}
@@ -651,8 +659,8 @@ export default function ModernHome() {
                           height: 28,
                           borderRadius: 14,
                           backgroundColor: currentPlan.tier === 'free'
-                            ? theme.colors.brandGreen + "15"
-                            : theme.colors.brandGreen + "15",
+                            ? theme.colors.explorerTeal + "15"
+                            : theme.colors.explorerTeal + "15",
                           justifyContent: 'center',
                           alignItems: 'center',
                           marginRight: theme.spacing.xs,
@@ -661,14 +669,14 @@ export default function ModernHome() {
                         <Ionicons
                           name={currentPlan.tier === 'free' ? "star-outline" : "star"}
                           size={14}
-                          color={currentPlan.tier === 'free' ? theme.colors.brandGreen : theme.colors.brandGreen}
+                          color={currentPlan.tier === 'free' ? theme.colors.explorerTeal : theme.colors.explorerTeal}
                         />
                       </View>
                       <Column style={{ flex: 1 }}>
-                        <Text variant="caption" weight="medium" color="neutral.500" style={{ fontSize: 10,marginBottom:-20 }}>
+                        <Text variant="caption" weight="medium" color="neutral.500" style={{ fontSize: 10, marginBottom: -20 }}>
                           CURRENT PLAN
                         </Text>
-                        <Text weight="semibold" numberOfLines={1} style={{ color: theme.colors.brandNavy, fontSize: 14 }}>
+                        <Text weight="semibold" numberOfLines={1} style={{ color: theme.colors.oceanBlue, fontSize: 14 }}>
                           {currentPlan.name}
                         </Text>
                       </Column>
@@ -696,7 +704,7 @@ export default function ModernHome() {
                       {currentPlan.tier !== 'free' && (
                         <View
                           style={{
-                            backgroundColor: theme.colors.brandGreen,
+                            backgroundColor: theme.colors.explorerTeal,
                             paddingHorizontal: 6,
                             paddingVertical: 2,
                             borderRadius: theme.borderRadius.sm,
@@ -807,7 +815,7 @@ export default function ModernHome() {
                 <Heading
                   level="h3"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: theme.colors.oceanBlue,
                     fontFamily: theme.typography.fontFamily.bold,
                     fontSize: 20,
                   }}
@@ -818,18 +826,18 @@ export default function ModernHome() {
               <TouchableOpacity
                 onPress={() => router.push("/achievements")}
                 style={{
-                  backgroundColor: theme.colors.brandGreen + "15",
+                  backgroundColor: theme.colors.explorerTeal + "15",
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 16,
                   borderWidth: 1,
-                  borderColor: theme.colors.brandGreen + "30",
+                  borderColor: theme.colors.explorerTeal + "30",
                 }}
               >
                 <Text
                   weight="semibold"
                   style={{
-                    color: theme.colors.brandGreen,
+                    color: theme.colors.explorerTeal,
                     fontFamily: theme.typography.fontFamily.semibold,
                     fontSize: 12,
                   }}
@@ -856,12 +864,12 @@ export default function ModernHome() {
                     justifyContent: "center",
                     width: 280,
                     height: 180,
-                    backgroundColor: theme.colors.brandWhite,
+                    backgroundColor: BRAND_COLORS.CARD_BACKGROUND, // Using constant
                     borderRadius: 20,
                     marginRight: theme.spacing.md,
                     padding: theme.spacing.lg,
                     borderWidth: 2,
-                    borderColor: theme.colors.neutral[200],
+                    borderColor: BRAND_COLORS.EXPLORER_TEAL + "40",
                     borderStyle: "dashed",
                   }}
                 >
@@ -870,23 +878,25 @@ export default function ModernHome() {
                       width: 72,
                       height: 72,
                       borderRadius: 36,
-                      backgroundColor: theme.colors.neutral[100],
+                      backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                       alignItems: "center",
                       justifyContent: "center",
                       marginBottom: theme.spacing.md,
+                      borderWidth: 2,
+                      borderColor: BRAND_COLORS.EXPLORER_TEAL + "30",
                     }}
                   >
                     <Ionicons
                       name="trophy-outline"
                       size={36}
-                      color={theme.colors.neutral[400]}
+                      color={BRAND_COLORS.EXPLORER_TEAL}
                     />
                   </View>
                   <Text
                     weight="semibold"
                     align="center"
                     style={{
-                      color: theme.colors.brandNavy,
+                      color: theme.colors.oceanBlue,
                       fontFamily: theme.typography.fontFamily.semibold,
                       fontSize: 14,
                       marginBottom: 6,

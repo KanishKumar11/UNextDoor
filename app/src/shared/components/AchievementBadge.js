@@ -3,6 +3,8 @@ import { View, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 import { Text } from "./index";
+import { BRAND_COLORS } from "../constants/colors";
+import { LinearGradient } from "expo-linear-gradient";
 
 /**
  * AchievementBadge Component
@@ -11,38 +13,142 @@ import { Text } from "./index";
 const AchievementBadge = ({ achievement, onPress, style }) => {
   const { theme } = useTheme();
 
-  // Achievement category colors and icons
+  // Enhanced achievement category colors with diverse, vibrant Miles-inspired palette
   const getAchievementStyle = (category, earned) => {
     const styles = {
+      // Learning achievements - Cool, trustworthy teal tones
       learning: {
-        color: "#6FC935", // Brand green
+        color: BRAND_COLORS.EXPLORER_TEAL,
         icon: earned ? "school" : "school-outline",
-        gradient: ["#6FC935", "#5BA82C"],
+        gradient: earned
+          ? [BRAND_COLORS.EXPLORER_TEAL + "40", BRAND_COLORS.SKY_AQUA + "30"]
+          : [BRAND_COLORS.CARD_BACKGROUND, BRAND_COLORS.EXPLORER_TEAL + "10"],
+        bgColor: earned ? BRAND_COLORS.EXPLORER_TEAL + "25" : BRAND_COLORS.CARD_BACKGROUND,
+        borderColor: earned ? BRAND_COLORS.EXPLORER_TEAL + "80" : BRAND_COLORS.EXPLORER_TEAL + "40",
+        shadowColor: BRAND_COLORS.EXPLORER_TEAL,
+        iconBg: earned ? BRAND_COLORS.EXPLORER_TEAL + "35" : BRAND_COLORS.EXPLORER_TEAL + "20",
+        textColor: earned ? BRAND_COLORS.OCEAN_BLUE : BRAND_COLORS.SHADOW_GREY,
+        accentColor: BRAND_COLORS.SKY_AQUA,
       },
+
+      // Streak achievements - Warm, energetic brown/orange tones
       streak: {
-        color: "#FF6B35", // Orange-red
+        color: BRAND_COLORS.RUCKSACK_BROWN,
         icon: earned ? "flame" : "flame-outline",
-        gradient: ["#FF6B35", "#E55A2B"],
+        gradient: earned
+          ? [BRAND_COLORS.RUCKSACK_BROWN + "40", BRAND_COLORS.SUNSET_ORANGE + "30"]
+          : [BRAND_COLORS.CARD_BACKGROUND, BRAND_COLORS.RUCKSACK_BROWN + "10"],
+        bgColor: earned ? BRAND_COLORS.RUCKSACK_BROWN + "25" : BRAND_COLORS.CARD_BACKGROUND,
+        borderColor: earned ? BRAND_COLORS.RUCKSACK_BROWN + "80" : BRAND_COLORS.RUCKSACK_BROWN + "40",
+        shadowColor: BRAND_COLORS.RUCKSACK_BROWN,
+        iconBg: earned ? BRAND_COLORS.RUCKSACK_BROWN + "35" : BRAND_COLORS.RUCKSACK_BROWN + "20",
+        textColor: earned ? BRAND_COLORS.RUCKSACK_BROWN : BRAND_COLORS.SHADOW_GREY,
+        accentColor: BRAND_COLORS.SUNSET_ORANGE,
       },
+
+      // XP achievements - Deep, prestigious blue tones
       xp: {
-        color: "#FFD700", // Gold
+        color: BRAND_COLORS.OCEAN_BLUE,
         icon: earned ? "star" : "star-outline",
-        gradient: ["#FFD700", "#E6C200"],
+        gradient: earned
+          ? [BRAND_COLORS.OCEAN_BLUE + "40", BRAND_COLORS.ROYAL_BLUE + "30"]
+          : [BRAND_COLORS.CARD_BACKGROUND, BRAND_COLORS.OCEAN_BLUE + "10"],
+        bgColor: earned ? BRAND_COLORS.OCEAN_BLUE + "25" : BRAND_COLORS.CARD_BACKGROUND,
+        borderColor: earned ? BRAND_COLORS.OCEAN_BLUE + "80" : BRAND_COLORS.OCEAN_BLUE + "40",
+        shadowColor: BRAND_COLORS.OCEAN_BLUE,
+        iconBg: earned ? BRAND_COLORS.OCEAN_BLUE + "35" : BRAND_COLORS.OCEAN_BLUE + "20",
+        textColor: earned ? BRAND_COLORS.OCEAN_BLUE : BRAND_COLORS.SHADOW_GREY,
+        accentColor: BRAND_COLORS.ROYAL_BLUE,
       },
+
+      // Completion achievements - Fresh, success-oriented aqua/green tones
       completion: {
-        color: "#2196F3", // Blue
+        color: BRAND_COLORS.SKY_AQUA,
         icon: earned ? "checkmark-circle" : "checkmark-circle-outline",
-        gradient: ["#2196F3", "#1976D2"],
+        gradient: earned
+          ? [BRAND_COLORS.SKY_AQUA + "40", BRAND_COLORS.FOREST_GREEN + "30"]
+          : [BRAND_COLORS.CARD_BACKGROUND, BRAND_COLORS.SKY_AQUA + "10"],
+        bgColor: earned ? BRAND_COLORS.SKY_AQUA + "25" : BRAND_COLORS.CARD_BACKGROUND,
+        borderColor: earned ? BRAND_COLORS.SKY_AQUA + "80" : BRAND_COLORS.SKY_AQUA + "40",
+        shadowColor: BRAND_COLORS.SKY_AQUA,
+        iconBg: earned ? BRAND_COLORS.SKY_AQUA + "35" : BRAND_COLORS.SKY_AQUA + "20",
+        textColor: earned ? BRAND_COLORS.OCEAN_BLUE : BRAND_COLORS.SHADOW_GREY,
+        accentColor: BRAND_COLORS.FOREST_GREEN,
       },
+
+      // Milestone achievements - Premium, celebratory golden tones
       milestone: {
-        color: "#9C27B0", // Purple
+        color: BRAND_COLORS.GOLDEN_AMBER,
         icon: earned ? "trophy" : "trophy-outline",
-        gradient: ["#9C27B0", "#7B1FA2"],
+        gradient: earned
+          ? [BRAND_COLORS.GOLDEN_AMBER + "40", BRAND_COLORS.EXPLORER_TEAL + "30"]
+          : [BRAND_COLORS.CARD_BACKGROUND, BRAND_COLORS.GOLDEN_AMBER + "10"],
+        bgColor: earned ? BRAND_COLORS.GOLDEN_AMBER + "25" : BRAND_COLORS.CARD_BACKGROUND,
+        borderColor: earned ? BRAND_COLORS.GOLDEN_AMBER + "80" : BRAND_COLORS.GOLDEN_AMBER + "40",
+        shadowColor: BRAND_COLORS.GOLDEN_AMBER,
+        iconBg: earned ? BRAND_COLORS.GOLDEN_AMBER + "35" : BRAND_COLORS.GOLDEN_AMBER + "20",
+        textColor: earned ? BRAND_COLORS.RUCKSACK_BROWN : BRAND_COLORS.SHADOW_GREY,
+        accentColor: BRAND_COLORS.EXPLORER_TEAL,
       },
+
+      // Social achievements - Warm, friendly coral tones
+      social: {
+        color: BRAND_COLORS.WARM_CORAL,
+        icon: earned ? "people" : "people-outline",
+        gradient: earned
+          ? [BRAND_COLORS.WARM_CORAL + "40", BRAND_COLORS.SKY_AQUA + "30"]
+          : [BRAND_COLORS.CARD_BACKGROUND, BRAND_COLORS.WARM_CORAL + "10"],
+        bgColor: earned ? BRAND_COLORS.WARM_CORAL + "25" : BRAND_COLORS.CARD_BACKGROUND,
+        borderColor: earned ? BRAND_COLORS.WARM_CORAL + "80" : BRAND_COLORS.WARM_CORAL + "40",
+        shadowColor: BRAND_COLORS.WARM_CORAL,
+        iconBg: earned ? BRAND_COLORS.WARM_CORAL + "35" : BRAND_COLORS.WARM_CORAL + "20",
+        textColor: earned ? BRAND_COLORS.OCEAN_BLUE : BRAND_COLORS.SHADOW_GREY,
+        accentColor: BRAND_COLORS.SKY_AQUA,
+      },
+
+      // Mastery achievements - Sophisticated, advanced purple tones
+      mastery: {
+        color: BRAND_COLORS.DEEP_PURPLE,
+        icon: earned ? "diamond" : "diamond-outline",
+        gradient: earned
+          ? [BRAND_COLORS.DEEP_PURPLE + "40", BRAND_COLORS.OCEAN_BLUE + "30"]
+          : [BRAND_COLORS.CARD_BACKGROUND, BRAND_COLORS.DEEP_PURPLE + "10"],
+        bgColor: earned ? BRAND_COLORS.DEEP_PURPLE + "25" : BRAND_COLORS.CARD_BACKGROUND,
+        borderColor: earned ? BRAND_COLORS.DEEP_PURPLE + "80" : BRAND_COLORS.DEEP_PURPLE + "40",
+        shadowColor: BRAND_COLORS.DEEP_PURPLE,
+        iconBg: earned ? BRAND_COLORS.DEEP_PURPLE + "35" : BRAND_COLORS.DEEP_PURPLE + "20",
+        textColor: earned ? BRAND_COLORS.DEEP_PURPLE : BRAND_COLORS.SHADOW_GREY,
+        accentColor: BRAND_COLORS.OCEAN_BLUE,
+      },
+
+      // Time-based achievements - Energetic, motivating orange tones
+      time: {
+        color: BRAND_COLORS.SUNSET_ORANGE,
+        icon: earned ? "time" : "time-outline",
+        gradient: earned
+          ? [BRAND_COLORS.SUNSET_ORANGE + "40", BRAND_COLORS.GOLDEN_AMBER + "30"]
+          : [BRAND_COLORS.CARD_BACKGROUND, BRAND_COLORS.SUNSET_ORANGE + "10"],
+        bgColor: earned ? BRAND_COLORS.SUNSET_ORANGE + "25" : BRAND_COLORS.CARD_BACKGROUND,
+        borderColor: earned ? BRAND_COLORS.SUNSET_ORANGE + "80" : BRAND_COLORS.SUNSET_ORANGE + "40",
+        shadowColor: BRAND_COLORS.SUNSET_ORANGE,
+        iconBg: earned ? BRAND_COLORS.SUNSET_ORANGE + "35" : BRAND_COLORS.SUNSET_ORANGE + "20",
+        textColor: earned ? BRAND_COLORS.RUCKSACK_BROWN : BRAND_COLORS.SHADOW_GREY,
+        accentColor: BRAND_COLORS.GOLDEN_AMBER,
+      },
+
+      // Default fallback - Explorer Teal theme
       default: {
-        color: theme.colors.brandGreen,
+        color: BRAND_COLORS.EXPLORER_TEAL,
         icon: earned ? "trophy" : "trophy-outline",
-        gradient: [theme.colors.brandGreen, "#5BA82C"],
+        gradient: earned
+          ? [BRAND_COLORS.EXPLORER_TEAL + "40", BRAND_COLORS.SKY_AQUA + "30"]
+          : [BRAND_COLORS.CARD_BACKGROUND, BRAND_COLORS.EXPLORER_TEAL + "10"],
+        bgColor: earned ? BRAND_COLORS.EXPLORER_TEAL + "25" : BRAND_COLORS.CARD_BACKGROUND,
+        borderColor: earned ? BRAND_COLORS.EXPLORER_TEAL + "80" : BRAND_COLORS.EXPLORER_TEAL + "40",
+        shadowColor: BRAND_COLORS.EXPLORER_TEAL,
+        iconBg: earned ? BRAND_COLORS.EXPLORER_TEAL + "35" : BRAND_COLORS.EXPLORER_TEAL + "20",
+        textColor: earned ? BRAND_COLORS.OCEAN_BLUE : BRAND_COLORS.SHADOW_GREY,
+        accentColor: BRAND_COLORS.SKY_AQUA,
       },
     };
     return styles[category] || styles.default;
@@ -64,17 +170,17 @@ const AchievementBadge = ({ achievement, onPress, style }) => {
             left: "50%",
             transform: [{ translateX: -30 }], // Half of badge width (60px)
             zIndex: 10,
-            backgroundColor: theme.colors.brandNavy,
+            backgroundColor: BRAND_COLORS.OCEAN_BLUE,
             borderRadius: 16,
             paddingHorizontal: 8,
             paddingVertical: 4,
             flexDirection: "row",
             alignItems: "center",
-            shadowColor: theme.colors.brandNavy,
+            shadowColor: theme.colors.oceanBlue,
             shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.4,
-            shadowRadius: 6,
-            elevation: 8,
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 0,
             alignItems: "center",
             justifyContent: "center",
           }}
@@ -144,56 +250,114 @@ const AchievementBadge = ({ achievement, onPress, style }) => {
         style={{
           width: 160,
           height: 180,
-          backgroundColor: theme.colors.brandWhite,
           borderRadius: 20,
-          padding: theme.spacing.lg,
-          alignItems: "center",
-          justifyContent: "space-between",
+          overflow: 'hidden',
           borderWidth: achievement.earned ? 2 : 1,
-          borderColor: achievement.earned
-            ? achievementStyle.color
-            : theme.colors.neutral[200],
-          shadowColor: achievement.earned
-            ? achievementStyle.color
-            : theme.colors.neutral[300],
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: achievement.earned ? 0.25 : 0.1,
-          shadowRadius: 12,
-          elevation: achievement.earned ? 6 : 2,
+          borderColor: achievementStyle.borderColor,
+          shadowColor: achievement.earned ? achievementStyle.shadowColor : theme.colors.oceanBlue,
+          shadowOffset: { width: 0, height: achievement.earned ? 4 : 2 },
+          shadowOpacity: achievement.earned ? 0.2 : 0.05,
+          shadowRadius: achievement.earned ? 12 : 8,
+          elevation: 0,
         }}
       >
-        {/* Badge Header with Icon */}
-        <View
-          style={{ alignItems: "center", flex: 1, justifyContent: "center" }}
-        >
-          {/* Main Achievement Icon */}
-          <View
+        {achievement.earned ? (
+          <LinearGradient
+            colors={achievementStyle.gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
-              backgroundColor: achievement.earned
-                ? achievementStyle.color + "20"
-                : theme.colors.neutral[100],
+              flex: 1,
+              padding: theme.spacing.lg,
               alignItems: "center",
-              justifyContent: "center",
-              marginBottom: theme.spacing.sm,
-              borderWidth: achievement.earned ? 2 : 0,
-              borderColor: achievement.earned
-                ? achievementStyle.color + "40"
-                : "transparent",
+              justifyContent: "space-between",
             }}
           >
-            <Ionicons
-              name={achievementStyle.icon}
-              size={32}
-              color={
-                achievement.earned
-                  ? achievementStyle.color
-                  : theme.colors.neutral[400]
-              }
-            />
-          </View>
+            {/* Content for earned achievements */}
+            {renderAchievementContent()}
+          </LinearGradient>
+        ) : (
+          <LinearGradient
+            colors={achievementStyle.gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              flex: 1,
+              padding: theme.spacing.lg,
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            {/* Content for unearned achievements */}
+            {renderAchievementContent()}
+          </LinearGradient>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Helper function to render achievement content
+  function renderAchievementContent() {
+    return (
+      <>
+        {/* Badge Header with Icon */}
+        <View style={{ alignItems: "center", flex: 1, justifyContent: "center" }}>
+          {/* Enhanced Achievement Icon with Dynamic Colors */}
+          {achievement.earned ? (
+            <LinearGradient
+              colors={[achievementStyle.color + "50", achievementStyle.accentColor + "30"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                width: 76,
+                height: 76,
+                borderRadius: 38,
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: theme.spacing.sm,
+                borderWidth: 3,
+                borderColor: achievementStyle.color + "90",
+                shadowColor: achievementStyle.shadowColor,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.4,
+                shadowRadius: 8,
+                elevation: 0,
+              }}
+            >
+              <Ionicons
+                name={achievementStyle.icon}
+                size={38}
+                color={achievementStyle.color}
+              />
+            </LinearGradient>
+          ) : (
+            <LinearGradient
+              colors={[achievementStyle.iconBg, BRAND_COLORS.CARD_BACKGROUND]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                width: 68,
+                height: 68,
+                borderRadius: 34,
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: theme.spacing.sm,
+                borderWidth: 2,
+                borderColor: achievementStyle.color + "40",
+                shadowColor: achievementStyle.shadowColor,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 0,
+              }}
+            >
+              <Ionicons
+                name={achievementStyle.icon}
+                size={34}
+                color={achievementStyle.color}
+              />
+            </LinearGradient>
+          )}
         </View>
 
         {/* Badge Footer with Text */}
@@ -206,7 +370,7 @@ const AchievementBadge = ({ achievement, onPress, style }) => {
             style={{
               marginBottom: 4,
               color: achievement.earned
-                ? theme.colors.brandNavy
+                ? achievementStyle.textColor
                 : theme.colors.neutral[600],
               fontFamily: theme.typography.fontFamily.semibold,
               fontSize: 12,
@@ -232,32 +396,36 @@ const AchievementBadge = ({ achievement, onPress, style }) => {
           </Text>
         </View>
 
-        {/* Earned Badge Overlay */}
+        {/* Enhanced Earned Badge Overlay with Gradient */}
         {achievement.earned && (
-          <View
+          <LinearGradient
+            colors={[achievementStyle.color, achievementStyle.accentColor]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={{
               position: "absolute",
-              top: 12,
-              right: 12,
-              width: 24,
-              height: 24,
-              borderRadius: 12,
-              backgroundColor: achievementStyle.color,
+              top: 10,
+              right: 10,
+              width: 32,
+              height: 32,
+              borderRadius: 16,
               alignItems: "center",
               justifyContent: "center",
-              shadowColor: achievementStyle.color,
-              shadowOffset: { width: 0, height: 2 },
+              shadowColor: achievementStyle.shadowColor,
+              shadowOffset: { width: 0, height: 3 },
               shadowOpacity: 0.4,
-              shadowRadius: 4,
-              elevation: 4,
+              shadowRadius: 10,
+              elevation: 0,
+              borderWidth: 3,
+              borderColor: BRAND_COLORS.WHISPER_WHITE,
             }}
           >
-            <Ionicons name="checkmark" size={14} color="#FFF" />
-          </View>
+            <Ionicons name="checkmark" size={18} color={BRAND_COLORS.WHISPER_WHITE} />
+          </LinearGradient>
         )}
-      </TouchableOpacity>
-    </View>
-  );
+      </>
+    );
+  };
 };
 
 export default AchievementBadge;

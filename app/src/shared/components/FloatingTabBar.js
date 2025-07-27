@@ -8,6 +8,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../context/ThemeContext";
 import { BlurView } from "expo-blur";
+import { BRAND_COLORS } from "../constants/colors";
 
 const { width } = Dimensions.get("window");
 
@@ -134,9 +135,8 @@ const FloatingTabBar = ({ state, descriptors, navigation }) => {
               styles.indicator,
               {
                 backgroundColor:
-                  theme.colors.brandGreen ||
-                  theme.colors.primary?.[500] ||
-                  "#6FC935",
+                  theme.colors.explorerTeal ||
+                  BRAND_COLORS.EXPLORER_TEAL,
               },
             ]}
           />
@@ -150,10 +150,10 @@ const FloatingTabBar = ({ state, descriptors, navigation }) => {
           // Get icon name from options
           const iconName = options.tabBarIcon
             ? options.tabBarIcon({
-                color: "transparent",
-                size: 24,
-                focused: isFocused,
-              }).props.name
+              color: "transparent",
+              size: 24,
+              focused: isFocused,
+            }).props.name
             : "help-circle-outline";
 
           // Handle tab press
@@ -197,11 +197,11 @@ const FloatingTabBar = ({ state, descriptors, navigation }) => {
                   color={
                     isFocused
                       ? theme.colors.brandGreen ||
-                        theme.colors.primary?.[500] ||
-                        "#6FC935"
+                      theme.colors.primary?.[500] ||
+                      BRAND_COLORS.EXPLORER_TEAL
                       : isDarkMode
-                      ? theme.colors.neutral?.[400] || "#9CA3AF"
-                      : theme.colors.neutral?.[500] || "#6B7280"
+                        ? theme.colors.neutral?.[400] || "#9CA3AF"
+                        : theme.colors.neutral?.[500] || "#6B7280"
                   }
                 />
               </Animated.View>

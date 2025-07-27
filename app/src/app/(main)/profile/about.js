@@ -22,9 +22,10 @@ import {
   ModernCard,
   ModernButton,
 } from "../../../shared/components";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, FontAwesome6 } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { TUTOR_NAME } from "./../../../shared/constants/tutorConstants";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 
 const { width } = Dimensions.get("window");
 
@@ -88,7 +89,7 @@ export default function AboutScreen() {
               align="center"
               style={{
                 padding: theme.spacing.md,
-                backgroundColor: theme.colors.brandWhite,
+                backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
               }}
             >
               <Column>
@@ -98,7 +99,7 @@ export default function AboutScreen() {
                 <Heading
                   level="h2"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontFamily: theme.typography.fontFamily.bold,
                   }}
                 >
@@ -113,7 +114,7 @@ export default function AboutScreen() {
               <ModernCard
                 variant="outlined"
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   padding: theme.spacing.lg,
                   alignItems: "center",
@@ -121,13 +122,11 @@ export default function AboutScreen() {
               >
                 <View
                   style={{
-                    shadowColor: theme.colors.brandNavy,
+                    shadowColor: BRAND_COLORS.OCEAN_BLUE,
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.15,
                     shadowRadius: 12,
                     borderRadius: 60,
-                    borderWidth: 3,
-                    borderColor: theme.colors.brandWhite,
                     marginBottom: theme.spacing.md,
                   }}
                 >
@@ -145,7 +144,7 @@ export default function AboutScreen() {
                 <Heading
                   level="h2"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontFamily: theme.typography.fontFamily.bold,
                     textAlign: "center",
                     marginBottom: 8,
@@ -156,7 +155,7 @@ export default function AboutScreen() {
 
                 <Text
                   style={{
-                    color: theme.colors.neutral[600],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontFamily: theme.typography.fontFamily.regular,
                     textAlign: "center",
                     marginBottom: theme.spacing.sm,
@@ -167,7 +166,7 @@ export default function AboutScreen() {
 
                 <View
                   style={{
-                    backgroundColor: theme.colors.neutral[100],
+                    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                     borderRadius: 20,
                     paddingHorizontal: 16,
                     paddingVertical: 8,
@@ -176,7 +175,7 @@ export default function AboutScreen() {
                   <Text
                     variant="caption"
                     style={{
-                      color: theme.colors.neutral[600],
+                      color: BRAND_COLORS.SHADOW_GREY,
                       fontFamily: theme.typography.fontFamily.medium,
                     }}
                   >
@@ -192,7 +191,7 @@ export default function AboutScreen() {
             <View style={{ paddingHorizontal: theme.spacing.md }}>
               <ModernCard
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   elevation: 0,
                   padding: theme.spacing.lg,
@@ -203,7 +202,7 @@ export default function AboutScreen() {
                   variant="caption"
                   weight="medium"
                   style={{
-                    color: theme.colors.neutral[600],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontFamily: theme.typography.fontFamily.medium,
                     marginBottom: 8,
                   }}
@@ -213,7 +212,7 @@ export default function AboutScreen() {
                 <Heading
                   level="h3"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontFamily: theme.typography.fontFamily.bold,
                     marginBottom: theme.spacing.md,
                   }}
@@ -222,7 +221,7 @@ export default function AboutScreen() {
                 </Heading>
                 <Text
                   style={{
-                    color: theme.colors.neutral[700],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontFamily: theme.typography.fontFamily.regular,
                     lineHeight: 20,
                     marginBottom: theme.spacing.sm,
@@ -236,7 +235,7 @@ export default function AboutScreen() {
                 </Text>
                 <Text
                   style={{
-                    color: theme.colors.neutral[700],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontFamily: theme.typography.fontFamily.regular,
                     lineHeight: 20,
                   }}
@@ -252,7 +251,7 @@ export default function AboutScreen() {
             <View style={{ paddingHorizontal: theme.spacing.md }}>
               <ModernCard
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   elevation: 0,
 
@@ -264,7 +263,7 @@ export default function AboutScreen() {
                   variant="caption"
                   weight="medium"
                   style={{
-                    color: theme.colors.neutral[600],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontFamily: theme.typography.fontFamily.medium,
                     marginBottom: 8,
                   }}
@@ -274,7 +273,7 @@ export default function AboutScreen() {
                 <Heading
                   level="h3"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontFamily: theme.typography.fontFamily.bold,
                     marginBottom: theme.spacing.md,
                   }}
@@ -290,7 +289,7 @@ export default function AboutScreen() {
                         width: 32,
                         height: 32,
                         borderRadius: 16,
-                        backgroundColor: theme.colors.brandGreen,
+                        backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
                         alignItems: "center",
                         justifyContent: "center",
                         marginRight: 12,
@@ -299,13 +298,13 @@ export default function AboutScreen() {
                       <Ionicons
                         name="chatbubbles"
                         size={16}
-                        color={theme.colors.brandWhite}
+                        color={BRAND_COLORS.WHISPER_WHITE}
                       />
                     </View>
                     <Text
                       weight="medium"
                       style={{
-                        color: theme.colors.brandNavy,
+                        color: BRAND_COLORS.OCEAN_BLUE,
                         fontFamily: theme.typography.fontFamily.medium,
                       }}
                     >
@@ -321,7 +320,7 @@ export default function AboutScreen() {
                         width: 32,
                         height: 32,
                         borderRadius: 16,
-                        backgroundColor: theme.colors.brandGreen,
+                        backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
                         alignItems: "center",
                         justifyContent: "center",
                         marginRight: 12,
@@ -330,13 +329,13 @@ export default function AboutScreen() {
                       <Ionicons
                         name="school"
                         size={16}
-                        color={theme.colors.brandWhite}
+                        color={BRAND_COLORS.WHISPER_WHITE}
                       />
                     </View>
                     <Text
                       weight="medium"
                       style={{
-                        color: theme.colors.brandNavy,
+                        color: BRAND_COLORS.OCEAN_BLUE,
                         fontFamily: theme.typography.fontFamily.medium,
                       }}
                     >
@@ -352,7 +351,7 @@ export default function AboutScreen() {
                         width: 32,
                         height: 32,
                         borderRadius: 16,
-                        backgroundColor: theme.colors.brandGreen,
+                        backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
                         alignItems: "center",
                         justifyContent: "center",
                         marginRight: 12,
@@ -361,13 +360,13 @@ export default function AboutScreen() {
                       <Ionicons
                         name="trophy"
                         size={16}
-                        color={theme.colors.brandWhite}
+                        color={BRAND_COLORS.WHISPER_WHITE}
                       />
                     </View>
                     <Text
                       weight="medium"
                       style={{
-                        color: theme.colors.brandNavy,
+                        color: BRAND_COLORS.OCEAN_BLUE,
                         fontFamily: theme.typography.fontFamily.medium,
                       }}
                     >
@@ -382,7 +381,7 @@ export default function AboutScreen() {
             <View style={{ paddingHorizontal: theme.spacing.md }}>
               <ModernCard
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   elevation: 0,
 
@@ -549,7 +548,7 @@ export default function AboutScreen() {
             <View style={{ paddingHorizontal: theme.spacing.md }}>
               <ModernCard
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   elevation: 0,
                   padding: theme.spacing.lg,
@@ -585,7 +584,7 @@ export default function AboutScreen() {
                       width: 50,
                       height: 50,
                       borderRadius: 30,
-                      backgroundColor: theme.colors.brandGreen,
+                      backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
                       alignItems: "center",
                       justifyContent: "center",
                       marginRight: theme.spacing.md,
@@ -593,7 +592,7 @@ export default function AboutScreen() {
                   >
                     <Text
                       style={{
-                        color: theme.colors.brandWhite,
+                        color: BRAND_COLORS.WHISPER_WHITE,
                         fontSize: 24,
                         fontFamily: theme.typography.fontFamily.bold,
                       }}
@@ -601,7 +600,7 @@ export default function AboutScreen() {
                       K
                     </Text>
                   </View>
-                  <Column style={{ marginLeft: -16 , justifyContent:"center" }}>
+                  <Column style={{ marginLeft: -16, justifyContent: "center" }}>
                     <Text
                       weight="semibold"
                       style={{
@@ -609,7 +608,7 @@ export default function AboutScreen() {
                         fontFamily: theme.typography.fontFamily.semibold,
                         fontSize: 18,
                         lineHeight: 14,
-                        marginBottom:-10 ,
+                        marginBottom: -10,
                       }}
                     >
                       Kanish Kumar
@@ -729,7 +728,7 @@ export default function AboutScreen() {
             <View style={{ paddingHorizontal: theme.spacing.md }}>
               <ModernCard
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   elevation: 0,
 
@@ -741,7 +740,7 @@ export default function AboutScreen() {
                   variant="caption"
                   weight="medium"
                   style={{
-                    color: theme.colors.neutral[600],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontFamily: theme.typography.fontFamily.medium,
                     marginBottom: 8,
                   }}
@@ -751,7 +750,7 @@ export default function AboutScreen() {
                 <Heading
                   level="h3"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontFamily: theme.typography.fontFamily.bold,
                     marginBottom: theme.spacing.md,
                   }}
@@ -763,7 +762,7 @@ export default function AboutScreen() {
                   <TouchableOpacity
                     style={{ alignItems: "center" }}
                     onPress={() =>
-                      openUrl("https://twitter.com/UNextDoorapp")
+                      openUrl("https://x.com/UNextDoorapp")
                     }
                   >
                     <View
@@ -771,26 +770,30 @@ export default function AboutScreen() {
                         width: 48,
                         height: 48,
                         borderRadius: 24,
-                        backgroundColor: "#1DA1F2",
+                        backgroundColor: BRAND_COLORS.SKY_AQUA,
                         alignItems: "center",
                         justifyContent: "center",
                         marginBottom: 8,
                       }}
                     >
-                      <Ionicons
-                        name="logo-twitter"
+                      {/* <Ionicons
+                        name="x-twitter"
                         size={24}
-                        color={theme.colors.brandWhite}
-                      />
+                        color={BRAND_COLORS.WHISPER_WHITE}
+                      /> */}
+                      <FontAwesome6
+                        name="x-twitter"
+                        size={24}
+                        color={BRAND_COLORS.WHISPER_WHITE} />
                     </View>
                     <Text
                       variant="caption"
                       style={{
-                        color: theme.colors.neutral[600],
+                        color: BRAND_COLORS.SHADOW_GREY,
                         fontFamily: theme.typography.fontFamily.regular,
                       }}
                     >
-                      Twitter
+                      X (Twitter)
                     </Text>
                   </TouchableOpacity>
 
@@ -805,7 +808,7 @@ export default function AboutScreen() {
                         width: 48,
                         height: 48,
                         borderRadius: 24,
-                        backgroundColor: "#E4405F",
+                        backgroundColor: BRAND_COLORS.WARM_CORAL,
                         alignItems: "center",
                         justifyContent: "center",
                         marginBottom: 8,
@@ -814,7 +817,7 @@ export default function AboutScreen() {
                       <Ionicons
                         name="logo-instagram"
                         size={24}
-                        color={theme.colors.brandWhite}
+                        color={BRAND_COLORS.WHISPER_WHITE}
                       />
                     </View>
                     <Text
@@ -839,7 +842,7 @@ export default function AboutScreen() {
                         width: 48,
                         height: 48,
                         borderRadius: 24,
-                        backgroundColor: "#1877F2",
+                        backgroundColor: BRAND_COLORS.OCEAN_BLUE,
                         alignItems: "center",
                         justifyContent: "center",
                         marginBottom: 8,
@@ -848,7 +851,7 @@ export default function AboutScreen() {
                       <Ionicons
                         name="logo-facebook"
                         size={24}
-                        color={theme.colors.brandWhite}
+                        color={BRAND_COLORS.WHISPER_WHITE}
                       />
                     </View>
                     <Text

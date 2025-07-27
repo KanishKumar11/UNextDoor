@@ -20,7 +20,7 @@ export const curriculum = {
       requiredXp: 0,
       modules: beginnerModules,
       icon: "school-outline",
-      color: "#6FC935", // Primary green color
+      color: "#5BC4B3", // Explorer Teal
     },
     {
       id: "intermediate",
@@ -30,7 +30,7 @@ export const curriculum = {
       requiredXp: 2000, // Reduced from 5000 to achievable amount
       modules: intermediateModules,
       icon: "book-outline",
-      color: "#3498db", // Blue color
+      color: "#36798A", // Ocean Blue
     },
     {
       id: "advanced",

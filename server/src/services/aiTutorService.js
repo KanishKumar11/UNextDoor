@@ -6,6 +6,9 @@
 import OpenAI from "openai";
 import config from "../config/index.js";
 import Conversation from "../models/Conversation.js";
+import { getUserLevelCached } from "./userLevelService.js";
+import { createOptimizedCompletion, USE_CASES } from "./aiModelService.js";
+import User from "../models/User.js";
 import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import path from "path";
@@ -53,10 +56,13 @@ export const createSession = async (userId, conversationId, options = {}) => {
       }
     } else {
       // Create a new conversation if none provided
+      // Get user's actual proficiency level
+      const userLevel = options.level || await getUserLevelCached(userId);
+
       conversation = new Conversation({
         userId,
         title: options.title || "New Conversation",
-        level: options.level || "beginner", // Must be lowercase to match the enum
+        level: userLevel, // Use actual user level instead of hardcoded "beginner"
         scenarioId: options.scenarioId,
         messages: [],
       });
@@ -180,15 +186,18 @@ export const processMessage = async (sessionId, message) => {
     conversation.lastMessageAt = new Date();
     await conversation.save();
 
-    // Generate AI response
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: sessionData.messages,
-      temperature: 0.7,
-      max_tokens: 300,
-    });
+    // Get user for model selection
+    const user = await User.findById(userId).select('subscriptionTier');
 
-    const aiResponse = response.choices[0].message.content;
+    // Generate AI response using optimized model selection
+    const result = await createOptimizedCompletion(
+      openai,
+      USE_CASES.EDUCATIONAL_CHAT,
+      sessionData.messages,
+      user
+    );
+
+    const aiResponse = result.completion.choices[0].message.content;
 
     // Add AI response to session
     sessionData.messages.push({

@@ -8,6 +8,7 @@ import { View, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../shared/context/ThemeContext';
 import { Text, ModernCard, ModernButton } from '../../../shared/components';
+import { BRAND_COLORS } from '../../../shared/constants/colors';
 import MatchWordGame from '../../games/components/MatchWordGame';
 import SentenceScrambleGame from '../../games/components/SentenceScrambleGame';
 import PronunciationChallengeGame from '../../games/components/PronunciationChallengeGame';
@@ -40,21 +41,21 @@ const LessonGameActivity = ({
       title: 'Match the Word',
       description: 'Practice the vocabulary from this lesson',
       icon: 'grid-outline',
-      color: theme.colors.brandGreen,
+      color: BRAND_COLORS.EXPLORER_TEAL,
       component: MatchWordGame
     },
     'sentence-scramble': {
       title: 'Sentence Scramble',
       description: 'Arrange words to form correct sentences',
       icon: 'shuffle-outline',
-      color: '#3498db',
+      color: BRAND_COLORS.OCEAN_BLUE,
       component: SentenceScrambleGame
     },
     'pronunciation-challenge': {
       title: 'Pronunciation Challenge',
       description: 'Practice speaking the phrases from this lesson',
       icon: 'mic-outline',
-      color: '#9b59b6',
+      color: BRAND_COLORS.DEEP_PURPLE,
       component: PronunciationChallengeGame
     }
   };
@@ -76,7 +77,7 @@ const LessonGameActivity = ({
   const handleGameComplete = (results) => {
     setGameResults(results);
     setShowGame(false);
-    
+
     // Call parent completion handler
     if (onComplete) {
       onComplete(results);
@@ -304,7 +305,7 @@ const LessonGameActivity = ({
               <Text
                 style={{
                   fontSize: 14,
-                  color: theme.colors.neutral[500],
+                  color: BRAND_COLORS.SHADOW_GREY,
                   textDecorationLine: 'underline',
                 }}
               >
@@ -317,13 +318,13 @@ const LessonGameActivity = ({
         <Text
           style={{
             fontSize: 14,
-            color: theme.colors.neutral[600],
+            color: BRAND_COLORS.SHADOW_GREY,
             marginBottom: theme.spacing.lg,
             lineHeight: 20,
           }}
         >
-          Practice what you've learned with this interactive game. 
-          {content.length > 0 
+          Practice what you've learned with this interactive game.
+          {content.length > 0
             ? ` This game uses content from your current lesson.`
             : ` This game will use content appropriate for your level.`
           }
@@ -336,7 +337,7 @@ const LessonGameActivity = ({
             backgroundColor: config.color,
             width: '100%',
           }}
-          textStyle={{ color: theme.colors.brandWhite }}
+          textStyle={{ color: BRAND_COLORS.WHISPER_WHITE }}
         />
       </ModernCard>
     </View>

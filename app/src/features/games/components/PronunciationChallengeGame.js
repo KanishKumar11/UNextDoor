@@ -1,53 +1,65 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
+  Text,
   StyleSheet,
   TouchableOpacity,
+  Alert,
   Animated,
   Dimensions,
   ActivityIndicator,
   Platform,
+  Modal,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import ConfettiCannon from "react-native-confetti-cannon";
-import * as FileSystem from "expo-file-system";
-import { useAudioRecorder, AudioModule, RecordingPresets } from "expo-audio";
-import { Audio } from "../../../shared/utils/audioUtils";
-import ttsService from "../../../shared/services/ttsService";
-import { useTheme } from "../../../shared/context/ThemeContext";
-import { Text, Heading, ModernButton, Row } from "../../../shared/components";
+import { Audio } from "expo-av";
+import { router } from "expo-router";
+// import ConfettiCannon from "react-native-confetti-cannon"; // Temporarily disabled
+import { BRAND_COLORS } from "../../../shared/constants/colors";
+import { Row } from "../../../shared/components/layout";
+import ModernButton from "../../../shared/components/ModernButton";
 import { useAchievements } from "../../achievements/context/AchievementContext";
-import { curriculumService } from "../../../features/curriculum/services/curriculumService";
-import { gameService } from "../services/gameService";
-import { apiClient } from "../../../shared/api/apiClient";
-import gameContentService from "../services/gameContentService";
-import { useAuth } from "../../auth/hooks/useAuth";
-import { ENDPOINTS } from "../../../shared/config/api";
+import GameResultsPage from "./GameResultsPage";
+import ttsService from "../../../shared/services/ttsService";
+import { pronunciationService } from "../../pronunciation/services/pronunciationService";
 
 const { width } = Dimensions.get("window");
 
+// Helper function for cross-platform font families
+const getFontFamily = (weight = 'regular') => {
+  if (Platform.OS === 'web') {
+    return 'Montserrat, sans-serif';
+  }
+
+  const fontMap = {
+    light: 'Montserrat-Light',
+    regular: 'Montserrat-Regular',
+    medium: 'Montserrat-Medium',
+    semibold: 'Montserrat-SemiBold',
+    bold: 'Montserrat-Bold',
+    extrabold: 'Montserrat-ExtraBold',
+  };
+
+  return fontMap[weight] || fontMap.regular;
+};
+
 /**
  * Pronunciation Challenge Game Component
- * A game where users record themselves speaking Korean and get feedback
- *
- * @param {Object} props - Component props
- * @param {string} props.lessonId - ID of the lesson this game is for
- * @param {Array} props.phrases - Array of phrases to pronounce
- * @param {Function} props.onComplete - Function to call when game is completed
- * @param {Function} props.onClose - Function to call when game is closed
+ * 
+ * Features:
+ * - Audio recording and playback
+ * - Real-time pronunciation analysis
+ * - Progress tracking with animated progress bar
+ * - Achievement system
+ * - Standardized GameResultsPage integration
+ * - Compact listen button design for small devices
  */
 const PronunciationChallengeGame = ({
-  lessonId,
   phrases = [],
-  onComplete,
-  onClose,
+  lessonId = null,
+  onComplete = () => { },
+  onClose = () => { },
 }) => {
-  const router = useRouter();
-  const { theme } = useTheme();
-  const { checkAchievements } = useAchievements();
-  const { user } = useAuth();
-
   // Game state
   const [gamePhrases, setGamePhrases] = useState([]);
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
@@ -56,975 +68,583 @@ const PronunciationChallengeGame = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [score, setScore] = useState(0);
+  const [correctAnswers, setCorrectAnswers] = useState(0);
   const [accuracyScores, setAccuracyScores] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Game completion state
   const [gameCompleted, setGameCompleted] = useState(false);
   const [gameResults, setGameResults] = useState(null);
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [analysisDetails, setAnalysisDetails] = useState(null);
+  const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '', onRetry: null });
 
-  // expo-audio recorder hook
-  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-
-  // Confetti ref
+  // Refs
   const confettiRef = useRef(null);
+  const recordingRef = useRef(null);
+  const soundRef = useRef(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  // Achievement context
+  const { checkAchievements } = useAchievements();
 
   // Initialize game
   useEffect(() => {
-    initializeGameAsync();
-  }, [lessonId, phrases]);
-
-  // Initialize game asynchronously
-  const initializeGameAsync = async () => {
-    try {
-      // Request permissions first
-      const permissionsResult = await requestPermissions();
-      if (!permissionsResult) {
-        return; // Exit if permissions not granted
-      }
-
-      // Load phrases
-      if (phrases.length > 0) {
-        initializeGame(phrases);
-      } else if (lessonId && lessonId !== "practice") {
-        await loadPhrasesFromLesson(lessonId);
-      } else {
-        await loadContentFromService();
-      }
-
-      // Start game timer
-      setStartTime(Date.now());
-    } catch (error) {
-      console.error("❌ Error initializing game:", error);
-      setIsLoading(false);
-    }
-  };
-
-  // Clean up when component unmounts
-  useEffect(() => {
-    return () => {
-      if (isRecording) {
-        // Stop recording on cleanup
-        audioRecorder.stop().catch(() => {});
-      }
-    };
+    initializeGame();
+    requestAudioPermissions();
+    initializeTTSService();
   }, []);
 
-  // Load content from the new game content service
-  const loadContentFromService = async () => {
+  const initializeTTSService = async () => {
     try {
-      setIsLoading(true);
+      console.log('🔊 Initializing TTS service...');
+      console.log('🔊 TTS service object:', ttsService);
+      console.log('🔊 TTS service methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(ttsService)));
 
-      // Determine user level
-      const userLevel = user?.preferences?.languageLevel || "beginner";
-
-      console.log(
-        `🎮 Loading Pronunciation Challenge content for level: ${userLevel}`
-      );
-
-      // Get content from the new service
-      const content = await gameContentService.getPronunciationContent({
-        level: userLevel,
-        count: 5,
-      });
-
-      console.log(`✅ Loaded ${content.length} phrases from content service`);
-
-      if (content && content.length > 0) {
-        initializeGame(content);
+      if (ttsService && typeof ttsService.initialize === 'function') {
+        await ttsService.initialize();
+        console.log('✅ TTS service initialized successfully');
       } else {
-        // Fallback to default phrases if service fails
-        console.warn("⚠️ No content from service, using fallback");
-        loadFallbackPhrases();
+        console.warn('⚠️ TTS service initialize method not available');
       }
     } catch (error) {
-      console.error("❌ Error loading content from service:", error);
-      // Fallback to default phrases on error
-      loadFallbackPhrases();
-    } finally {
-      setIsLoading(false);
+      console.error('❌ Failed to initialize TTS service:', error);
+      console.error('❌ TTS service state:', {
+        serviceExists: !!ttsService,
+        initializeMethod: typeof ttsService?.initialize,
+        speakMethod: typeof ttsService?.speak,
+      });
     }
   };
 
-  // Fallback phrases if content service fails
-  const loadFallbackPhrases = () => {
-    const fallbackPhrases = [
-      {
-        korean: "안녕하세요",
-        english: "Hello",
-        romanization: "annyeonghaseyo",
-      },
-      {
-        korean: "감사합니다",
-        english: "Thank you",
-        romanization: "gamsahamnida",
-      },
-      {
-        korean: "저는 한국어를 공부해요",
-        english: "I study Korean",
-        romanization: "jeoneun hangugeo-reul gongbuhaeyo",
-      },
-      {
-        korean: "오늘 날씨가 좋아요",
-        english: "The weather is good today",
-        romanization: "oneul nalssiga joayo",
-      },
-      {
-        korean: "한국 음식을 좋아해요",
-        english: "I like Korean food",
-        romanization: "hanguk eumsigeul joahaeyo",
-      },
-    ];
-    initializeGame(fallbackPhrases);
-  };
-
-  // Request audio recording permissions
-  const requestPermissions = async () => {
+  const requestAudioPermissions = async () => {
     try {
-      console.log("🎤 Requesting audio permissions...");
+      const { status } = await Audio.requestPermissionsAsync();
+      setPermissionsGranted(status === 'granted');
 
-      // Request recording permissions using AudioModule
-      const permissionResult = await AudioModule.requestRecordingPermissionsAsync();
-      console.log("📱 Permission result:", permissionResult);
-
-      if (!permissionResult.granted) {
-        console.error("❌ Audio recording permissions not granted");
-        alert("Microphone permission is required for pronunciation practice. Please enable it in your device settings.");
-        setPermissionsGranted(false);
-        return false;
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'This game requires microphone access to record your pronunciation.',
+          [{ text: 'OK' }]
+        );
       }
-
-      console.log("✅ Audio permissions granted");
-      setPermissionsGranted(true);
-
-      // Set audio mode for recording
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-      });
-
-      console.log("✅ Audio mode configured for recording");
-      return true;
     } catch (error) {
-      console.error("❌ Error requesting permissions:", error);
-      alert("Failed to set up audio recording. Please check your device settings.");
+      console.error('Error requesting audio permissions:', error);
       setPermissionsGranted(false);
-      return false;
     }
   };
 
-  // Load phrases from lesson
-  const loadPhrasesFromLesson = async (lessonId) => {
-    try {
-      setIsLoading(true);
-      const response = await curriculumService.getLesson(lessonId);
-      const lesson = response.data.lesson;
+  const initializeGame = () => {
+    console.log("🎮 Initializing Pronunciation Challenge Game...");
 
-      // Extract phrases from lesson
-      const phraseItems = [];
-      lesson.content.sections.forEach((section) => {
-        if (section.type === "vocabulary" || section.type === "conversation") {
-          if (section.type === "vocabulary") {
-            section.items.forEach((item) => {
-              phraseItems.push({
-                korean: item.korean,
-                english: item.english,
-                romanization: item.romanization,
-              });
-            });
-          } else if (section.examples) {
-            section.examples.forEach((example) => {
-              if (example.korean && example.english) {
-                phraseItems.push({
-                  korean: example.korean,
-                  english: example.english,
-                  romanization: example.romanization || "",
-                });
-              }
-            });
-          }
-        }
-      });
+    // Use provided phrases or load default ones
+    const phrasesToUse = phrases.length > 0 ? phrases : getDefaultPhrases();
 
-      if (phraseItems.length > 0) {
-        initializeGame(phraseItems);
-      } else {
-        // Use default phrases if no phrases found
-        initializeGame([
-          {
-            korean: "안녕하세요",
-            english: "Hello",
-            romanization: "Annyeonghaseyo",
-          },
-          {
-            korean: "감사합니다",
-            english: "Thank you",
-            romanization: "Gamsahamnida",
-          },
-        ]);
-      }
-    } catch (error) {
-      console.error("Error loading lesson phrases:", error);
-      // Use default phrases on error
-      initializeGame([
-        {
-          korean: "안녕하세요",
-          english: "Hello",
-          romanization: "Annyeonghaseyo",
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Initialize game with phrases
-  const initializeGame = (phraseList) => {
-    // Shuffle phrases and create game state
-    const shuffledPhrases = [...phraseList].sort(() => Math.random() - 0.5);
-    setGamePhrases(shuffledPhrases.slice(0, 5)); // Limit to 5 phrases for game
-    setIsLoading(false);
-  };
-
-  // Start recording
-  const startRecording = async () => {
-    try {
-      if (!permissionsGranted) {
-        console.error("❌ Permissions not granted for recording");
-        alert("Please grant microphone permissions to record pronunciation.");
-        return;
-      }
-
-      console.log("🎤 Starting recording...");
-
-      // Prepare and start recording using expo-audio
-      await audioRecorder.prepareToRecordAsync();
-      audioRecorder.record();
-
-      setIsRecording(true);
-
-      console.log("✅ Recording started successfully");
-    } catch (error) {
-      console.error("❌ Error starting recording:", error);
-      
-      // Provide specific error messages based on the error type
-      if (error.message.includes("permissions")) {
-        alert("Microphone permission is required. Please enable it in your device settings.");
-      } else if (error.message.includes("busy")) {
-        alert("Microphone is busy. Please close other apps using the microphone and try again.");
-      } else {
-        alert("Failed to start recording. Please check microphone permissions and try again.");
-      }
-    }
-  };
-
-  // Stop recording
-  const stopRecording = async () => {
-    try {
-      if (!isRecording) {
-        console.warn("⚠️ No recording to stop");
-        return;
-      }
-
-      console.log("🛑 Stopping recording...");
-
-      // Stop recording using expo-audio
-      await audioRecorder.stop();
-
-      // Get recording URI from audioRecorder
-      const uri = audioRecorder.uri;
-      console.log("📁 Recording URI:", uri);
-
-      setRecordingUri(uri);
-      setIsRecording(false);
-      console.log("✅ Recording stopped, URI:", uri);
-
-      // Analyze pronunciation
-      if (uri) {
-        await analyzePronunciation(uri);
-      } else {
-        console.error("❌ No recording URI available");
-        alert("Recording failed. Please try again.");
-      }
-    } catch (error) {
-      console.error("❌ Error stopping recording:", error);
-      setIsRecording(false);
-      alert("Failed to stop recording. Please try again.");
-    }
-  };
-
-  // Analyze pronunciation
-  const analyzePronunciation = async (uri) => {
-    try {
-      setIsAnalyzing(true);
-
-      // Create form data for audio file
-      const formData = new FormData();
-      formData.append("audio", {
-        uri,
-        type: "audio/m4a",
-        name: "recording.m4a",
-      });
-      formData.append("targetText", gamePhrases[currentPhraseIndex].korean);
-      formData.append("userLevel", user?.preferences?.languageLevel || "beginner");
-
-      // Send to server for analysis
-      const response = await apiClient.post(
-        ENDPOINTS.TUTOR.ANALYZE_PRONUNCIATION,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      // Get analysis results
-      const analysisData = response.data.data;
-      const accuracy = analysisData.accuracy;
-      const feedbackText = analysisData.accentFeedback;
-
-      // Check if no speech was detected (accuracy is 0 or very low)
-      if (
-        accuracy === 0 ||
-        !analysisData.transcribedText ||
-        analysisData.transcribedText.trim() === ""
-      ) {
-        // No speech detected - provide specific feedback
-        setFeedback({
-          accuracy: 0,
-          text: "No speech detected. Please try recording again and speak clearly into the microphone.",
-          transcribedText: "",
-          improvementTips: [
-            "Make sure your microphone is working",
-            "Speak clearly and loudly enough",
-            "Try recording in a quiet environment",
-          ],
-          strengths: [],
-        });
-
-        // Don't add any score for empty recordings
-        setAccuracyScores((prev) => [...prev, 0]);
-        return;
-      }
-
-      // Update score based on accuracy
-      const phraseScore = Math.round(accuracy);
-      setScore((prevScore) => prevScore + phraseScore);
-
-      // Save accuracy score for this phrase
-      setAccuracyScores((prev) => [...prev, phraseScore]);
-
-      // Set feedback
-      setFeedback({
-        accuracy: phraseScore,
-        text: feedbackText,
-        transcribedText: analysisData.transcribedText,
-        improvementTips: analysisData.improvementTips || [],
-        strengths: analysisData.strengths || [],
-      });
-
-      // Clean up recording file
-      if (Platform.OS !== "web") {
-        try {
-          await FileSystem.deleteAsync(uri);
-        } catch (error) {
-          console.error("Error deleting recording file:", error);
-        }
-      }
-    } catch (error) {
-      console.error("❌ Error analyzing pronunciation:", error);
-
-      // Check if it's a 404 or server error - likely means no speech detected
-      if (
-        error.response &&
-        (error.response.status === 404 || error.response.status === 400)
-      ) {
-        setFeedback({
-          accuracy: 0,
-          text: "Could not analyze the recording. Please try again and speak clearly.",
-          transcribedText: "",
-          improvementTips: [
-            "Make sure you speak into the microphone",
-            "Try recording in a quieter environment",
-            "Speak the phrase clearly and at normal volume",
-          ],
-          strengths: [],
-        });
-
-        // Don't add any score for failed recordings
-        setAccuracyScores((prev) => [...prev, 0]);
-      } else {
-        // Other errors - provide generic feedback but still no score
-        setFeedback({
-          accuracy: 0,
-          text: "Unable to analyze pronunciation at this time. Please try again.",
-          transcribedText: "",
-          improvementTips: [
-            "Check your internet connection",
-            "Try recording again",
-            "Make sure your microphone is working",
-          ],
-          strengths: [],
-        });
-
-        setAccuracyScores((prev) => [...prev, 0]);
-      }
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  // Play reference audio using TTS service (same as lessons)
-  const playReferenceAudio = async () => {
-    try {
-      // Get current phrase
-      const phrase = gamePhrases[currentPhraseIndex].korean;
-
-      // Use the same TTS service that works in lessons
-      await ttsService.speak(phrase, {
-        language: "ko-KR",
-        rate: 0.8, // Slower rate for learning
-        pitch: 1.0,
-      });
-    } catch (error) {
-      console.error("Error playing reference audio:", error);
-    }
-  };
-
-  // Move to next phrase
-  const moveToNextPhrase = () => {
-    // Animate transition to next phrase
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: -width,
-        duration: 0,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // Reset feedback
-      setFeedback(null);
-      setRecordingUri(null);
-
-      // Move to next phrase or end game
-      if (currentPhraseIndex < gamePhrases.length - 1) {
-        setCurrentPhraseIndex((prevIndex) => prevIndex + 1);
-
-        // Reset animations for next phrase
-        slideAnim.setValue(width);
-
-        Animated.sequence([
-          Animated.timing(slideAnim, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      } else {
-        // Game completed
-        completeGame();
-      }
-    });
-  };
-
-
-
-  // Complete game and show results
-  const completeGame = () => {
-    const endTimeValue = Date.now();
-    setEndTime(endTimeValue);
-
-    const totalTime = (endTimeValue - startTime) / 1000; // in seconds
-
-    // Calculate average accuracy with safety checks
-    const validScores = accuracyScores.filter(
-      (score) => !isNaN(score) && score !== null && score !== undefined
-    );
-    const totalAccuracy = validScores.reduce((sum, score) => sum + score, 0);
-    const averageAccuracy =
-      validScores.length > 0
-        ? Math.round(totalAccuracy / validScores.length)
-        : 0;
-
-    // Calculate time bonus (faster = more points)
-    const timeBonus = Math.max(0, 500 - Math.floor(totalTime) * 2);
-
-    // Calculate final score with safety check
-    const finalScore = (score || 0) + timeBonus;
-
-    // Prepare game results with safety checks
-    const results = {
-      score: finalScore,
-      accuracy: averageAccuracy,
-      correctAnswers: validScores.filter((score) => score >= 70).length,
-      totalQuestions: gamePhrases.length || 0,
-      timeSpent: totalTime,
-      rewards: [],
-    };
-
-    // Add rewards based on performance
-    if (averageAccuracy >= 90) {
-      results.rewards.push({
-        type: "Pronunciation Master",
-        points: 200,
-        icon: "mic",
-      });
-    }
-
-    if (totalTime < 120) {
-      results.rewards.push({
-        type: "Quick Speaker",
-        points: 100,
-        icon: "timer",
-      });
-    }
-
-    // Save game results
-    if (lessonId) {
-      saveGameResults(lessonId, results);
-    }
-
-    setGameResults(results);
-    setGameCompleted(true);
-
-    // Trigger confetti for good performance
-    setTimeout(() => {
-      if (confettiRef.current && averageAccuracy >= 70) {
-        confettiRef.current.start();
-      }
-    }, 500);
-
-    // Check for achievements
-    if (checkAchievements) {
-      checkAchievements();
-    }
-  };
-
-  // Save game results to backend
-  const saveGameResults = async (lessonId, results) => {
-    try {
-      // Update lesson progress
-      await curriculumService.updateLessonProgress(
-        lessonId,
-        results.accuracy >= 70, // Mark as completed if accuracy is at least 70%
-        results.score,
-        results.score, // XP earned equals score
-        "game-pronunciation-challenge"
-      );
-
-      // Save game-specific results
-      await gameService.saveGameResults(
-        "pronunciation-challenge",
-        lessonId,
-        results
-      );
-    } catch (error) {
-      console.error("Error saving game results:", error);
-    }
-  };
-
-  // Handle continue button in results screen
-  const handleContinue = () => {
-    if (onComplete) {
-      onComplete(gameResults);
-    } else {
-      // Navigate back to lesson or games screen
-      router.back();
-    }
-  };
-
-  // Handle try again button in results screen
-  const handleTryAgain = () => {
-    console.log("🔄 Restarting pronunciation challenge game...");
-
-    // Reset all game state
-    setGameCompleted(false);
-    setGameResults(null);
+    setGamePhrases(phrasesToUse);
     setCurrentPhraseIndex(0);
     setScore(0);
+    setCorrectAnswers(0);
     setAccuracyScores([]);
     setFeedback(null);
     setRecordingUri(null);
     setIsRecording(false);
     setIsAnalyzing(false);
+    setIsTransitioning(false);
+    setIsPlayingAudio(false);
+    setAnalysisDetails(null);
     setStartTime(Date.now());
+    setEndTime(null);
 
     // Reset animations
     fadeAnim.setValue(1);
     slideAnim.setValue(0);
-    progressAnim.setValue(0);
+    progressAnim.setValue(1); // Start with first phrase progress
 
-    console.log("✅ Game restarted successfully");
+    setIsLoading(false);
+    console.log("🎮 Game initialized with", phrasesToUse.length, "phrases");
   };
 
-  // Handle close button
-  const handleClose = () => {
-    if (onClose) {
-      onClose();
-    } else {
-      router.back();
+  const getDefaultPhrases = () => {
+    return [
+      {
+        korean: "안녕하세요",
+        english: "Hello",
+        romanization: "annyeonghaseyo"
+      },
+      {
+        korean: "감사합니다",
+        english: "Thank you",
+        romanization: "gamsahamnida"
+      },
+      {
+        korean: "죄송합니다",
+        english: "I'm sorry",
+        romanization: "joesonghamnida"
+      },
+      {
+        korean: "괜찮아요",
+        english: "It's okay",
+        romanization: "gwaenchanayo"
+      },
+      {
+        korean: "안녕히 가세요",
+        english: "Goodbye",
+        romanization: "annyeonghi gaseyo"
+      }
+    ];
+  };
+
+  const startRecording = async () => {
+    if (!permissionsGranted) {
+      Alert.alert('Permission Required', 'Microphone access is required to record.');
+      return;
+    }
+
+    try {
+      console.log('🎤 Starting recording...');
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+
+      recordingRef.current = recording;
+      setIsRecording(true);
+      console.log('🎤 Recording started');
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      Alert.alert('Error', 'Failed to start recording. Please try again.');
     }
   };
 
-  // Render game results screen
+  const stopRecording = async () => {
+    if (!recordingRef.current) return;
+
+    try {
+      console.log('🛑 Stopping recording...');
+      setIsRecording(false);
+      setIsAnalyzing(true);
+
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+
+      setRecordingUri(uri);
+      console.log('🛑 Recording stopped, URI:', uri);
+
+      // Analyze the recording
+      await analyzeRecording(uri);
+    } catch (error) {
+      console.error('Failed to stop recording:', error);
+      setIsAnalyzing(false);
+      Alert.alert('Error', 'Failed to process recording. Please try again.');
+    }
+  };
+
+  const analyzeRecording = async (uri) => {
+    try {
+      console.log('🔍 Analyzing pronunciation with real AI service...');
+
+      if (!uri) {
+        throw new Error('No recording URI provided');
+      }
+
+      const currentPhrase = gamePhrases[currentPhraseIndex];
+      if (!currentPhrase || !currentPhrase.korean) {
+        throw new Error('No target phrase available for analysis');
+      }
+
+      console.log('🎯 Target phrase:', currentPhrase.korean);
+      console.log('🎤 Recording URI:', uri);
+      console.log('🔧 Pronunciation service available:', !!pronunciationService);
+      console.log('🔧 analyzePronunciation method:', typeof pronunciationService?.analyzePronunciation);
+
+      // Validate pronunciation service is available
+      if (!pronunciationService || typeof pronunciationService.analyzePronunciation !== 'function') {
+        throw new Error('Pronunciation service is not available or not properly initialized');
+      }
+
+      // Use real pronunciation analysis service
+      const analysisResult = await pronunciationService.analyzePronunciation(
+        uri,
+        currentPhrase.korean,
+        'beginner' // User level - could be made dynamic based on user profile
+      );
+
+      console.log('📊 Analysis result:', analysisResult);
+
+      if (!analysisResult.success) {
+        throw new Error(analysisResult.error || 'Analysis failed');
+      }
+
+      // Extract data from API response (data is nested inside 'data' property)
+      const analysisData = analysisResult.data || analysisResult;
+      console.log('📊 Extracted analysis data:', analysisData);
+
+      // Extract accuracy and feedback from real analysis
+      const accuracy = analysisData.accuracy || 0;
+      const transcribedText = analysisData.transcribedText || '';
+
+      // Generate user-friendly feedback based on real analysis results
+      let feedbackText = '';
+
+      if (accuracy >= 90) {
+        feedbackText = analysisData.accentFeedback || "Excellent pronunciation! 🎉";
+      } else if (accuracy >= 70) {
+        feedbackText = analysisData.accentFeedback || "Good pronunciation! Keep it up!";
+      } else if (accuracy >= 50) {
+        feedbackText = analysisData.accentFeedback || "Not bad! Try focusing on clarity.";
+      } else {
+        feedbackText = analysisData.accentFeedback || "Keep practicing! You're making progress.";
+      }
+
+      // Skip transcription and tips to save space on smaller devices
+
+      const newFeedback = {
+        accuracy,
+        text: feedbackText,
+        phrase: currentPhrase.korean,
+        transcribedText,
+        improvementTips: analysisData.improvementTips || [],
+        strengths: analysisData.strengths || [],
+        difficultSounds: analysisData.difficultSounds || []
+      };
+
+      setFeedback(newFeedback);
+      setAccuracyScores([...accuracyScores, accuracy]);
+      setAnalysisDetails(analysisResult); // Store full analysis details
+
+      // Update score based on real accuracy
+      const points = Math.floor(accuracy / 10) * 10;
+      setScore(prevScore => prevScore + points);
+
+      // Count as correct if accuracy is 70% or higher
+      if (accuracy >= 70) {
+        setCorrectAnswers(prev => prev + 1);
+      }
+
+      setIsAnalyzing(false);
+      console.log('✅ Real pronunciation analysis complete:', newFeedback);
+
+    } catch (error) {
+      console.error('❌ Error analyzing pronunciation:', error);
+      setIsAnalyzing(false);
+
+      // Show professional error modal
+      const errorMessage = error.message || 'Failed to analyze pronunciation';
+      const isNetworkError = errorMessage.includes('Network request failed') || errorMessage.includes('network');
+
+      setErrorModal({
+        visible: true,
+        title: isNetworkError ? 'Connection Error' : 'Analysis Error',
+        message: isNetworkError
+          ? 'Unable to connect to our pronunciation analysis service. Please check your internet connection and try again.'
+          : `${errorMessage}\n\nPlease try recording again with clear speech.`,
+        onRetry: () => {
+          setErrorModal({ visible: false, title: '', message: '', onRetry: null });
+          // Allow user to record again by resetting feedback
+          setFeedback(null);
+          setRecordingUri(null);
+        }
+      });
+    }
+  };
+
+  const playReferenceAudio = async () => {
+    try {
+      const currentPhrase = gamePhrases[currentPhraseIndex];
+      if (!currentPhrase || !currentPhrase.korean) {
+        console.warn('No Korean text available for audio playback');
+        return;
+      }
+
+      // Prevent multiple simultaneous audio playback
+      if (isPlayingAudio) {
+        console.log('Audio already playing, ignoring request');
+        return;
+      }
+
+      console.log('🔊 Playing reference audio for:', currentPhrase.korean);
+      console.log('🔊 TTS Service available:', !!ttsService);
+      console.log('🔊 TTS Service speak method:', typeof ttsService?.speak);
+
+      setIsPlayingAudio(true);
+
+      // Verify TTS service is available
+      if (!ttsService) {
+        throw new Error('TTS service is not available');
+      }
+
+      if (typeof ttsService.speak !== 'function') {
+        throw new Error('TTS service speak method is not available');
+      }
+
+      // Use TTS service to speak the Korean phrase
+      await ttsService.speak(currentPhrase.korean, {
+        rate: 0.7, // Slower rate for learning pronunciation
+        pitch: 1.0,
+      });
+
+      console.log('🔊 Audio playback completed successfully');
+    } catch (error) {
+      console.error('❌ Error playing reference audio:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        ttsServiceAvailable: !!ttsService,
+        speakMethodType: typeof ttsService?.speak,
+      });
+
+      // Show professional error modal for audio issues
+      setErrorModal({
+        visible: true,
+        title: 'Audio Not Available',
+        message: `Unable to play pronunciation audio: ${error.message}\n\nPlease check your device settings.\n\nTo enable pronunciation audio:\n• On Android: Go to Settings > Accessibility > Text-to-speech\n• On iOS: Go to Settings > Accessibility > Spoken Content\n• Make sure Korean language is installed`,
+        onRetry: () => {
+          setErrorModal({ visible: false, title: '', message: '', onRetry: null });
+        }
+      });
+    } finally {
+      setIsPlayingAudio(false);
+    }
+  };
+
+  const moveToNextPhrase = () => {
+    if (currentPhraseIndex < gamePhrases.length - 1) {
+      // Move to next phrase
+      setCurrentPhraseIndex(prevIndex => {
+        const newIndex = prevIndex + 1;
+
+        // Animate progress bar
+        Animated.timing(progressAnim, {
+          toValue: newIndex + 1,
+          duration: 300,
+          useNativeDriver: false,
+        }).start();
+
+        return newIndex;
+      });
+
+      // Reset for next phrase
+      setFeedback(null);
+      setRecordingUri(null);
+      setIsTransitioning(false);
+      setIsPlayingAudio(false);
+      setAnalysisDetails(null);
+
+      // Reset animations for next phrase
+      slideAnim.setValue(width);
+      Animated.sequence([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Complete the game
+      completeGame();
+    }
+  };
+
+  const completeGame = async () => {
+    console.log("🏁 Completing Pronunciation Challenge Game...");
+
+    const endTime = Date.now();
+    const timeSpent = Math.round((endTime - startTime) / 1000);
+    const totalQuestions = gamePhrases.length;
+    const averageAccuracy = accuracyScores.length > 0
+      ? Math.round(accuracyScores.reduce((sum, acc) => sum + acc, 0) / accuracyScores.length)
+      : 0;
+
+    const results = {
+      score,
+      correctAnswers,
+      totalQuestions,
+      accuracy: averageAccuracy,
+      timeSpent,
+      accuracyScores,
+    };
+
+    setGameResults(results);
+    setEndTime(endTime);
+    setGameCompleted(true);
+
+    // Trigger confetti for good performance - temporarily disabled
+    // if (averageAccuracy >= 70 && confettiRef.current) {
+    //   setTimeout(() => {
+    //     confettiRef.current.start();
+    //   }, 500);
+    // }
+
+    // Check for achievements after game completion
+    try {
+      await checkAchievements();
+      console.log('✅ Achievement check completed after pronunciation game');
+    } catch (error) {
+      console.error('❌ Error checking achievements:', error);
+    }
+
+    console.log("🏁 Game completed with results:", results);
+  };
+
+  const handleClose = () => {
+    console.log("❌ Closing Pronunciation Challenge Game...");
+
+    // Clean up audio resources
+    if (recordingRef.current) {
+      recordingRef.current.stopAndUnloadAsync();
+    }
+    if (soundRef.current) {
+      soundRef.current.unloadAsync();
+    }
+
+    onClose();
+    router.back();
+  };
+
+  // Render game results screen with standardized GameResultsPage
   if (gameCompleted && gameResults) {
+    // Prepare data for the GameResultsPage component
+    const resultsData = {
+      score: gameResults.score,
+      correctAnswers: gameResults.correctAnswers,
+      totalQuestions: gameResults.totalQuestions,
+      accuracy: gameResults.accuracy,
+      timeSpent: gameResults.timeSpent || 120,
+      xpEarned: Math.floor(gameResults.score * 0.15), // Calculate XP based on score
+      incorrectAnswers: gameResults.totalQuestions - gameResults.correctAnswers,
+    };
+
+    console.log("🎮 PronunciationChallenge - Results data for GameResultsPage:", resultsData);
+    console.log("🎮 PronunciationChallenge - Original gameResults:", gameResults);
+
+    // Custom metrics specific to Pronunciation Challenge Game
+    const customMetrics = {
+      pronunciationAccuracy: `${gameResults.accuracy}%`,
+      averageScore: `${Math.round(gameResults.score / gameResults.totalQuestions)}`,
+      speakingConfidence: gameResults.accuracy >= 80 ? "High" : gameResults.accuracy >= 60 ? "Medium" : "Building",
+    };
+
+    // Mock achievements for demonstration (replace with real achievement system)
+    const achievements = [];
+    if (gameResults.accuracy === 100) {
+      achievements.push({
+        id: "perfect_pronunciation",
+        name: "Perfect Speaker!",
+        icon: "mic-outline",
+        description: "Got 100% accuracy in pronunciation"
+      });
+    }
+    if (gameResults.timeSpent < 90) {
+      achievements.push({
+        id: "speed_speaker",
+        name: "Quick Speaker",
+        icon: "flash-outline",
+        description: "Completed in under 90 seconds"
+      });
+    }
+    if (gameResults.correctAnswers >= 4) {
+      achievements.push({
+        id: "pronunciation_pro",
+        name: "Pronunciation Pro",
+        icon: "trophy-outline",
+        description: "Excellent pronunciation skills"
+      });
+    }
+
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: theme.colors.brandWhite,
+      <GameResultsPage
+        results={resultsData}
+        gameType="pronunciation-challenge"
+        onPlayAgain={() => {
+          console.log("🔄 Retrying game...");
+          // Reset all game state
+          setGameCompleted(false);
+          setGameResults(null);
+          setCurrentPhraseIndex(0);
+          setScore(0);
+          setCorrectAnswers(0);
+          setAccuracyScores([]);
+          setFeedback(null);
+          setRecordingUri(null);
+          setIsRecording(false);
+          setIsAnalyzing(false);
+          setIsTransitioning(false);
+          setStartTime(Date.now());
+          setEndTime(null);
+
+          // Reset animations
+          fadeAnim.setValue(1);
+          slideAnim.setValue(0);
+          progressAnim.setValue(1);
+
+          // Reinitialize the game with existing phrases
+          if (gamePhrases.length > 0) {
+            console.log("🎮 Reinitializing game with existing phrases");
+            // Game will restart with current phrases
+          } else {
+            console.log("🎮 Loading new content for retry");
+            // Reload content if no phrases available
+            if (phrases.length > 0) {
+              setGamePhrases(phrases);
+            } else {
+              // Use default phrases if no content available
+              setGamePhrases(getDefaultPhrases());
+            }
+          }
         }}
-      >
-        {/* Confetti */}
-        {gameResults && gameResults.accuracy >= 70 && (
-          <ConfettiCannon
-            ref={confettiRef}
-            count={150}
-            origin={{ x: width / 2, y: 0 }}
-            autoStart={false}
-            fadeOut={true}
-            explosionSpeed={350}
-            fallSpeed={2000}
-            colors={[
-              theme.colors.brandGreen,
-              "#FFD700",
-              "#FF6B35",
-              "#9B59B6",
-              "#3498DB",
-            ]}
-          />
-        )}
-
-        {/* Results Header */}
-        <View
-          style={{
-            paddingHorizontal: theme.spacing.md,
-            paddingVertical: theme.spacing.sm,
-            backgroundColor: theme.colors.brandWhite,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 18,
-                color: theme.colors.brandNavy,
-                fontFamily: theme.typography.fontFamily.bold,
-              }}
-            >
-              Pronunciation Challenge
-            </Text>
-            <TouchableOpacity
-              onPress={handleClose}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: theme.colors.neutral[100],
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons
-                name="close"
-                size={18}
-                color={theme.colors.neutral[600]}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Results Content */}
-        <View
-          style={{
-            flex: 1,
-            paddingHorizontal: theme.spacing.md,
-            paddingTop: theme.spacing.lg,
-          }}
-        >
-          {/* Celebration Card */}
-          <View
-            style={{
-              alignItems: "center",
-              padding: theme.spacing.xl,
-              marginBottom: theme.spacing.lg,
-              backgroundColor:
-                gameResults && gameResults.accuracy >= 70
-                  ? theme.colors.brandGreen + "10"
-                  : theme.colors.brandWhite,
-              borderRadius: 20,
-              borderWidth: gameResults && gameResults.accuracy >= 70 ? 2 : 1,
-              borderColor:
-                gameResults && gameResults.accuracy >= 70
-                  ? theme.colors.brandGreen
-                  : theme.colors.neutral[200],
-            }}
-          >
-            <Text style={{ fontSize: 64, marginBottom: 16 }}>
-              {gameResults && gameResults.accuracy >= 70 ? "🎤" : "🗣️"}
-            </Text>
-            <Heading
-              level="h2"
-              style={{
-                textAlign: "center",
-                marginBottom: 8,
-                color: theme.colors.brandNavy,
-                fontFamily: theme.typography.fontFamily.bold,
-                fontSize: 24,
-              }}
-            >
-              {gameResults && gameResults.accuracy >= 70
-                ? "Great Speaking!"
-                : "Keep Practicing!"}
-            </Heading>
-            <Text
-              style={{
-                textAlign: "center",
-                color: theme.colors.neutral[600],
-                fontFamily: theme.typography.fontFamily.medium,
-                fontSize: 16,
-              }}
-            >
-              {gameResults && gameResults.accuracy >= 70
-                ? "Your pronunciation is improving!"
-                : "Practice makes perfect in pronunciation!"}
-            </Text>
-          </View>
-
-          {/* Stats Cards */}
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-around",
-              marginBottom: theme.spacing.lg,
-            }}
-          >
-            <View
-              style={{
-                alignItems: "center",
-                backgroundColor: theme.colors.brandWhite,
-                padding: theme.spacing.md,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: theme.colors.neutral[200],
-                minWidth: 100,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 32,
-                  color: theme.colors.brandGreen,
-                  fontFamily: theme.typography.fontFamily.bold,
-                  marginBottom: 4,
-                }}
-              >
-                {gameResults ? gameResults.score : 0}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: theme.colors.neutral[600],
-                  fontFamily: theme.typography.fontFamily.medium,
-                }}
-              >
-                Score
-              </Text>
-            </View>
-
-            <View
-              style={{
-                alignItems: "center",
-                backgroundColor: theme.colors.brandWhite,
-                padding: theme.spacing.md,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: theme.colors.neutral[200],
-                minWidth: 100,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 32,
-                  color:
-                    gameResults && gameResults.accuracy >= 70
-                      ? theme.colors.brandGreen
-                      : theme.colors.neutral[500],
-                  fontFamily: theme.typography.fontFamily.bold,
-                  marginBottom: 4,
-                }}
-              >
-                {gameResults ? gameResults.accuracy : 0}%
-              </Text>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: theme.colors.neutral[600],
-                  fontFamily: theme.typography.fontFamily.medium,
-                }}
-              >
-                Accuracy
-              </Text>
-            </View>
-
-            <View
-              style={{
-                alignItems: "center",
-                backgroundColor: theme.colors.brandWhite,
-                padding: theme.spacing.md,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: theme.colors.neutral[200],
-                minWidth: 100,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 32,
-                  color: theme.colors.brandGreen,
-                  fontFamily: theme.typography.fontFamily.bold,
-                  marginBottom: 4,
-                }}
-              >
-                {gameResults ? gameResults.correctAnswers : 0}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: theme.colors.neutral[600],
-                  fontFamily: theme.typography.fontFamily.medium,
-                }}
-              >
-                Correct
-              </Text>
-            </View>
-          </View>
-
-          {/* Rewards Section */}
-          {gameResults.rewards && gameResults.rewards.length > 0 && (
-            <View style={{ marginBottom: theme.spacing.lg }}>
-              <Text
-                style={{
-                  fontSize: 20,
-                  color: theme.colors.brandNavy,
-                  fontFamily: theme.typography.fontFamily.bold,
-                  marginBottom: theme.spacing.md,
-                }}
-              >
-                Rewards Earned
-              </Text>
-
-              {gameResults.rewards.map((reward, index) => (
-                <View
-                  key={index}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    backgroundColor: theme.colors.brandGreen + "10",
-                    borderRadius: 12,
-                    padding: theme.spacing.md,
-                    marginBottom: theme.spacing.sm,
-                    borderWidth: 1,
-                    borderColor: theme.colors.brandGreen + "30",
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
-                      backgroundColor: theme.colors.brandGreen + "20",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      marginRight: theme.spacing.md,
-                    }}
-                  >
-                    <Ionicons
-                      name={reward.icon}
-                      size={24}
-                      color={theme.colors.brandGreen}
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={{
-                        fontSize: 16,
-                        color: theme.colors.brandNavy,
-                        fontFamily: theme.typography.fontFamily.semibold,
-                        marginBottom: 2,
-                      }}
-                    >
-                      {reward.type}
-                    </Text>
-                    <Text
-                      style={{
-                        fontSize: 14,
-                        color: theme.colors.brandGreen,
-                        fontFamily: theme.typography.fontFamily.medium,
-                      }}
-                    >
-                      +{reward.points} XP
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Action Buttons */}
-          <View style={styles.resultsActionButtons}>
-            {gameResults.accuracy < 80 && (
-              <ModernButton
-                text="Try Again"
-                variant="outline"
-                color="secondary"
-                onPress={handleTryAgain}
-                style={styles.resultsTryAgainButton}
-              />
-            )}
-
-            <ModernButton
-              text="Continue"
-              onPress={handleContinue}
-              style={[
-                styles.resultsContinueButton,
-                gameResults.accuracy >= 80 && { flex: 1 } // Full width when no try again button
-              ]}
-            />
-          </View>
-        </View>
-      </View>
+        onContinue={() => {
+          console.log("🏠 Continuing to next lesson or home...");
+          router.back();
+        }}
+        customMetrics={customMetrics}
+        achievements={achievements}
+      // confettiRef={confettiRef} // Temporarily disabled
+      />
     );
   }
 
   // Render loading state
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Loading game...</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+        }}
+      >
+        <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
+        <Text
+          style={{
+            marginTop: 16,
+            fontSize: 16,
+            color: BRAND_COLORS.SHADOW_GREY,
+            fontFamily: getFontFamily('medium'),
+          }}
+        >
+          Loading game...
+        </Text>
       </View>
     );
   }
@@ -1032,15 +652,42 @@ const PronunciationChallengeGame = ({
   // Get current phrase
   const currentPhrase = gamePhrases[currentPhraseIndex];
 
+  // Safety check - if no current phrase available, show loading
+  if (!currentPhrase) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+        }}
+      >
+        <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
+        <Text
+          style={{
+            marginTop: 16,
+            fontSize: 16,
+            color: BRAND_COLORS.SHADOW_GREY,
+            fontFamily: getFontFamily('medium'),
+          }}
+        >
+          Loading phrase...
+        </Text>
+      </View>
+    );
+  }
+
   // Render game screen
   return (
     <View style={styles.container}>
+      {/* Confetti for celebrations - temporarily disabled to fix startup issue */}
       {/* Modern Progress Section */}
       <View
         style={{
-          paddingHorizontal: theme.spacing.md,
-          paddingVertical: theme.spacing.sm,
-          backgroundColor: theme.colors.brandWhite,
+          paddingHorizontal: 16, // theme.spacing.md
+          paddingVertical: 8,    // theme.spacing.sm
+          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
         }}
       >
         {/* Game Title */}
@@ -1048,8 +695,8 @@ const PronunciationChallengeGame = ({
           <Text
             style={{
               fontSize: 18,
-              color: theme.colors.brandNavy,
-              fontFamily: theme.typography.fontFamily.bold,
+              color: BRAND_COLORS.OCEAN_BLUE,
+              fontFamily: getFontFamily('bold'),
             }}
           >
             Pronunciation Challenge
@@ -1060,7 +707,7 @@ const PronunciationChallengeGame = ({
               width: 32,
               height: 32,
               borderRadius: 16,
-              backgroundColor: theme.colors.neutral[100],
+              backgroundColor: BRAND_COLORS.SHADOW_GREY + "30",
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -1068,74 +715,73 @@ const PronunciationChallengeGame = ({
             <Ionicons
               name="close"
               size={18}
-              color={theme.colors.neutral[600]}
+              color={BRAND_COLORS.SHADOW_GREY}
             />
           </TouchableOpacity>
         </Row>
 
-        {/* Progress Info */}
-        <Row
-          justify="space-between"
-          align="center"
-          style={{ marginBottom: 12 }}
+        {/* Progress Text */}
+        <Text
+          style={{
+            fontSize: 14,
+            color: BRAND_COLORS.SHADOW_GREY,
+            fontFamily: getFontFamily('medium'),
+            marginBottom: 8,
+          }}
         >
-          <Text
-            style={{
-              fontSize: 14,
-              color: theme.colors.neutral[600],
-              fontFamily: theme.typography.fontFamily.medium,
-            }}
-          >
-            Phrase {currentPhraseIndex + 1} of {gamePhrases.length}
-          </Text>
-          <Text
-            style={{
-              fontSize: 14,
-              color: theme.colors.brandGreen,
-              fontFamily: theme.typography.fontFamily.semibold,
-            }}
-          >
-            Score: {score}
-          </Text>
-        </Row>
+          Phrase {currentPhraseIndex + 1} of {gamePhrases.length}
+        </Text>
 
         {/* Progress Bar */}
         <View
           style={{
             height: 8,
-            backgroundColor: theme.colors.neutral[200],
+            backgroundColor: BRAND_COLORS.SHADOW_GREY + "30",
             borderRadius: 4,
             overflow: "hidden",
           }}
         >
-          <View
+          <Animated.View
             style={{
               height: "100%",
-              width: `${
-                ((currentPhraseIndex + 1) / gamePhrases.length) * 100
-              }%`,
-              backgroundColor: theme.colors.brandGreen,
+              backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
               borderRadius: 4,
+              width: progressAnim.interpolate({
+                inputRange: [0, gamePhrases.length],
+                outputRange: ["0%", "100%"],
+                extrapolate: "clamp",
+              }),
             }}
           />
         </View>
       </View>
 
-      <Animated.View
-        style={[
-          styles.gameContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateX: slideAnim }],
-          },
-        ]}
-      >
+      {/* Game Content */}
+      <View style={styles.gameContainer}>
         <Text style={styles.instructionText}>
           Record yourself saying the following phrase:
         </Text>
 
         <View style={styles.phraseContainer}>
-          <Text style={styles.koreanPhrase}>{currentPhrase.korean}</Text>
+          {/* Korean phrase with inline audio button */}
+          <View style={styles.koreanPhraseRow}>
+            <Text style={styles.koreanPhrase}>{currentPhrase.korean}</Text>
+            <TouchableOpacity
+              style={[
+                styles.compactListenButton,
+                isPlayingAudio && styles.compactListenButtonActive
+              ]}
+              onPress={playReferenceAudio}
+              disabled={isPlayingAudio}
+            >
+              {isPlayingAudio ? (
+                <ActivityIndicator size="small" color={BRAND_COLORS.EXPLORER_TEAL} />
+              ) : (
+                <Ionicons name="volume-high" size={18} color={BRAND_COLORS.EXPLORER_TEAL} />
+              )}
+            </TouchableOpacity>
+          </View>
+
           <Text style={styles.englishPhrase}>"{currentPhrase.english}"</Text>
 
           {currentPhrase.romanization && (
@@ -1143,16 +789,9 @@ const PronunciationChallengeGame = ({
               {currentPhrase.romanization}
             </Text>
           )}
-
-          <TouchableOpacity
-            style={styles.listenButton}
-            onPress={playReferenceAudio}
-          >
-            <Ionicons name="volume-high" size={20} color="#fff" />
-            <Text style={styles.listenButtonText}>Listen</Text>
-          </TouchableOpacity>
         </View>
 
+        {/* Recording Section */}
         {feedback ? (
           <View style={styles.feedbackContainer}>
             <View
@@ -1161,8 +800,8 @@ const PronunciationChallengeGame = ({
                 feedback.accuracy >= 90
                   ? styles.excellentAccuracy
                   : feedback.accuracy >= 70
-                  ? styles.goodAccuracy
-                  : styles.poorAccuracy,
+                    ? styles.goodAccuracy
+                    : styles.poorAccuracy,
               ]}
             >
               <Text style={styles.accuracyText}>{feedback.accuracy}%</Text>
@@ -1217,12 +856,62 @@ const PronunciationChallengeGame = ({
               {isAnalyzing
                 ? "Analyzing your pronunciation..."
                 : isRecording
-                ? "Recording... Tap to stop"
-                : "Tap to start recording"}
+                  ? "Recording... Tap to stop"
+                  : "Tap to start recording"}
             </Text>
           </View>
         )}
-      </Animated.View>
+      </View>
+
+      {/* Professional Error Modal */}
+      <Modal
+        visible={errorModal.visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setErrorModal({ visible: false, title: '', message: '', onRetry: null })}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <ModernCard style={styles.errorCard}>
+              {/* Error Icon */}
+              <View style={styles.errorIconContainer}>
+                <Ionicons
+                  name="alert-circle"
+                  size={48}
+                  color={BRAND_COLORS.SHADOW_GREY}
+                />
+              </View>
+
+              {/* Error Title */}
+              <Text style={styles.errorTitle}>
+                {errorModal.title}
+              </Text>
+
+              {/* Error Message */}
+              <Text style={styles.errorMessage}>
+                {errorModal.message}
+              </Text>
+
+              {/* Action Buttons */}
+              <View style={styles.errorButtonContainer}>
+                <ModernButton
+                  text="Cancel"
+                  variant="outline"
+                  color="secondary"
+                  onPress={() => setErrorModal({ visible: false, title: '', message: '', onRetry: null })}
+                  style={styles.errorCancelButton}
+                />
+
+                <ModernButton
+                  text="Try Again"
+                  onPress={errorModal.onRetry}
+                  style={styles.errorRetryButton}
+                />
+              </View>
+            </ModernCard>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -1230,94 +919,70 @@ const PronunciationChallengeGame = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#EFEFEF",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  closeButton: {
-    padding: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-  },
-  progressContainer: {
-    padding: 16,
-  },
-  progressText: {
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  progressBarContainer: {
-    height: 8,
-    backgroundColor: "#F0F0F0",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressBar: {
-    height: "100%",
-    borderRadius: 4,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   gameContainer: {
-    flex: 1,
+    // flex: 1,
     padding: 16,
   },
   instructionText: {
     fontSize: 16,
     textAlign: "center",
     marginBottom: 24,
+    color: BRAND_COLORS.SHADOW_GREY,
+    fontFamily: getFontFamily('medium'),
   },
   phraseContainer: {
     alignItems: "center",
-    marginBottom: 32,
+    // marginBottom: 32,
     padding: 16,
-    backgroundColor: "#F9F9F9",
     borderRadius: 12,
+    elevation: 0,
+  },
+  koreanPhraseRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+    gap: 12,
   },
   koreanPhrase: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 8,
+    textAlign: "center",
+    color: BRAND_COLORS.OCEAN_BLUE,
+    fontFamily: getFontFamily('bold'),
+  },
+  compactListenButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "20",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + "40",
+  },
+  compactListenButtonActive: {
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "40",
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + "60",
   },
   englishPhrase: {
     fontSize: 16,
-    color: "#666",
+    color: BRAND_COLORS.SHADOW_GREY,
     marginBottom: 8,
+    textAlign: "center",
+    fontFamily: getFontFamily('medium'),
   },
   romanizationText: {
     fontSize: 14,
-    color: "#999",
+    color: BRAND_COLORS.SHADOW_GREY + "80",
     marginBottom: 16,
-  },
-  listenButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#6FC953",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-  },
-  listenButtonText: {
-    color: "#fff",
-    marginLeft: 8,
+    textAlign: "center",
+    fontFamily: getFontFamily('regular'),
   },
   recordingContainer: {
-    flex: 1,
+    marginTop: 60,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1325,24 +990,25 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#6FC953",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
   },
   recordingActive: {
-    backgroundColor: "#FF5757",
+    backgroundColor: "#FF5757", // Keep red for recording state
   },
   recordingDisabled: {
-    backgroundColor: "#999",
+    backgroundColor: BRAND_COLORS.SHADOW_GREY,
   },
   recordingText: {
     fontSize: 16,
-    color: "#666",
+    color: BRAND_COLORS.SHADOW_GREY,
     textAlign: "center",
+    fontFamily: getFontFamily('medium'),
   },
   feedbackContainer: {
-    flex: 1,
+    // marginTop: 40,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1356,7 +1022,7 @@ const styles = StyleSheet.create({
   },
   excellentAccuracy: {
     backgroundColor: "rgba(111, 201, 83, 0.2)",
-    borderColor: "#6FC953",
+    borderColor: BRAND_COLORS.EXPLORER_TEAL,
     borderWidth: 2,
   },
   goodAccuracy: {
@@ -1372,107 +1038,84 @@ const styles = StyleSheet.create({
   accuracyText: {
     fontSize: 24,
     fontWeight: "bold",
+    color: BRAND_COLORS.OCEAN_BLUE,
+    fontFamily: getFontFamily('bold'),
   },
   feedbackText: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: "center",
-    marginBottom: 32,
-    color: "#666",
+    marginBottom: 16,
+    color: BRAND_COLORS.SHADOW_GREY,
+    fontFamily: getFontFamily('medium'),
   },
   actionButtonsContainer: {
     flexDirection: "row",
     gap: 12,
-    marginTop: 8,
+    marginTop: 16,
   },
   tryAgainButton: {
     flex: 1,
   },
   nextButton: {
     flex: 1,
-    backgroundColor: "#6FC953",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
   },
-  resultsContainer: {
+  // Professional Error Modal Styles
+  modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    width: '100%',
+    maxWidth: 400,
+  },
+  errorCard: {
     padding: 24,
+    alignItems: 'center',
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+    borderRadius: 16,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
   },
-  resultsTitle: {
-    fontSize: 28,
-    textAlign: "center",
+  errorIconContainer: {
     marginBottom: 16,
+    padding: 12,
+    borderRadius: 50,
+    backgroundColor: BRAND_COLORS.SHADOW_GREY + '20',
   },
-  resultsSubtitle: {
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 32,
-    color: "#666",
-  },
-  statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 32,
-  },
-  statItem: {
-    alignItems: "center",
-  },
-  statValue: {
-    fontSize: 32,
-    color: "#6FC953",
-  },
-  statLabel: {
-    fontSize: 14,
-    color: "#666",
-  },
-  rewardsContainer: {
-    marginBottom: 32,
-  },
-  rewardsTitle: {
+  errorTitle: {
     fontSize: 20,
-    marginBottom: 16,
-  },
-  rewardItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F9F9F9",
-    borderRadius: 12,
-    padding: 16,
+    fontWeight: 'bold',
+    color: BRAND_COLORS.OCEAN_BLUE,
+    textAlign: 'center',
     marginBottom: 12,
+    fontFamily: getFontFamily('bold'),
   },
-  rewardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(111, 201, 83, 0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  rewardInfo: {
-    flex: 1,
-  },
-  rewardTitle: {
+  errorMessage: {
     fontSize: 16,
-    marginBottom: 4,
+    color: BRAND_COLORS.SHADOW_GREY,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+    fontFamily: getFontFamily('regular'),
   },
-  rewardPoints: {
-    fontSize: 14,
-    color: "#666",
-  },
-  continueButton: {
-    backgroundColor: "#6FC953",
-  },
-  // Results page action buttons
-  resultsActionButtons: {
-    flexDirection: "row",
+  errorButtonContainer: {
+    flexDirection: 'row',
     gap: 12,
-    paddingBottom: 32,
+    width: '100%',
   },
-  resultsTryAgainButton: {
+  errorCancelButton: {
     flex: 1,
   },
-  resultsContinueButton: {
+  errorRetryButton: {
     flex: 1,
-    backgroundColor: "#6FC953",
-    borderRadius: 12,
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
   },
 });
 

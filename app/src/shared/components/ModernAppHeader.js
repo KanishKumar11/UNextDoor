@@ -7,6 +7,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useNotifications } from "../context/NotificationContext";
 import { Text } from "./typography";
 import { Row } from "./layout";
+import { BRAND_COLORS } from "../constants/colors";
 
 /**
  * ModernAppHeader component
@@ -57,7 +58,7 @@ const ModernAppHeader = ({
         {
           backgroundColor: isDarkMode
             ? theme.colors.background.default
-            : theme.colors.background.paper,
+            : BRAND_COLORS.CARD_BACKGROUND,
           borderBottomColor: isDarkMode
             ? theme.colors.neutral[800]
             : theme.colors.neutral[200],

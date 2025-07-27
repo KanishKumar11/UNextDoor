@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { Alert } from 'react-native';
 import { apiClient } from '../api/apiClient';
 
 /**
@@ -7,9 +8,28 @@ import { apiClient } from '../api/apiClient';
  * Simplified: India = ₹ (INR), Rest of World = $ (USD)
  */
 
+// Centralized currency configuration with standardized exchange rates
 export const SUPPORTED_CURRENCIES = {
-  'IN': { code: 'INR', symbol: '₹', name: 'Indian Rupee', country: 'India' },
-  'DEFAULT': { code: 'USD', symbol: '$', name: 'US Dollar', country: 'International' }
+  'IN': {
+    code: 'INR',
+    symbol: '₹',
+    name: 'Indian Rupee',
+    country: 'India',
+    exchangeRate: 1.0 // Base currency
+  },
+  'DEFAULT': {
+    code: 'USD',
+    symbol: '$',
+    name: 'US Dollar',
+    country: 'International',
+    exchangeRate: 0.012 // 1 INR = 0.012 USD (approximately 1 USD = 83.33 INR)
+  }
+};
+
+// Standardized conversion rate - single source of truth
+export const CURRENCY_EXCHANGE_RATES = {
+  INR_TO_USD: 0.012,
+  USD_TO_INR: 83.33
 };
 
 export class CurrencyService {
@@ -172,8 +192,8 @@ export class CurrencyService {
       console.log('📍 Attempting locale-based currency detection...');
 
       const locale = require('react-native').NativeModules.SettingsManager?.settings?.AppleLocale ||
-                   require('react-native').NativeModules.I18nManager?.localeIdentifier ||
-                   'en_US';
+        require('react-native').NativeModules.I18nManager?.localeIdentifier ||
+        'en_US';
 
       console.log('📍 System locale detected:', locale);
 
@@ -236,9 +256,7 @@ export class CurrencyService {
    * Show currency selection dialog with enhanced error handling
    */
   static async showCurrencySelector() {
-    return new Promise((resolve, reject) => {
-      const { Alert } = require('react-native');
-
+    return new Promise((resolve) => {
       const handleCurrencySelection = async (currency, currencyName) => {
         try {
           console.log(`💰 User selected ${currencyName}:`, currency);
@@ -308,7 +326,7 @@ export class CurrencyService {
    */
   static formatPrice(price, currencyInfo, interval = 'month', intervalCount = 1) {
     const { symbol } = currencyInfo;
-    
+
     if (intervalCount === 3) return `${symbol}${price}/quarter`;
     if (intervalCount === 12) return `${symbol}${price}/year`;
     return `${symbol}${price}/month`;
@@ -397,19 +415,42 @@ export class CurrencyService {
   }
 
   /**
-   * Convert INR price to other currency (simple conversion)
+   * Convert INR price to other currency using standardized rates
    */
   static convertPrice(inrPrice, targetCurrency) {
     if (targetCurrency.code === 'INR') {
       return inrPrice;
     }
-    
-    // Simple conversion: 1 USD = ~83 INR (approximate)
+
+    // Use standardized conversion rate
     if (targetCurrency.code === 'USD') {
-      return Math.round((inrPrice / 95) * 100) / 100; // Round to 2 decimal places
+      return Math.round((inrPrice * CURRENCY_EXCHANGE_RATES.INR_TO_USD) * 100) / 100; // Round to 2 decimal places
     }
-    
+
     return inrPrice; // Fallback
+  }
+
+  /**
+   * Convert USD price to INR using standardized rates
+   */
+  static convertUSDToINR(usdPrice) {
+    return Math.round((usdPrice * CURRENCY_EXCHANGE_RATES.USD_TO_INR) * 100) / 100;
+  }
+
+  /**
+   * Get the actual payment amount in INR (what Razorpay will charge)
+   * This ensures users know exactly what they'll be charged
+   */
+  static getPaymentAmountINR(displayPrice, displayCurrency) {
+    if (displayCurrency === 'INR') {
+      return displayPrice;
+    }
+
+    if (displayCurrency === 'USD') {
+      return this.convertUSDToINR(displayPrice);
+    }
+
+    return displayPrice; // Fallback
   }
 }
 

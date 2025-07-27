@@ -22,6 +22,7 @@ import { updateUserProfile } from "../../../shared/api/authApi";
 import { SUPPORT_EMAIL } from "../../../shared/constants/appConstants";
 import { useSubscription } from "../../../shared/hooks/useSubscription";
 import SafeAreaWrapper from "../../../shared/components/SafeAreaWrapper";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 
 // Import modern components
 import {
@@ -282,7 +283,7 @@ const ModernProfileScreenImpl = () => {
       <SafeAreaWrapper>
         <Container withPadding>
           <Column align="center" justify="center" style={{ flex: 1 }}>
-            <ActivityIndicator size="large" color={theme.colors.brandGreen} />
+            <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
             <Spacer size="md" />
             <Text>Loading...</Text>
           </Column>
@@ -300,10 +301,10 @@ const ModernProfileScreenImpl = () => {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.brandGreen]}
-              tintColor={theme.colors.brandGreen}
+              colors={[BRAND_COLORS.EXPLORER_TEAL]}
+              tintColor={BRAND_COLORS.EXPLORER_TEAL}
               title="Pull to refresh"
-              titleColor={theme.colors.neutral[600]}
+              titleColor={BRAND_COLORS.SHADOW_GREY}
             />
           }
           style={{ flex: 1 }}
@@ -320,7 +321,7 @@ const ModernProfileScreenImpl = () => {
               align="center"
               style={{
                 padding: theme.spacing.md,
-                backgroundColor: theme.colors.brandWhite,
+                backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
               }}
             >
               <Column>
@@ -330,7 +331,7 @@ const ModernProfileScreenImpl = () => {
                 <Heading
                   level="h2"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontFamily: theme.typography.fontFamily.bold,
                   }}
                 >
@@ -340,7 +341,7 @@ const ModernProfileScreenImpl = () => {
               <TouchableOpacity
                 onPress={() => router.push("/profile/edit")}
                 style={{
-                  backgroundColor: theme.colors.brandGreen,
+                  backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
                   borderRadius: 20,
                   paddingHorizontal: 16,
                   paddingVertical: 8,
@@ -349,7 +350,7 @@ const ModernProfileScreenImpl = () => {
                 <Text
                   weight="semibold"
                   style={{
-                    color: theme.colors.brandWhite,
+                    color: BRAND_COLORS.WHISPER_WHITE,
                     fontSize: 12,
                     fontFamily: theme.typography.fontFamily.semibold,
                   }}
@@ -372,22 +373,28 @@ const ModernProfileScreenImpl = () => {
             <View style={{ paddingHorizontal: theme.spacing.md }}>
               <ModernCard
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   padding: theme.spacing.lg,
                   alignItems: "center",
                   elevation: 0,
+                  borderWidth: 1,
+                  borderColor: BRAND_COLORS.EXPLORER_TEAL + "20",
+                  shadowColor: BRAND_COLORS.OCEAN_BLUE,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 8,
                 }}
               >
                 <View
                   style={{
-                    shadowColor: theme.colors.brandNavy,
+                    shadowColor: BRAND_COLORS.OCEAN_BLUE,
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.15,
                     shadowRadius: 12,
                     borderRadius: 50,
                     borderWidth: 3,
-                    borderColor: theme.colors.brandWhite,
+                    borderColor: BRAND_COLORS.WHISPER_WHITE,
                   }}
                 >
                   <ModernAvatar
@@ -409,7 +416,7 @@ const ModernProfileScreenImpl = () => {
                 <Heading
                   level="h3"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontFamily: theme.typography.fontFamily.bold,
                     textAlign: "center",
                   }}
@@ -420,7 +427,7 @@ const ModernProfileScreenImpl = () => {
                 <Text
                   variant="caption"
                   style={{
-                    color: theme.colors.neutral[600],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontFamily: theme.typography.fontFamily.regular,
                     textAlign: "center",
                     marginTop: 4,
@@ -434,7 +441,7 @@ const ModernProfileScreenImpl = () => {
                 {/* Level Badge */}
                 <View
                   style={{
-                    backgroundColor: theme.colors.brandNavy,
+                    backgroundColor: BRAND_COLORS.OCEAN_BLUE,
                     borderRadius: 20,
                     paddingHorizontal: 16,
                     paddingVertical: 8,
@@ -443,7 +450,7 @@ const ModernProfileScreenImpl = () => {
                   <Text
                     weight="semibold"
                     style={{
-                      color: theme.colors.brandWhite,
+                      color: BRAND_COLORS.WHISPER_WHITE,
                       fontSize: 12,
                       fontFamily: theme.typography.fontFamily.semibold,
                     }}
@@ -460,7 +467,7 @@ const ModernProfileScreenImpl = () => {
             <View style={{ paddingHorizontal: theme.spacing.md }}>
               <ModernCard
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   padding: theme.spacing.lg,
                 }}
@@ -469,7 +476,7 @@ const ModernProfileScreenImpl = () => {
                   variant="caption"
                   weight="medium"
                   style={{
-                    color: theme.colors.neutral[600],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontFamily: theme.typography.fontFamily.medium,
                     marginBottom: 8,
                   }}
@@ -479,7 +486,7 @@ const ModernProfileScreenImpl = () => {
                 <Heading
                   level="h3"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontFamily: theme.typography.fontFamily.bold,
                     marginBottom: theme.spacing.md,
                   }}
@@ -491,13 +498,13 @@ const ModernProfileScreenImpl = () => {
                   <View style={{ alignItems: "center", paddingVertical: 20 }}>
                     <ActivityIndicator
                       size="small"
-                      color={theme.colors.brandGreen}
+                      color={BRAND_COLORS.EXPLORER_TEAL}
                     />
                     <Text
                       variant="caption"
                       style={{
                         marginTop: 8,
-                        color: theme.colors.neutral[600],
+                        color: BRAND_COLORS.SHADOW_GREY,
                       }}
                     >
                       Loading your progress...
@@ -510,7 +517,7 @@ const ModernProfileScreenImpl = () => {
                         weight="bold"
                         style={{
                           fontSize: 24,
-                          color: theme.colors.brandGreen,
+                          color: BRAND_COLORS.EXPLORER_TEAL,
                           fontFamily: theme.typography.fontFamily.bold,
                         }}
                       >
@@ -519,7 +526,7 @@ const ModernProfileScreenImpl = () => {
                       <Text
                         variant="caption"
                         style={{
-                          color: theme.colors.neutral[600],
+                          color: BRAND_COLORS.SHADOW_GREY,
                           fontFamily: theme.typography.fontFamily.regular,
                         }}
                       >
@@ -531,7 +538,7 @@ const ModernProfileScreenImpl = () => {
                       style={{
                         width: 1,
                         height: 40,
-                        backgroundColor: theme.colors.neutral[200],
+                        backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "20",
                       }}
                     />
 
@@ -540,7 +547,7 @@ const ModernProfileScreenImpl = () => {
                         weight="bold"
                         style={{
                           fontSize: 24,
-                          color: theme.colors.brandGreen,
+                          color: BRAND_COLORS.EXPLORER_TEAL,
                           fontFamily: theme.typography.fontFamily.bold,
                         }}
                       >
@@ -549,7 +556,7 @@ const ModernProfileScreenImpl = () => {
                       <Text
                         variant="caption"
                         style={{
-                          color: theme.colors.neutral[600],
+                          color: BRAND_COLORS.SHADOW_GREY,
                           fontFamily: theme.typography.fontFamily.regular,
                         }}
                       >
@@ -561,7 +568,7 @@ const ModernProfileScreenImpl = () => {
                       style={{
                         width: 1,
                         height: 40,
-                        backgroundColor: theme.colors.neutral[200],
+                        backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "20",
                       }}
                     />
 
@@ -570,7 +577,7 @@ const ModernProfileScreenImpl = () => {
                         weight="bold"
                         style={{
                           fontSize: 24,
-                          color: theme.colors.brandGreen,
+                          color: BRAND_COLORS.EXPLORER_TEAL,
                           fontFamily: theme.typography.fontFamily.bold,
                         }}
                       >
@@ -579,7 +586,7 @@ const ModernProfileScreenImpl = () => {
                       <Text
                         variant="caption"
                         style={{
-                          color: theme.colors.neutral[600],
+                          color: BRAND_COLORS.SHADOW_GREY,
                           fontFamily: theme.typography.fontFamily.regular,
                         }}
                       >
@@ -597,7 +604,7 @@ const ModernProfileScreenImpl = () => {
             <View style={{ paddingHorizontal: theme.spacing.md }}>
               <ModernCard
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   padding: theme.spacing.lg,
                 }}
@@ -606,7 +613,7 @@ const ModernProfileScreenImpl = () => {
                   variant="caption"
                   weight="medium"
                   style={{
-                    color: theme.colors.neutral[600],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontFamily: theme.typography.fontFamily.medium,
                     marginBottom: 8,
                   }}
@@ -616,7 +623,7 @@ const ModernProfileScreenImpl = () => {
                 <Heading
                   level="h3"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontFamily: theme.typography.fontFamily.bold,
                     marginBottom: theme.spacing.md,
                   }}
@@ -628,13 +635,13 @@ const ModernProfileScreenImpl = () => {
                   <View style={{ alignItems: "center", paddingVertical: 20 }}>
                     <ActivityIndicator
                       size="small"
-                      color={theme.colors.brandGreen}
+                      color={BRAND_COLORS.EXPLORER_TEAL}
                     />
                     <Text
                       variant="caption"
                       style={{
                         marginTop: 8,
-                        color: theme.colors.neutral[600],
+                        color: BRAND_COLORS.SHADOW_GREY,
                       }}
                     >
                       Loading subscription data...
@@ -649,7 +656,7 @@ const ModernProfileScreenImpl = () => {
                       style={{
                         paddingVertical: 12,
                         borderBottomWidth: 1,
-                        borderBottomColor: theme.colors.neutral[100],
+                        borderBottomColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                       }}
                     >
                       <Row align="center">
@@ -658,7 +665,7 @@ const ModernProfileScreenImpl = () => {
                             width: 40,
                             height: 40,
                             borderRadius: 20,
-                            backgroundColor: currentPlan.tier === 'free' ? theme.colors.warning.main + "20" : theme.colors.success.main + "20",
+                            backgroundColor: currentPlan.tier === 'free' ? BRAND_COLORS.GOLDEN_AMBER + "20" : BRAND_COLORS.EXPLORER_TEAL + "20",
                             alignItems: "center",
                             justifyContent: "center",
                             marginRight: 12,
@@ -667,14 +674,14 @@ const ModernProfileScreenImpl = () => {
                           <Ionicons
                             name={currentPlan.tier === 'free' ? "star-outline" : "checkmark-circle-outline"}
                             size={20}
-                            color={currentPlan.tier === 'free' ? theme.colors.warning.main : theme.colors.success.main}
+                            color={currentPlan.tier === 'free' ? BRAND_COLORS.GOLDEN_AMBER : BRAND_COLORS.EXPLORER_TEAL}
                           />
                         </View>
                         <Column>
                           <Text
                             weight="medium"
                             style={{
-                              color: theme.colors.brandNavy,
+                              color: BRAND_COLORS.OCEAN_BLUE,
                               fontFamily: theme.typography.fontFamily.medium,
                             }}
                           >
@@ -683,14 +690,14 @@ const ModernProfileScreenImpl = () => {
                           <Text
                             variant="caption"
                             style={{
-                              color: theme.colors.neutral[600],
+                              color: BRAND_COLORS.SHADOW_GREY,
                               fontFamily: theme.typography.fontFamily.regular,
                             }}
                           >
-                            {currentPlan.tier === 'free' 
-                              ? `${usage.lessons.remaining}/${usage.lessons.limit} lessons left` 
-                              : hasActiveSubscription 
-                                ? 'Active subscription' 
+                            {currentPlan.tier === 'free'
+                              ? `${usage.lessons.remaining}/${usage.lessons.limit} lessons left`
+                              : hasActiveSubscription
+                                ? 'Active subscription'
                                 : 'Inactive subscription'
                             }
                           </Text>
@@ -702,15 +709,15 @@ const ModernProfileScreenImpl = () => {
                           text="Upgrade"
                           variant="solid"
                           size="sm"
-                          style={{ 
-                            backgroundColor: theme.colors.warning.main,
+                          style={{
+                            backgroundColor: BRAND_COLORS.GOLDEN_AMBER,
                             paddingHorizontal: theme.spacing.md,
                           }}
                           onPress={() => router.push("/subscription")}
                         />
                       ) : (
                         <TouchableOpacity onPress={() => router.push("/subscription")}>
-                          <Ionicons name="chevron-forward" size={20} color={theme.colors.neutral[400]} />
+                          <Ionicons name="chevron-forward" size={20} color={BRAND_COLORS.SHADOW_GREY} />
                         </TouchableOpacity>
                       )}
                     </Row>
@@ -722,19 +729,19 @@ const ModernProfileScreenImpl = () => {
                           variant="caption"
                           weight="medium"
                           style={{
-                            color: theme.colors.neutral[600],
+                            color: BRAND_COLORS.SHADOW_GREY,
                             fontFamily: theme.typography.fontFamily.medium,
                             marginBottom: 8,
                           }}
                         >
                           USAGE THIS MONTH
                         </Text>
-                        
+
                         <Row justify="space-between" align="center" style={{ marginBottom: 8 }}>
                           <Text
                             variant="caption"
                             style={{
-                              color: theme.colors.neutral[700],
+                              color: BRAND_COLORS.OCEAN_BLUE,
                               fontFamily: theme.typography.fontFamily.regular,
                             }}
                           >
@@ -744,7 +751,7 @@ const ModernProfileScreenImpl = () => {
                             variant="caption"
                             weight="medium"
                             style={{
-                              color: hasReachedLimit('lessons') ? theme.colors.error.main : theme.colors.success.main,
+                              color: hasReachedLimit('lessons') ? BRAND_COLORS.WARM_CORAL : BRAND_COLORS.EXPLORER_TEAL,
                               fontFamily: theme.typography.fontFamily.medium,
                             }}
                           >
@@ -752,44 +759,24 @@ const ModernProfileScreenImpl = () => {
                           </Text>
                         </Row>
 
-                        <Row justify="space-between" align="center">
-                          <Text
-                            variant="caption"
-                            style={{
-                              color: theme.colors.neutral[700],
-                              fontFamily: theme.typography.fontFamily.regular,
-                            }}
-                          >
-                            AI Sessions
-                          </Text>
-                          <Text
-                            variant="caption"
-                            weight="medium"
-                            style={{
-                              color: hasReachedLimit('aiSessions') ? theme.colors.error.main : theme.colors.success.main,
-                              fontFamily: theme.typography.fontFamily.medium,
-                            }}
-                          >
-                            {usage.aiSessions.current}/{usage.aiSessions.limit}
-                          </Text>
-                        </Row>
+                        {/* AI Sessions removed for free plan - no limitations on AI sessions */}
 
-                        {(hasReachedLimit('lessons') || hasReachedLimit('aiSessions')) && (
+                        {hasReachedLimit('lessons') && (
                           <View
                             style={{
-                              backgroundColor: theme.colors.error.main + "10",
+                              backgroundColor: BRAND_COLORS.WARM_CORAL + "10",
                               borderRadius: 8,
                               padding: 12,
                               marginTop: 12,
                               borderWidth: 1,
-                              borderColor: theme.colors.error.main + "20",
+                              borderColor: BRAND_COLORS.WARM_CORAL + "20",
                             }}
                           >
                             <Text
                               variant="caption"
                               weight="medium"
                               style={{
-                                color: theme.colors.error.main,
+                                color: BRAND_COLORS.WARM_CORAL,
                                 textAlign: "center",
                               }}
                             >
@@ -807,20 +794,20 @@ const ModernProfileScreenImpl = () => {
             <Spacer size="md" />
 
             {/* Settings Section */}
-            <View style={{ paddingHorizontal: theme.spacing.md,elevation:0 }}>
+            <View style={{ paddingHorizontal: theme.spacing.md, elevation: 0 }}>
               <ModernCard
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   padding: theme.spacing.lg,
-                  elevation:0
+                  elevation: 0
                 }}
               >
                 <Text
                   variant="caption"
                   weight="medium"
                   style={{
-                    color: theme.colors.neutral[600],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     fontFamily: theme.typography.fontFamily.medium,
                     marginBottom: 8,
                   }}
@@ -830,7 +817,7 @@ const ModernProfileScreenImpl = () => {
                 <Heading
                   level="h3"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontFamily: theme.typography.fontFamily.bold,
                     marginBottom: theme.spacing.md,
                   }}
@@ -845,7 +832,7 @@ const ModernProfileScreenImpl = () => {
                   style={{
                     paddingVertical: 12,
                     borderBottomWidth: 1,
-                    borderBottomColor: theme.colors.neutral[100],
+                    borderBottomColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                   }}
                 >
                   <Row align="center">
@@ -854,7 +841,7 @@ const ModernProfileScreenImpl = () => {
                         width: 40,
                         height: 40,
                         borderRadius: 20,
-                        backgroundColor: theme.colors.neutral[100],
+                        backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                         alignItems: "center",
                         justifyContent: "center",
                         marginRight: 12,
@@ -863,14 +850,14 @@ const ModernProfileScreenImpl = () => {
                       <Ionicons
                         name="notifications-outline"
                         size={20}
-                        color={theme.colors.brandNavy}
+                        color={BRAND_COLORS.OCEAN_BLUE}
                       />
                     </View>
                     <Column>
                       <Text
                         weight="medium"
                         style={{
-                          color: theme.colors.brandNavy,
+                          color: BRAND_COLORS.OCEAN_BLUE,
                           fontFamily: theme.typography.fontFamily.medium,
                         }}
                       >
@@ -879,7 +866,7 @@ const ModernProfileScreenImpl = () => {
                       <Text
                         variant="caption"
                         style={{
-                          color: theme.colors.neutral[600],
+                          color: BRAND_COLORS.SHADOW_GREY,
                           fontFamily: theme.typography.fontFamily.regular,
                         }}
                       >
@@ -892,10 +879,10 @@ const ModernProfileScreenImpl = () => {
                     value={notifications}
                     onValueChange={handleNotificationsToggle}
                     trackColor={{
-                      false: theme.colors.neutral[300],
-                      true: theme.colors.brandGreen,
+                      false: BRAND_COLORS.SHADOW_GREY + "50",
+                      true: BRAND_COLORS.EXPLORER_TEAL,
                     }}
-                    thumbColor={theme.colors.brandWhite}
+                    thumbColor={BRAND_COLORS.WHISPER_WHITE}
                   />
                 </Row>
 
@@ -905,7 +892,7 @@ const ModernProfileScreenImpl = () => {
                   style={{
                     paddingVertical: 12,
                     borderBottomWidth: 1,
-                    borderBottomColor: theme.colors.neutral[100],
+                    borderBottomColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                   }}
                 >
                   <Row justify="space-between" align="center">
@@ -915,7 +902,7 @@ const ModernProfileScreenImpl = () => {
                           width: 40,
                           height: 40,
                           borderRadius: 20,
-                          backgroundColor: theme.colors.neutral[100],
+                          backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                           alignItems: "center",
                           justifyContent: "center",
                           marginRight: 12,
@@ -924,14 +911,14 @@ const ModernProfileScreenImpl = () => {
                         <Ionicons
                           name="help-circle-outline"
                           size={20}
-                          color={theme.colors.brandNavy}
+                          color={BRAND_COLORS.OCEAN_BLUE}
                         />
                       </View>
                       <Column>
                         <Text
                           weight="medium"
                           style={{
-                            color: theme.colors.brandNavy,
+                            color: BRAND_COLORS.OCEAN_BLUE,
                             fontFamily: theme.typography.fontFamily.medium,
                           }}
                         >
@@ -940,7 +927,7 @@ const ModernProfileScreenImpl = () => {
                         <Text
                           variant="caption"
                           style={{
-                            color: theme.colors.neutral[600],
+                            color: BRAND_COLORS.SHADOW_GREY,
                             fontFamily: theme.typography.fontFamily.regular,
                           }}
                         >
@@ -952,7 +939,7 @@ const ModernProfileScreenImpl = () => {
                     <Ionicons
                       name="chevron-forward"
                       size={18}
-                      color={theme.colors.neutral[400]}
+                      color={BRAND_COLORS.SHADOW_GREY}
                     />
                   </Row>
                 </TouchableOpacity>
@@ -964,17 +951,17 @@ const ModernProfileScreenImpl = () => {
                     style={{
                       paddingVertical: 12,
                       borderBottomWidth: 1,
-                      borderBottomColor: theme.colors.neutral[100],
+                      borderBottomColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                     }}
                   >
                     <Row justify="space-between" align="center">
-                      <Row align="center" style={{width: "75%"}}>
+                      <Row align="center" style={{ width: "75%" }}>
                         <View
                           style={{
                             width: 40,
                             height: 40,
                             borderRadius: 20,
-                            backgroundColor: theme.colors.neutral[100],
+                            backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                             alignItems: "center",
                             justifyContent: "center",
                             marginRight: 12,
@@ -983,14 +970,14 @@ const ModernProfileScreenImpl = () => {
                           <Ionicons
                             name="card-outline"
                             size={20}
-                            color={theme.colors.brandNavy}
+                            color={BRAND_COLORS.OCEAN_BLUE}
                           />
                         </View>
                         <Column>
                           <Text
                             weight="medium"
                             style={{
-                              color: theme.colors.brandNavy,
+                              color: BRAND_COLORS.OCEAN_BLUE,
                               fontFamily: theme.typography.fontFamily.medium,
                             }}
                           >
@@ -999,7 +986,7 @@ const ModernProfileScreenImpl = () => {
                           <Text
                             variant="caption"
                             style={{
-                              color: theme.colors.neutral[600],
+                              color: BRAND_COLORS.SHADOW_GREY,
 
                               fontFamily: theme.typography.fontFamily.regular,
                             }}
@@ -1012,7 +999,7 @@ const ModernProfileScreenImpl = () => {
                       <Ionicons
                         name="chevron-forward"
                         size={18}
-                        color={theme.colors.neutral[400]}
+                        color={BRAND_COLORS.SHADOW_GREY}
                       />
                     </Row>
                   </TouchableOpacity>
@@ -1026,7 +1013,7 @@ const ModernProfileScreenImpl = () => {
                       paddingVertical: 12,
                       borderBottomWidth: 1,
                       width: "75%",
-                      borderBottomColor: theme.colors.neutral[100],
+                      borderBottomColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                     }}
                   >
                     <Row justify="space-between" align="center">
@@ -1036,7 +1023,7 @@ const ModernProfileScreenImpl = () => {
                             width: 40,
                             height: 40,
                             borderRadius: 20,
-                            backgroundColor: theme.colors.neutral[100],
+                            backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                             alignItems: "center",
                             justifyContent: "center",
                             marginRight: 12,
@@ -1045,14 +1032,14 @@ const ModernProfileScreenImpl = () => {
                           <Ionicons
                             name="receipt-outline"
                             size={20}
-                            color={theme.colors.brandNavy}
+                            color={BRAND_COLORS.OCEAN_BLUE}
                           />
                         </View>
                         <Column>
                           <Text
                             weight="medium"
                             style={{
-                              color: theme.colors.brandNavy,
+                              color: BRAND_COLORS.OCEAN_BLUE,
                               fontFamily: theme.typography.fontFamily.medium,
                             }}
                           >
@@ -1061,7 +1048,7 @@ const ModernProfileScreenImpl = () => {
                           <Text
                             variant="caption"
                             style={{
-                              color: theme.colors.neutral[600],
+                              color: BRAND_COLORS.SHADOW_GREY,
                               fontFamily: theme.typography.fontFamily.regular,
                             }}
                           >
@@ -1073,7 +1060,7 @@ const ModernProfileScreenImpl = () => {
                       <Ionicons
                         name="chevron-forward"
                         size={18}
-                        color={theme.colors.neutral[400]}
+                        color={BRAND_COLORS.SHADOW_GREY}
                       />
                     </Row>
                   </TouchableOpacity>
@@ -1091,7 +1078,7 @@ const ModernProfileScreenImpl = () => {
                           width: 40,
                           height: 40,
                           borderRadius: 20,
-                          backgroundColor: theme.colors.neutral[100],
+                          backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                           alignItems: "center",
                           justifyContent: "center",
                           marginRight: 12,
@@ -1100,14 +1087,14 @@ const ModernProfileScreenImpl = () => {
                         <Ionicons
                           name="information-circle-outline"
                           size={20}
-                          color={theme.colors.brandNavy}
+                          color={BRAND_COLORS.OCEAN_BLUE}
                         />
                       </View>
                       <Column>
                         <Text
                           weight="medium"
                           style={{
-                            color: theme.colors.brandNavy,
+                            color: BRAND_COLORS.OCEAN_BLUE,
                             fontFamily: theme.typography.fontFamily.medium,
                           }}
                         >
@@ -1116,7 +1103,7 @@ const ModernProfileScreenImpl = () => {
                         <Text
                           variant="caption"
                           style={{
-                            color: theme.colors.neutral[600],
+                            color: BRAND_COLORS.SHADOW_GREY,
                             fontFamily: theme.typography.fontFamily.regular,
                           }}
                         >
@@ -1128,7 +1115,7 @@ const ModernProfileScreenImpl = () => {
                     <Ionicons
                       name="chevron-forward"
                       size={18}
-                      color={theme.colors.neutral[400]}
+                      color={BRAND_COLORS.SHADOW_GREY}
                     />
                   </Row>
                 </TouchableOpacity>
@@ -1143,30 +1130,30 @@ const ModernProfileScreenImpl = () => {
                 onPress={handleSignOut}
                 disabled={isSigningOut}
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   padding: theme.spacing.sm,
                   borderWidth: 2,
-                  borderColor: "#FF4444",
+                  borderColor: BRAND_COLORS.WARM_CORAL,
                   alignItems: "center",
                   opacity: isSigningOut ? 0.7 : 1,
                 }}
               >
                 <Row align="center">
                   {isSigningOut ? (
-                    <ActivityIndicator size="small" color="#FF4444" />
+                    <ActivityIndicator size="small" color={BRAND_COLORS.WARM_CORAL} />
                   ) : (
                     <Ionicons
                       name="log-out-outline"
                       size={20}
-                      color="#FF4444"
+                      color={BRAND_COLORS.WARM_CORAL}
                       style={{ marginRight: 8 }}
                     />
                   )}
                   <Text
                     weight="semibold"
                     style={{
-                      color: "#FF4444",
+                      color: BRAND_COLORS.WARM_CORAL,
                       fontFamily: theme.typography.fontFamily.semibold,
                     }}
                   >
@@ -1179,9 +1166,9 @@ const ModernProfileScreenImpl = () => {
             {/* Bottom Padding for Floating Tab Bar */}
             <View style={{ height: 150 }} />
           </Animated.View>
-        </ScrollView>
-      </Container>
-    </SafeAreaWrapper>
+        </ScrollView >
+      </Container >
+    </SafeAreaWrapper >
   );
 };
 

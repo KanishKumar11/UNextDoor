@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import modernTheme from "../styles/modernTheme";
+import { BRAND_COLORS } from "../constants/colors";
 
 /**
  * Error message component for displaying errors consistently across the app
@@ -19,14 +20,14 @@ const ErrorMessage = ({ error, style, showIcon = true, type = "error" }) => {
   // Define styles based on type following brand guidelines with proper contrast
   const typeStyles = {
     error: {
-      backgroundColor: "#FFEBEE", // Very light red background for better contrast
+      backgroundColor: BRAND_COLORS.CARD_BACKGROUND, // Use card background
       borderColor: modernTheme.colors.error.main,
       iconColor: modernTheme.colors.error.dark,
       textColor: modernTheme.colors.error.dark, // Dark red text for better readability
       icon: "alert-circle-outline",
     },
     warning: {
-      backgroundColor: "#FFF8E1", // Very light orange background for better contrast
+      backgroundColor: BRAND_COLORS.CARD_BACKGROUND, // Use card background
       borderColor: modernTheme.colors.warning.main,
       iconColor: modernTheme.colors.warning.dark,
       textColor: modernTheme.colors.warning.dark, // Dark orange text for better readability

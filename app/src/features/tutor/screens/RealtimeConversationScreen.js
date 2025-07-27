@@ -11,20 +11,45 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  Image,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import PersistentConversationView from "../components/PersistentConversationView";
-import modernTheme from "../../../shared/styles/modernTheme";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
+import { useTheme } from "../../../shared/context/ThemeContext";
 import { useWebRTCConversation } from "../hooks/useWebRTCConversation";
+import {
+  Text as ThemedText,
+  Row,
+  Column,
+  ModernCard,
+} from "../../../shared/components";
+import characterIconService from "../../../shared/services/characterIconService";
+
+// Helper function for cross-platform font families
+const getFontFamily = (weight = 'regular') => {
+  const fontMap = {
+    light: Platform.OS === 'web' ? 'Montserrat, sans-serif' : 'Montserrat-Light',
+    regular: Platform.OS === 'web' ? 'Montserrat, sans-serif' : 'Montserrat-Regular',
+    medium: Platform.OS === 'web' ? 'Montserrat, sans-serif' : 'Montserrat-Medium',
+    semibold: Platform.OS === 'web' ? 'Montserrat, sans-serif' : 'Montserrat-SemiBold',
+    bold: Platform.OS === 'web' ? 'Montserrat, sans-serif' : 'Montserrat-Bold',
+    extrabold: Platform.OS === 'web' ? 'Montserrat, sans-serif' : 'Montserrat-ExtraBold',
+  };
+
+  return fontMap[weight] || fontMap.regular;
+};
 
 /**
  * RealtimeConversationScreen component
  * @returns {JSX.Element} Component JSX
  */
 const RealtimeConversationScreen = () => {
-  // Router
+  // Router and theme
   const router = useRouter();
+  const theme = useTheme();
 
   // State
   const [transcripts, setTranscripts] = useState([]);
@@ -81,17 +106,44 @@ const RealtimeConversationScreen = () => {
   // Render scenario selection
   const renderScenarioSelection = () => (
     <View style={styles.scenarioContainer}>
-      <Text style={styles.sectionTitle}>Select a Conversation Scenario</Text>
-      {scenarios.map((scenario) => (
-        <TouchableOpacity
-          key={scenario.id}
-          style={styles.scenarioCard}
-          onPress={() => handleScenarioSelect(scenario)}
-        >
-          <Text style={styles.scenarioTitle}>{scenario.title}</Text>
-          <Text style={styles.scenarioLevel}>Level: {scenario.level}</Text>
-        </TouchableOpacity>
-      ))}
+      <ThemedText style={styles.sectionTitle}>Select a Conversation Scenario</ThemedText>
+      {scenarios.map((scenario) => {
+        // Get character for this scenario
+        const scenarioCharacter = characterIconService.getCharacterForScenario(scenario.id);
+
+        return (
+          <ModernCard
+            key={scenario.id}
+            style={styles.scenarioCard}
+            onPress={() => handleScenarioSelect(scenario)}
+          >
+            <Row justify="space-between" align="center">
+              <Row align="center" style={{ flex: 1 }}>
+                {/* Character Preview */}
+                <View style={styles.scenarioCharacterPreview}>
+                  <Image
+                    source={scenarioCharacter.icon}
+                    style={styles.scenarioCharacterIcon}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Column style={{ flex: 1, marginLeft: 12 }}>
+                  <ThemedText style={styles.scenarioTitle}>{scenario.title}</ThemedText>
+                  <ThemedText style={styles.scenarioLevel}>Level: {scenario.level}</ThemedText>
+                  <ThemedText style={styles.scenarioCharacterName}>
+                    with {scenarioCharacter.profile.name}
+                  </ThemedText>
+                </Column>
+              </Row>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={BRAND_COLORS.EXPLORER_TEAL}
+              />
+            </Row>
+          </ModernCard>
+        );
+      })}
     </View>
   );
 
@@ -105,8 +157,8 @@ const RealtimeConversationScreen = () => {
         >
           <Ionicons
             name="arrow-back"
-            size={24}
-            color={modernTheme.colors.text.primary}
+            size={18}
+            color={BRAND_COLORS.SHADOW_GREY}
           />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
@@ -172,89 +224,118 @@ const RealtimeConversationScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: modernTheme.colors.background.primary,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    // borderBottomColor: modernTheme.colors.border.light,
+    paddingVertical: 16,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   backButton: {
-    padding: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: BRAND_COLORS.SHADOW_GREY + "20",
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    color: modernTheme.colors.text.primary,
+    fontWeight: "700",
+    color: BRAND_COLORS.OCEAN_BLUE,
+    fontFamily: getFontFamily("bold"),
   },
   headerRight: {
-    width: 40,
+    width: 32,
   },
   content: {
     flex: 1,
   },
   contentContainer: {
     padding: 16,
+    paddingBottom: 100, // Space for bottom navigation
   },
   scenarioContainer: {
-    marginBottom: 16,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: modernTheme.colors.text.primary,
+    fontSize: 12,
+    fontWeight: "500",
+    color: BRAND_COLORS.SHADOW_GREY,
     marginBottom: 16,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    fontFamily: getFontFamily("medium"),
   },
   scenarioCard: {
-    backgroundColor: modernTheme.colors.background.card,
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+    padding: 20,
+    borderRadius: 16,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    borderWidth: 2,
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + "30",
+    elevation: 0,
   },
   scenarioTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: modernTheme.colors.text.primary,
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginBottom: 4,
+    fontFamily: "Montserrat-SemiBold",
   },
   scenarioLevel: {
     fontSize: 14,
-    color: modernTheme.colors.text.secondary,
+    color: BRAND_COLORS.SHADOW_GREY,
+    fontFamily: "Montserrat-Medium",
+  },
+  scenarioCharacterPreview: {
+    width: 40,
+    height: 40,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scenarioCharacterIcon: {
+    width: 36,
+    height: 36,
+  },
+  scenarioCharacterName: {
+    fontSize: 12,
+    color: BRAND_COLORS.EXPLORER_TEAL,
+    fontFamily: "Montserrat-Medium",
+    marginTop: 2,
   },
   transcriptsContainer: {
     marginBottom: 16,
   },
   transcriptItem: {
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 16,
     marginBottom: 8,
     maxWidth: "80%",
   },
   userTranscript: {
-    backgroundColor: modernTheme.colors.primary[500],
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     alignSelf: "flex-end",
   },
   assistantTranscript: {
-    backgroundColor: modernTheme.colors.background.card,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
     alignSelf: "flex-start",
+    borderWidth: 2,
+    borderColor: BRAND_COLORS.OCEAN_BLUE + "30",
   },
   transcriptText: {
     fontSize: 16,
+    fontFamily: "Montserrat-Regular",
   },
   userTranscriptText: {
-    color: modernTheme.colors.text.white,
+    color: BRAND_COLORS.CARD_BACKGROUND,
   },
   assistantTranscriptText: {
-    color: modernTheme.colors.text.primary,
+    color: BRAND_COLORS.OCEAN_BLUE,
   },
   conversationComponent: {
     marginTop: 16,

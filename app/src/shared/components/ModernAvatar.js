@@ -2,6 +2,7 @@ import React from "react";
 import { View, Image, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import modernTheme from "../styles/modernTheme";
+import { BRAND_COLORS } from "../constants/colors";
 
 /**
  * ModernAvatar component
@@ -124,7 +125,7 @@ const ModernAvatar = ({
             styles.initials,
             {
               fontSize,
-              color: textColor || modernTheme.colors.primary[700],
+              color: BRAND_COLORS.SHADOW_GREY,
             },
           ]}
         >
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     borderRadius: 999,
     borderWidth: 2,
-    borderColor: modernTheme.colors.background.paper,
+    borderColor: BRAND_COLORS.CARD_BACKGROUND,
   },
 });
 

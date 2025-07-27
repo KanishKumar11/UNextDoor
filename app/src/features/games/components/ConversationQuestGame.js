@@ -262,7 +262,7 @@ const ConversationQuestGame = ({ scenario, onComplete, onClose }) => {
             explosionSpeed={350}
             fallSpeed={2000}
             colors={[
-              theme.colors.brandGreen,
+              theme.colors.explorerTeal,
               "#FFD700",
               "#FF6B35",
               "#9B59B6",
@@ -288,11 +288,11 @@ const ConversationQuestGame = ({ scenario, onComplete, onClose }) => {
               {
                 backgroundColor:
                   gameResults.accuracy >= 70
-                    ? theme.colors.brandGreen + "10"
-                    : theme.colors.brandWhite,
+                    ? theme.colors.explorerTeal + "10"
+                    : theme.colors.whisperWhite,
                 borderColor:
                   gameResults.accuracy >= 70
-                    ? theme.colors.brandGreen
+                    ? theme.colors.explorerTeal
                     : theme.colors.neutral[200],
               },
             ]}
@@ -325,7 +325,7 @@ const ConversationQuestGame = ({ scenario, onComplete, onClose }) => {
                   {
                     color:
                       gameResults.accuracy >= 70
-                        ? theme.colors.brandGreen
+                        ? theme.colors.explorerTeal
                         : theme.colors.neutral[500],
                   },
                 ]}
@@ -355,7 +355,7 @@ const ConversationQuestGame = ({ scenario, onComplete, onClose }) => {
             <Row justify="space-between" style={styles.detailRow}>
               <Text style={styles.detailLabel}>XP Earned:</Text>
               <Text
-                style={[styles.detailValue, { color: theme.colors.brandGreen }]}
+                style={[styles.detailValue, { color: theme.colors.explorerTeal }]}
               >
                 +{gameResults.xpAwarded} XP
               </Text>

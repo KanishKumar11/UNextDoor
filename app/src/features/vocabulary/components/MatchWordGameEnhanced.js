@@ -12,6 +12,7 @@ import { Text, ModernCard, ModernButton } from "../../../shared/components";
 import { Ionicons } from "@expo/vector-icons";
 import modernTheme from "../../../shared/styles/modernTheme";
 import { vocabularyService } from "../services/vocabularyService";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 
 /**
  * MatchWordGame component - Enhanced version
@@ -180,8 +181,8 @@ const MatchWordGameEnhanced = ({
             difficulty === "beginner"
               ? 1
               : difficulty === "intermediate"
-              ? 1.5
-              : 2;
+                ? 1.5
+                : 2;
 
           const newScore =
             score + Math.round(basePoints * difficultyMultiplier);
@@ -293,27 +294,27 @@ const MatchWordGameEnhanced = ({
     const cardColor = isMatched
       ? modernTheme.colors.success[100]
       : card.type === "korean"
-      ? modernTheme.colors.primary[100]
-      : modernTheme.colors.secondary[100];
+        ? modernTheme.colors.primary[100]
+        : modernTheme.colors.secondary[100];
 
     // Determine text color based on type and state
     const textColor = isMatched
       ? modernTheme.colors.success[700]
       : card.type === "korean"
-      ? modernTheme.colors.primary[700]
-      : modernTheme.colors.secondary[700];
+        ? modernTheme.colors.primary[700]
+        : modernTheme.colors.secondary[700];
 
     // Add a border for matched cards
     const borderStyle = isMatched
       ? {
-          borderWidth: 2,
-          borderColor: modernTheme.colors.success[500],
-        }
+        borderWidth: 2,
+        borderColor: modernTheme.colors.success[500],
+      }
       : {};
 
     // Add a shadow for better visual feedback
     const shadowStyle = {
-      shadowColor: "#000",
+      shadowColor: "#4F4F4F", // Shadow Grey
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 4,
@@ -535,7 +536,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND + "E6", // Using constant with transparency
     justifyContent: "center",
     alignItems: "center",
     zIndex: 10,

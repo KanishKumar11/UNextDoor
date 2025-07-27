@@ -27,6 +27,7 @@ import {
 } from "../../../shared/components";
 import * as achievementService from "../../../features/achievements/services/achievementService";
 import { curriculumService } from "../../../features/curriculum/services/curriculumService";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 
 /**
  * Modern Achievements Page
@@ -58,16 +59,16 @@ const AchievementsPage = () => {
 
   // Achievement categories with modern icons
   const categories = [
-    { id: "all", label: "All", icon: "grid", color: theme.colors.brandNavy },
-    { id: "milestone", label: "Milestones", icon: "flag", color: "#FFD700" },
-    { id: "streak", label: "Streaks", icon: "flame", color: "#FF6B35" },
+    { id: "all", label: "All", icon: "grid", color: theme.colors.oceanBlue },
+    { id: "milestone", label: "Milestones", icon: "flag", color: theme.colors.canvasBeige },
+    { id: "streak", label: "Streaks", icon: "flame", color: theme.colors.rucksackBrown },
     {
       id: "skill",
       label: "Skills",
       icon: "school",
-      color: theme.colors.brandGreen,
+      color: theme.colors.explorerTeal,
     },
-    { id: "special", label: "Special", icon: "star", color: "#9B59B6" },
+    { id: "special", label: "Special", icon: "star", color: theme.colors.skyAqua },
   ];
 
   // Load achievements and user progress
@@ -234,25 +235,21 @@ const AchievementsPage = () => {
       case "streak_days":
         return `Practice for ${thresholdNum} consecutive days`;
       case "conversations_completed":
-        return `Complete ${thresholdNum} AI conversation${
-          thresholdNum > 1 ? "s" : ""
-        }`;
+        return `Complete ${thresholdNum} AI conversation${thresholdNum > 1 ? "s" : ""
+          }`;
       case "total_xp":
         return `Earn ${thresholdNum} XP total`;
       case "games_completed":
-        return `Complete ${thresholdNum} learning game${
-          thresholdNum > 1 ? "s" : ""
-        }`;
+        return `Complete ${thresholdNum} learning game${thresholdNum > 1 ? "s" : ""
+          }`;
       case "modules_completed":
-        return `Complete ${thresholdNum} learning module${
-          thresholdNum > 1 ? "s" : ""
-        }`;
+        return `Complete ${thresholdNum} learning module${thresholdNum > 1 ? "s" : ""
+          }`;
       case "practice_time_count":
         const beforeHour = additionalParams?.beforeHour;
         if (beforeHour) {
-          return `Practice ${thresholdNum} time${
-            thresholdNum > 1 ? "s" : ""
-          } before ${beforeHour}:00 AM`;
+          return `Practice ${thresholdNum} time${thresholdNum > 1 ? "s" : ""
+            } before ${beforeHour}:00 AM`;
         }
         return `Practice ${thresholdNum} time${thresholdNum > 1 ? "s" : ""}`;
       case "lesson_completion_time":
@@ -270,13 +267,11 @@ const AchievementsPage = () => {
       case "perfect_game_scores":
         const accuracy = additionalParams?.accuracy;
         if (accuracy) {
-          return `Achieve ${accuracy}% accuracy in ${thresholdNum} game${
-            thresholdNum > 1 ? "s" : ""
-          }`;
+          return `Achieve ${accuracy}% accuracy in ${thresholdNum} game${thresholdNum > 1 ? "s" : ""
+            }`;
         }
-        return `Get perfect scores in ${thresholdNum} game${
-          thresholdNum > 1 ? "s" : ""
-        }`;
+        return `Get perfect scores in ${thresholdNum} game${thresholdNum > 1 ? "s" : ""
+          }`;
       default:
         return achievement.description || "Complete the required actions";
     }
@@ -319,6 +314,13 @@ const AchievementsPage = () => {
     );
   };
 
+  // Define enhanced journey action cards
+  const journeyActions = [
+    { icon: 'book', title: 'Learn', description: 'Complete lessons', bg: BRAND_COLORS.SKY_AQUA + '15', border: BRAND_COLORS.SKY_AQUA + '30', iconColor: BRAND_COLORS.SKY_AQUA },
+    { icon: 'chatbubbles', title: 'Practice', description: 'Chat with Cooper', bg: BRAND_COLORS.GOLDEN_AMBER + '15', border: BRAND_COLORS.GOLDEN_AMBER + '30', iconColor: BRAND_COLORS.GOLDEN_AMBER },
+    { icon: 'game-controller', title: 'Play', description: 'Fun games', bg: BRAND_COLORS.WARM_CORAL + '15', border: BRAND_COLORS.WARM_CORAL + '30', iconColor: BRAND_COLORS.WARM_CORAL },
+  ];
+
   return (
     <>
       <Stack.Screen
@@ -335,13 +337,20 @@ const AchievementsPage = () => {
               <RefreshControl
                 refreshing={isRefreshing}
                 onRefresh={handleRefresh}
-                colors={[theme.colors.brandGreen]}
-                tintColor={theme.colors.brandGreen}
+                colors={[theme.colors.explorerTeal]}
+                tintColor={theme.colors.explorerTeal}
               />
             }
-            contentContainerStyle={{ paddingBottom: 120 }}
+            contentContainerStyle={{
+              paddingBottom: 120,
+              backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+            }}
+            style={{ backgroundColor: BRAND_COLORS.CARD_BACKGROUND }}
           >
-            <Column style={{ padding: theme.spacing.lg }}>
+            <Column style={{
+              padding: theme.spacing.md,
+              backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+            }}>
               {/* Modern Header Design */}
               <Row
                 justify="space-between"
@@ -358,7 +367,7 @@ const AchievementsPage = () => {
                       textTransform: "uppercase",
                       letterSpacing: 0.5,
                       fontSize: 11,
-                      marginBottom: 4,
+                      marginBottom: -18,
                     }}
                   >
                     Progress
@@ -366,7 +375,7 @@ const AchievementsPage = () => {
                   <Heading
                     level="h3"
                     style={{
-                      color: theme.colors.brandNavy,
+                      color: theme.colors.oceanBlue,
                       fontFamily: theme.typography.fontFamily.bold,
                       fontSize: 20,
                     }}
@@ -378,18 +387,18 @@ const AchievementsPage = () => {
                 <TouchableOpacity
                   onPress={handleRefresh}
                   style={{
-                    backgroundColor: theme.colors.brandGreen + "15",
+                    backgroundColor: theme.colors.explorerTeal + "15",
                     paddingHorizontal: 12,
                     paddingVertical: 6,
                     borderRadius: 16,
                     borderWidth: 1,
-                    borderColor: theme.colors.brandGreen + "30",
+                    borderColor: theme.colors.explorerTeal + "30",
                   }}
                 >
                   <Text
                     weight="semibold"
                     style={{
-                      color: theme.colors.brandGreen,
+                      color: theme.colors.explorerTeal,
                       fontFamily: theme.typography.fontFamily.semibold,
                       fontSize: 12,
                     }}
@@ -399,25 +408,35 @@ const AchievementsPage = () => {
                 </TouchableOpacity>
               </Row>
 
-              {/* Statistics Cards */}
-              <Row style={{ marginBottom: theme.spacing.lg }}>
-                <ModernCard
-                  variant="outlined"
+              {/* Simplified Statistics Section */}
+              <Row style={{ marginBottom: theme.spacing.lg }} justify="space-around" flexDirection="row">
+                <View
                   style={{
                     flex: 1,
-                    backgroundColor: theme.colors.brandWhite,
+
+                    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + 40,
                     borderRadius: 16,
                     padding: theme.spacing.md,
+                    paddingHorizontal: 40,
                     marginRight: theme.spacing.sm,
+                    borderWidth: 1,
+                    borderColor: BRAND_COLORS.EXPLORER_TEAL + "20",
+                    shadowColor: BRAND_COLORS.OCEAN_BLUE,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 8,
+                    elevation: 0,
                   }}
                 >
                   <Column align="center">
                     <Text
                       style={{
-                        color: theme.colors.neutral[500],
+                        color: BRAND_COLORS.SHADOW_GREY,
                         fontFamily: theme.typography.fontFamily.medium,
                         fontSize: 11,
                         marginBottom: 4,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
                       }}
                     >
                       EARNED
@@ -425,7 +444,7 @@ const AchievementsPage = () => {
                     <Text
                       weight="bold"
                       style={{
-                        color: theme.colors.brandNavy,
+                        color: BRAND_COLORS.OCEAN_BLUE,
                         fontFamily: theme.typography.fontFamily.bold,
                         fontSize: 18,
                       }}
@@ -433,25 +452,37 @@ const AchievementsPage = () => {
                       {stats.earned || 0}/{stats.total || 0}
                     </Text>
                   </Column>
-                </ModernCard>
+                </View>
 
-                <ModernCard
-                  variant="outlined"
+                <View
                   style={{
                     flex: 1,
-                    backgroundColor: theme.colors.brandWhite,
+                    width: "100%",
+                    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                     borderRadius: 16,
                     padding: theme.spacing.md,
-                    marginLeft: theme.spacing.sm,
+                    paddingHorizontal: 40,
+
+                    // marginLeft: theme.spacing.sm,
+                    borderWidth: 1,
+                    borderColor: BRAND_COLORS.EXPLORER_TEAL + "20",
+                    shadowColor: BRAND_COLORS.OCEAN_BLUE,
+                    backgroundColor: BRAND_COLORS.OCEAN_BLUE + 10,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 8,
+                    elevation: 0,
                   }}
                 >
                   <Column align="center">
                     <Text
                       style={{
-                        color: theme.colors.neutral[500],
+                        color: BRAND_COLORS.SHADOW_GREY,
                         fontFamily: theme.typography.fontFamily.medium,
                         fontSize: 11,
                         marginBottom: 4,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
                       }}
                     >
                       TOTAL XP
@@ -460,13 +491,13 @@ const AchievementsPage = () => {
                       <Ionicons
                         name="star"
                         size={16}
-                        color="#FFD700"
+                        color={BRAND_COLORS.EXPLORER_TEAL}
                         style={{ marginRight: 4 }}
                       />
                       <Text
                         weight="bold"
                         style={{
-                          color: theme.colors.brandNavy,
+                          color: BRAND_COLORS.EXPLORER_TEAL,
                           fontFamily: theme.typography.fontFamily.bold,
                           fontSize: 18,
                         }}
@@ -475,7 +506,7 @@ const AchievementsPage = () => {
                       </Text>
                     </Row>
                   </Column>
-                </ModernCard>
+                </View>
               </Row>
 
               {/* Category Filter */}
@@ -514,49 +545,141 @@ const AchievementsPage = () => {
               ) : (
                 /* Always show achievements - even if none are earned yet */
                 <Column>
-                  {/* Show encouragement message for new users */}
+                  {/* Enhanced Achievement Journey Starter for New Users */}
                   {achievements.length > 0 &&
                     achievements.filter((a) => a.earned).length === 0 && (
                       <View
                         style={{
-                          backgroundColor: theme.colors.brandGreen + "10",
-                          borderRadius: 12,
-                          padding: theme.spacing.lg,
+                          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+                          borderRadius: 14,
+                          padding: theme.spacing.md,
+                          paddingVertical: theme.spacing.lg,
                           marginBottom: theme.spacing.lg,
-                          marginHorizontal: theme.spacing.md,
-                          borderLeftWidth: 4,
-                          borderLeftColor: theme.colors.brandGreen,
+                          // marginHorizontal: theme.spacing.md,
+                          borderWidth: 1,
+                          borderColor: BRAND_COLORS.EXPLORER_TEAL + "20",
+                          shadowColor: BRAND_COLORS.EXPLORER_TEAL,
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.08,
+                          shadowRadius: 8,
+                          elevation: 0,
                         }}
                       >
-                        <Row align="center" style={{ marginBottom: 8 }}>
-                          <Ionicons
-                            name="rocket-outline"
-                            size={20}
-                            color={theme.colors.brandGreen}
-                            style={{ marginRight: 8 }}
-                          />
-                          <Text
-                            weight="semibold"
+                        {/* Header with Icon */}
+                        <Row align="center" style={{ marginBottom: theme.spacing.md }}>
+                          <View
                             style={{
-                              color: theme.colors.brandNavy,
-                              fontFamily: theme.typography.fontFamily.semibold,
-                              fontSize: 14,
+                              width: 48,
+                              height: 48,
+                              borderRadius: 24,
+                              backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "20",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              marginRight: theme.spacing.md,
+                              borderWidth: 2,
+                              borderColor: BRAND_COLORS.EXPLORER_TEAL + "40",
                             }}
                           >
-                            Start Your Achievement Journey!
-                          </Text>
+                            <Ionicons
+                              name="rocket"
+                              size={24}
+                              color={BRAND_COLORS.EXPLORER_TEAL}
+                            />
+                          </View>
+                          <Column style={{
+                            flex: 1, marginLeft: -15,
+                          }}>
+                            <Text
+                              weight="bold"
+                              numberOfLines={2}
+                              style={{
+                                color: BRAND_COLORS.OCEAN_BLUE,
+                                fontFamily: theme.typography.fontFamily.bold,
+                                fontSize: 16,
+                                marginBottom: 2,
+                                lineHeight: 20,
+                              }}
+                            >
+                              Start Your Achievement Journey!
+                            </Text>
+                            <Text
+                              style={{
+                                color: BRAND_COLORS.SHADOW_GREY,
+                                fontFamily: theme.typography.fontFamily.medium,
+                                fontSize: 12,
+                                textTransform: "uppercase",
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              Ready to unlock rewards?
+                            </Text>
+                          </Column>
                         </Row>
+
+                        {/* Description */}
                         <Text
                           style={{
-                            color: theme.colors.neutral[600],
+                            color: BRAND_COLORS.SHADOW_GREY,
                             fontFamily: theme.typography.fontFamily.regular,
-                            fontSize: 13,
-                            lineHeight: 18,
+                            fontSize: 14,
+                            lineHeight: 20,
+                            marginBottom: theme.spacing.lg,
                           }}
                         >
-                          Complete lessons, practice with Cooper, and play games
-                          to unlock achievements and earn XP!
+                          Complete lessons, practice with Cooper, and play games to unlock achievements and earn XP! Each milestone brings you closer to mastering your language skills.
                         </Text>
+
+                        {/* Action Cards */}
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          contentContainerStyle={{ paddingHorizontal: theme.spacing.md }}
+                          style={{ marginBottom: theme.spacing.lg }}
+                        >
+                          <Row style={{ gap: theme.spacing.sm }}>
+                            {journeyActions.map((action) => (
+                              <View
+                                key={action.title}
+                                style={{
+                                  flex: 1,
+                                  backgroundColor: action.bg,
+                                  borderRadius: 12,
+                                  padding: theme.spacing.md,
+                                  borderWidth: 1,
+                                  borderColor: action.border,
+                                }}
+                              >
+                                <Ionicons
+                                  name={action.icon}
+                                  size={20}
+                                  color={action.iconColor}
+                                  style={{ marginBottom: 4 }}
+                                />
+                                <Text
+                                  weight="semibold"
+                                  style={{
+                                    color: theme.colors.oceanBlue,
+                                    fontFamily: theme.typography.fontFamily.semibold,
+                                    fontSize: 12,
+                                    marginBottom: 2,
+                                  }}
+                                >
+                                  {action.title}
+                                </Text>
+                                <Text
+                                  style={{
+                                    color: BRAND_COLORS.SHADOW_GREY,
+                                    fontFamily: theme.typography.fontFamily.regular,
+                                    fontSize: 10,
+                                    lineHeight: 14,
+                                  }}
+                                >
+                                  {action.description}
+                                </Text>
+                              </View>
+                            ))}
+                          </Row>
+                        </ScrollView>
                       </View>
                     )}
 

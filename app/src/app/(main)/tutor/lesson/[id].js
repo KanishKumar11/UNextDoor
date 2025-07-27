@@ -25,13 +25,14 @@ import {
 } from "../../../../shared/components";
 
 import SafeAreaWrapper from "../../../../shared/components/SafeAreaWrapper";
+import { BRAND_COLORS } from "../../../../shared/constants/colors";
 import { curriculumService } from "../../../../features/curriculum/services/curriculumService";
 import useLessonsStore from "../../../../features/curriculum/stores/lessonsStore";
 import LessonScreen from "../../../../features/tutor/components/LessonScreen";
 import VocabularySection from "../../../../features/curriculum/components/VocabularySection";
 import PersistentConversationView from "../../../../features/tutor/components/PersistentConversationView";
 import webRTCConversationService from "../../../../features/tutor/services/WebRTCConversationService";
-import { AI_TUTOR_NAME } from "../../../../shared/constants/appConstants";
+import { AI_TUTOR_NAME, PROFICIENCY_LEVELS } from "../../../../shared/constants/appConstants";
 import MatchWordGame from "../../../../features/games/components/MatchWordGame";
 import SentenceScrambleGame from "../../../../features/games/components/SentenceScrambleGame";
 import PronunciationChallengeGame from "../../../../features/games/components/PronunciationChallengeGame";
@@ -82,15 +83,15 @@ export default function LessonDetailScreen() {
   const [showGame, setShowGame] = useState(false);
   const [activeGameType, setActiveGameType] = useState(null);
   const [gameContent, setGameContent] = useState([]);
-  
+
   // Success feedback state
   const [showSuccessFeedback, setShowSuccessFeedback] = useState(false);
-  
+
   // AI Practice state management
   const [hasCompletedAIPractice, setHasCompletedAIPractice] = useState(false);
   const [hasMetMinimumTime, setHasMetMinimumTime] = useState(false);
   const [practiceSessionStart, setPracticeSessionStart] = useState(null);
-  
+
   // Lesson completion state
   const [showCongratulations, setShowCongratulations] = useState(false);
   const [isCompletingLesson, setIsCompletingLesson] = useState(false);
@@ -195,22 +196,22 @@ export default function LessonDetailScreen() {
     try {
       console.log(`Playing audio for: ${text}`);
       setPlayingAudio(text);
-      
+
       // Check if this is a single Korean character (common in alphabet lessons)
       const isSingleKoreanChar = text.length === 1 && /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(text);
-      
+
       // Use TTS service for Korean pronunciation
       await ttsService.speak(text);
-      
+
       // If we get here, audio played successfully
       console.log(`Audio played successfully for: ${text}`);
-      
+
     } catch (error) {
       console.error('Error playing audio:', error);
-      
+
       // Check if this is a single Korean character
       const isSingleKoreanChar = text && text.length === 1 && /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(text);
-      
+
       if (isSingleKoreanChar) {
         // For single Korean characters (like vowels in lesson 1), just log the issue
         // Don't show error dialogs as this is a known limitation
@@ -338,27 +339,27 @@ export default function LessonDetailScreen() {
       // Check lesson ID, name, and content from backend
       const lessonId = lesson?.id?.toLowerCase() || '';
       const lessonName = lesson?.name?.toLowerCase() || '';
-      
+
       // Check if it's explicitly an alphabet lesson
-      if (lessonId.includes('alphabet') || 
-          lessonId.includes('hangul') || 
-          lessonName.includes('alphabet') || 
-          lessonName.includes('hangul') ||
-          lessonName.includes('한글')) {
+      if (lessonId.includes('alphabet') ||
+        lessonId.includes('hangul') ||
+        lessonName.includes('alphabet') ||
+        lessonName.includes('hangul') ||
+        lessonName.includes('한글')) {
         return true;
       }
-      
+
       // Check if vocabulary items are single characters (likely alphabet)
-      const hasAlphabetContent = lesson?.content?.sections?.some(section => 
-        section.type === "vocabulary" && 
+      const hasAlphabetContent = lesson?.content?.sections?.some(section =>
+        section.type === "vocabulary" &&
         section.items?.some(item => {
           // Check if Korean text is single character or very short (typical for alphabet)
           const koreanText = item.korean || '';
-          return koreanText.length === 1 || 
-                 (koreanText.length <= 2 && /^[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(koreanText));
+          return koreanText.length === 1 ||
+            (koreanText.length <= 2 && /^[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(koreanText));
         })
       );
-      
+
       return hasAlphabetContent;
     };
 
@@ -366,14 +367,14 @@ export default function LessonDetailScreen() {
     const isFirstLesson = () => {
       const lessonId = lesson?.id?.toLowerCase() || '';
       const lessonName = lesson?.name?.toLowerCase() || '';
-      
+
       // Check for common first lesson indicators
-      return lessonId.includes('first') || 
-             lessonId.includes('lesson-1') || 
-             lessonId.includes('intro') ||
-             lessonName.includes('first') ||
-             lessonName.includes('introduction') ||
-             isAlphabetLesson(); // Alphabet lesson is typically the first lesson
+      return lessonId.includes('first') ||
+        lessonId.includes('lesson-1') ||
+        lessonId.includes('intro') ||
+        lessonName.includes('first') ||
+        lessonName.includes('introduction') ||
+        isAlphabetLesson(); // Alphabet lesson is typically the first lesson
     };
 
     switch (activeSection) {
@@ -382,7 +383,7 @@ export default function LessonDetailScreen() {
           <View style={styles.modernSectionContainer}>
             <View style={[]}>
               <View style={styles.cardHeader}>
-                <Ionicons name="book-outline" size={24} color="#6FC935" />
+                <Ionicons name="book-outline" size={24} color={BRAND_COLORS.EXPLORER_TEAL} />
                 <Text style={styles.cardTitle}>Lesson Overview</Text>
               </View>
               <Text style={styles.modernIntroductionText}>
@@ -390,9 +391,9 @@ export default function LessonDetailScreen() {
               </Text>
             </View>
 
-            <View style={{marginTop:20}}>
+            <View style={{ marginTop: 20 }}>
               <View style={styles.cardHeader}>
-                <Ionicons name="checkmark-circle-outline" size={24} color="#6FC935" />
+                <Ionicons name="checkmark-circle-outline" size={24} color={BRAND_COLORS.EXPLORER_TEAL} />
                 <Text style={styles.cardTitle}>Learning Objectives</Text>
               </View>
               <View style={styles.objectivesList}>
@@ -417,15 +418,15 @@ export default function LessonDetailScreen() {
         const isAlphabet = isAlphabetLesson();
 
         return (
-          <View style={[styles.modernSectionContainer,{
-           
+          <View style={[styles.modernSectionContainer, {
+
           }]}>
             {vocabularySections.map((section, sectionIndex) => (
-              <View key={sectionIndex} style={[styles.modernCard,{
-                elevation:0,
+              <View key={sectionIndex} style={[styles.modernCard, {
+                elevation: 0,
               }]}>
                 <View style={styles.cardHeader}>
-                  <Ionicons name="library-outline" size={24} color="#6FC935" />
+                  <Ionicons name="library-outline" size={24} color={BRAND_COLORS.EXPLORER_TEAL} />
                   <Text style={styles.cardTitle}>{section.title}</Text>
                 </View>
                 <View style={styles.vocabularyGrid}>
@@ -433,7 +434,7 @@ export default function LessonDetailScreen() {
                     // Handle both alphabet lessons (character) and regular lessons (korean)
                     const koreanText = item.character || item.korean;
                     const englishText = item.sound || item.english;
-                    
+
                     // Debug logging to understand data structure
                     if (itemIndex === 0) {
                       console.log('🔍 Vocabulary item structure:', {
@@ -443,12 +444,12 @@ export default function LessonDetailScreen() {
                         isAlphabet: isAlphabet
                       });
                     }
-                    
+
                     return (
                       <View key={itemIndex} style={isAlphabet ? styles.compactVocabularyItem : styles.modernVocabularyItem}>
                         <View style={isAlphabet ? styles.compactVocabularyItemHeader : styles.vocabularyItemHeader}>
                           <Text style={isAlphabet ? styles.compactKoreanText : styles.modernKoreanText}>{koreanText}</Text>
-                          <TouchableOpacity 
+                          <TouchableOpacity
                             style={[
                               styles.modernAudioButton,
                               playingAudio === koreanText && styles.audioButtonPlaying
@@ -488,7 +489,7 @@ export default function LessonDetailScreen() {
             <View style={styles.modernSectionContainer}>
               <View style={styles.modernCard}>
                 <View style={styles.noContentContainer}>
-                  <Ionicons name="information-circle-outline" size={48} color="#6FC935" />
+                  <Ionicons name="information-circle-outline" size={48} color={BRAND_COLORS.EXPLORER_TEAL} />
                   <Text style={styles.noContentTitle}>No Grammar Section</Text>
                   <Text style={styles.noContentText}>
                     This lesson focuses on vocabulary and conversation practice.
@@ -505,7 +506,7 @@ export default function LessonDetailScreen() {
             {grammarSections.map((section, sectionIndex) => (
               <View key={sectionIndex} style={styles.modernCard}>
                 <View style={styles.cardHeader}>
-                  <Ionicons name="school-outline" size={24} color="#6FC935" />
+                  <Ionicons name="school-outline" size={24} color={BRAND_COLORS.EXPLORER_TEAL} />
                   <Text style={styles.cardTitle}>{section.title}</Text>
                 </View>
                 <Text style={styles.modernGrammarExplanation}>
@@ -544,7 +545,7 @@ export default function LessonDetailScreen() {
           <View style={styles.modernSectionContainer}>
             <View style={styles.modernCard}>
               <View style={styles.cardHeader}>
-                <Ionicons name="mic" size={24} color="#6FC935" />
+                <Ionicons name="mic" size={24} color={BRAND_COLORS.EXPLORER_TEAL} />
                 <Text style={styles.cardTitle}>Practice Session</Text>
               </View>
               <Text style={styles.modernPracticeIntro}>
@@ -571,39 +572,39 @@ export default function LessonDetailScreen() {
                   </Text>
                 </View>
               </View>
-              
+
               <View style={styles.practiceCardContent}>
                 <Text style={styles.practiceCardDescription}>
                   {isAlphabetPractice
                     ? "Learn to pronounce Korean letters (한글) with proper guidance and feedback."
                     : "Practice vocabulary and conversation with real-time AI feedback."}
                 </Text>
-                
+
                 <View style={styles.practiceFeatures}>
                   <View style={styles.featureItem}>
-                    <Ionicons name="checkmark-circle" size={16} color="#6FC935" />
+                    <Ionicons name="checkmark-circle" size={16} color={BRAND_COLORS.EXPLORER_TEAL} />
                     <Text style={styles.featureText}>
                       {isAlphabetPractice ? "Individual letter sounds" : "Real-time feedback"}
                     </Text>
                   </View>
                   <View style={styles.featureItem}>
-                    <Ionicons name="checkmark-circle" size={16} color="#6FC935" />
+                    <Ionicons name="checkmark-circle" size={16} color={BRAND_COLORS.EXPLORER_TEAL} />
                     <Text style={styles.featureText}>
                       {isAlphabetPractice ? "Pronunciation corrections" : "Vocabulary practice"}
                     </Text>
                   </View>
                   <View style={styles.featureItem}>
-                    <Ionicons name="checkmark-circle" size={16} color="#6FC935" />
+                    <Ionicons name="checkmark-circle" size={16} color={BRAND_COLORS.EXPLORER_TEAL} />
                     <Text style={styles.featureText}>
                       {isAlphabetPractice ? "Step-by-step guidance" : "Natural conversation"}
                     </Text>
                   </View>
                 </View>
               </View>
-              
+
               <View style={styles.practiceCardActions}>
                 <View style={styles.practiceRequiredBadge}>
-                  <Ionicons name="star" size={16} color="#fff" />
+                  <Ionicons name="star" size={16} color={BRAND_COLORS.WHISPER_WHITE} />
                   <Text style={styles.practiceRequiredText}>Required to Complete</Text>
                 </View>
                 <ModernButton
@@ -611,8 +612,8 @@ export default function LessonDetailScreen() {
                     hasCompletedAIPractice
                       ? "Practice Again"
                       : isAlphabetPractice
-                      ? "Start Pronunciation Practice"
-                      : "Start Conversation Practice"
+                        ? "Start Pronunciation Practice"
+                        : "Start Conversation Practice"
                   }
                   onPress={() => handlePracticeType("conversation")}
                   style={[
@@ -622,7 +623,7 @@ export default function LessonDetailScreen() {
                 />
                 {hasCompletedAIPractice && (
                   <View style={styles.modernCompletedIndicator}>
-                    <Ionicons name="checkmark-circle" size={20} color="#6FC935" />
+                    <Ionicons name="checkmark-circle" size={20} color={BRAND_COLORS.EXPLORER_TEAL} />
                     <Text style={styles.modernCompletedText}>Practice Completed!</Text>
                   </View>
                 )}
@@ -633,13 +634,13 @@ export default function LessonDetailScreen() {
             {!isAlphabetPractice && (
               <View style={styles.modernCard}>
                 <View style={styles.cardHeader}>
-                  <Ionicons name="game-controller-outline" size={24} color="#6FC935" />
+                  <Ionicons name="game-controller-outline" size={24} color={BRAND_COLORS.EXPLORER_TEAL} />
                   <Text style={styles.cardTitle}>Interactive Games</Text>
                 </View>
                 <Text style={styles.gamesDescription}>
                   Reinforce your learning with fun interactive games
                 </Text>
-                
+
                 <View style={styles.gamesGrid}>
                   {/* Match Word Game */}
                   {extractLessonContent().vocabulary.length > 0 && (
@@ -648,14 +649,14 @@ export default function LessonDetailScreen() {
                       onPress={() => handlePracticeType("match-word-game")}
                       activeOpacity={0.8}
                     >
-                      <View style={[styles.gameIconContainer, { backgroundColor: '#3498db' }]}>
-                        <Ionicons name="grid-outline" size={20} color="white" />
+                      <View style={[styles.gameIconContainer, { backgroundColor: BRAND_COLORS.OCEAN_BLUE }]}>
+                        <Ionicons name="grid-outline" size={20} color={BRAND_COLORS.WHISPER_WHITE} />
                       </View>
                       <Text style={styles.gameTitle}>Match Words</Text>
                       <Text style={styles.gameDescription}>Match Korean words with English meanings</Text>
                     </TouchableOpacity>
                   )}
-                  
+
                   {/* Sentence Scramble Game */}
                   {extractLessonContent().sentences.length > 0 && (
                     <TouchableOpacity
@@ -663,14 +664,14 @@ export default function LessonDetailScreen() {
                       onPress={() => handlePracticeType("sentence-scramble-game")}
                       activeOpacity={0.8}
                     >
-                      <View style={[styles.gameIconContainer, { backgroundColor: '#9b59b6' }]}>
-                        <Ionicons name="shuffle-outline" size={20} color="white" />
+                      <View style={[styles.gameIconContainer, { backgroundColor: BRAND_COLORS.RUCKSACK_BROWN }]}>
+                        <Ionicons name="shuffle-outline" size={20} color={BRAND_COLORS.WHISPER_WHITE} />
                       </View>
                       <Text style={styles.gameTitle}>Sentence Scramble</Text>
                       <Text style={styles.gameDescription}>Arrange words to form sentences</Text>
                     </TouchableOpacity>
                   )}
-                  
+
                   {/* Pronunciation Challenge */}
                   {extractLessonContent().phrases.length > 0 && (
                     <TouchableOpacity
@@ -678,8 +679,8 @@ export default function LessonDetailScreen() {
                       onPress={() => handlePracticeType("pronunciation-game")}
                       activeOpacity={0.8}
                     >
-                      <View style={[styles.gameIconContainer, { backgroundColor: '#e74c3c' }]}>
-                        <Ionicons name="mic-outline" size={20} color="white" />
+                      <View style={[styles.gameIconContainer, { backgroundColor: BRAND_COLORS.WARM_CORAL }]}>
+                        <Ionicons name="mic-outline" size={20} color={BRAND_COLORS.WHISPER_WHITE} />
                       </View>
                       <Text style={styles.gameTitle}>Pronunciation</Text>
                       <Text style={styles.gameDescription}>Practice speaking with AI feedback</Text>
@@ -693,7 +694,7 @@ export default function LessonDetailScreen() {
             {isAlphabetPractice && !isFirstPractice && (
               <View style={styles.modernCard}>
                 <View style={styles.cardHeader}>
-                  <Ionicons name="refresh-outline" size={24} color="#6FC935" />
+                  <Ionicons name="refresh-outline" size={24} color={BRAND_COLORS.EXPLORER_TEAL} />
                   <Text style={styles.cardTitle}>Additional Practice</Text>
                 </View>
                 <View style={styles.additionalPracticeGrid}>
@@ -702,19 +703,19 @@ export default function LessonDetailScreen() {
                     onPress={() => handlePracticeType("vocabulary")}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="book-outline" size={24} color="#6FC935" />
+                    <Ionicons name="book-outline" size={24} color={BRAND_COLORS.EXPLORER_TEAL} />
                     <Text style={styles.additionalPracticeTitle}>Vocabulary Review</Text>
                     <Text style={styles.additionalPracticeDescription}>
                       Review the key vocabulary
                     </Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={styles.additionalPracticeItem}
                     onPress={() => handlePracticeType("pronunciation")}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="mic-outline" size={24} color="#6FC935" />
+                    <Ionicons name="mic-outline" size={24} color={BRAND_COLORS.EXPLORER_TEAL} />
                     <Text style={styles.additionalPracticeTitle}>Pronunciation Practice</Text>
                     <Text style={styles.additionalPracticeDescription}>
                       Practice speaking words
@@ -811,7 +812,7 @@ export default function LessonDetailScreen() {
     <Modal visible={showLoadingOverlay} transparent={true} animationType="fade">
       <View style={styles.loadingOverlay}>
         <View style={styles.loadingContent}>
-          <ActivityIndicator size="large" color="#6FC935" />
+          <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
           <Text style={styles.loadingOverlayText}>Completing practice...</Text>
         </View>
       </View>
@@ -857,15 +858,15 @@ export default function LessonDetailScreen() {
             {/* Achievement Badges */}
             <View style={styles.achievementBadges}>
               <View style={styles.badge}>
-                <Ionicons name="checkmark-circle" size={24} color="#6FC935" />
+                <Ionicons name="checkmark-circle" size={24} color={BRAND_COLORS.EXPLORER_TEAL} />
                 <Text style={styles.badgeText}>Lesson Complete</Text>
               </View>
               <View style={styles.badge}>
-                <Ionicons name="mic" size={24} color="#6FC935" />
+                <Ionicons name="mic" size={24} color={BRAND_COLORS.EXPLORER_TEAL} />
                 <Text style={styles.badgeText}>AI Practice</Text>
               </View>
               <View style={styles.badge}>
-                <Ionicons name="star" size={24} color="#FFD700" />
+                <Ionicons name="star" size={24} color={BRAND_COLORS.RUCKSACK_BROWN} />
                 <Text style={styles.badgeText}>XP Earned</Text>
               </View>
             </View>
@@ -885,11 +886,11 @@ export default function LessonDetailScreen() {
   // Helper function to extract lesson content for games
   const extractLessonContent = () => {
     if (!lesson) return { vocabulary: [], sentences: [], phrases: [] };
-    
+
     const vocabulary = [];
     const sentences = [];
     const phrases = [];
-    
+
     // Extract vocabulary from lesson sections
     lesson.content.sections?.forEach(section => {
       if (section.type === "vocabulary" && section.items) {
@@ -899,7 +900,7 @@ export default function LessonDetailScreen() {
         sentences.push(...section.examples);
       }
     });
-    
+
     // Add some default phrases if none exist
     if (vocabulary.length > 0) {
       phrases.push(...vocabulary.map(item => ({
@@ -908,14 +909,14 @@ export default function LessonDetailScreen() {
         english: item.english
       })));
     }
-    
+
     return { vocabulary, sentences, phrases };
   };
 
   // Handle practice type selection
   const handlePracticeType = (type) => {
     console.log(`🎯 Starting practice type: ${type}`);
-    
+
     switch (type) {
       case "conversation":
         setPracticeSessionStart(Date.now());
@@ -962,22 +963,22 @@ export default function LessonDetailScreen() {
   // Handle realtime conversation complete
   const handleRealtimeConversationComplete = async () => {
     console.log("🎯 Completing realtime conversation practice");
-    
+
     if (!hasMetMinimumTime) {
       alert("Please practice for at least 1 minute before completing.");
       return;
     }
-    
+
     setIsCompletingPractice(true);
-    
+
     try {
       // Mark practice as completed
       setHasCompletedAIPractice(true);
       setShowRealtimeConversation(false);
-      
+
       // Small delay for smooth transition
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       console.log("✅ Realtime conversation practice completed");
     } catch (error) {
       console.error("❌ Error completing practice:", error);
@@ -992,7 +993,7 @@ export default function LessonDetailScreen() {
     setShowGame(false);
     setActiveGameType(null);
     setGameContent([]);
-    
+
     // Games are optional, so they don't affect lesson completion
     // But we can show some feedback
     alert(`Great job! You scored ${score} points!`);
@@ -1023,25 +1024,25 @@ export default function LessonDetailScreen() {
       }
       return "Finish Lesson";
     }
-    
+
     // For non-practice sections
     const currentIndex = sectionOrder.indexOf(activeSection);
     const nextSection = sectionOrder[currentIndex + 1];
-    
+
     if (nextSection) {
       return `Continue to ${getSectionTitle(nextSection)}`;
     }
-    
+
     return "Continue";
   };
 
   // Handle next section navigation
   const handleNext = () => {
     console.log(`🔄 Navigating from ${activeSection}`);
-    
+
     const currentIndex = sectionOrder.indexOf(activeSection);
     const nextSectionIndex = currentIndex + 1;
-    
+
     if (nextSectionIndex < sectionOrder.length) {
       const nextSection = sectionOrder[nextSectionIndex];
       console.log(`➡️ Moving to section: ${nextSection}`);
@@ -1056,47 +1057,47 @@ export default function LessonDetailScreen() {
   // Handle lesson completion
   const handleComplete = async () => {
     console.log("🎯 Handle complete called");
-    
+
     if (!hasCompletedAIPractice) {
       alert("Please complete the AI tutor practice session first.");
       return;
     }
-    
+
     if (!hasMetMinimumTime) {
       alert("Please practice for at least 1 minute before completing the lesson.");
       return;
     }
-    
+
     setIsCompletingLesson(true);
     setShowLoadingOverlay(true);
-    
+
     try {
       console.log("🚀 Starting lesson completion process...");
-      
+
       // Call the store's complete lesson function
       const result = await completeLesson(id);
-      
+
       if (result.success) {
         console.log("✅ Lesson completed successfully");
-        
+
         // Mark lesson as completed
         setLessonCompleted(true);
-        
+
         // Show success feedback briefly
         setShowSuccessFeedback(true);
         setTimeout(() => setShowSuccessFeedback(false), 2000);
-        
+
         // Check for achievements
         if (checkAchievements) {
           checkAchievements();
         }
-        
+
         // Show congratulations modal
         setTimeout(() => {
           setShowCongratulations(true);
           setShowLoadingOverlay(false);
         }, 1000);
-        
+
       } else {
         throw new Error(result.error || "Failed to complete lesson");
       }
@@ -1115,10 +1116,10 @@ export default function LessonDetailScreen() {
       activeGameType === "match-word"
         ? MatchWordGame
         : activeGameType === "sentence-scramble"
-        ? SentenceScrambleGame
-        : activeGameType === "pronunciation-challenge"
-        ? PronunciationChallengeGame
-        : null;
+          ? SentenceScrambleGame
+          : activeGameType === "pronunciation-challenge"
+            ? PronunciationChallengeGame
+            : null;
 
     if (GameComponent) {
       return (
@@ -1148,7 +1149,7 @@ export default function LessonDetailScreen() {
           {/* Modern Header with Gradient */}
           <View style={styles.conversationPracticeHeader}>
             <LinearGradient
-              colors={['#6FC935', '#5CB832', '#4AA72E']}
+              colors={[BRAND_COLORS.EXPLORER_TEAL, BRAND_COLORS.OCEAN_BLUE, BRAND_COLORS.RUCKSACK_BROWN]}
               style={styles.conversationHeaderGradient}
             >
               <View style={styles.conversationHeaderContent}>
@@ -1158,7 +1159,7 @@ export default function LessonDetailScreen() {
                     console.log("🛑 User manually closed conversation");
                     setShowRealtimeConversation(false);
                     setActiveSection("practice");
-                    
+
                     // If user had started a session, mark practice as completed
                     if (practiceSessionStart) {
                       setHasCompletedAIPractice(true);
@@ -1193,8 +1194,8 @@ export default function LessonDetailScreen() {
                   <View style={styles.statItem}>
                     <Ionicons name="time" size={16} color="rgba(255,255,255,0.8)" />
                     <Text style={styles.statText}>
-                      {practiceSessionStart 
-                        ? Math.floor((Date.now() - practiceSessionStart) / 1000) 
+                      {practiceSessionStart
+                        ? Math.floor((Date.now() - practiceSessionStart) / 1000)
                         : 0}s
                     </Text>
                   </View>
@@ -1207,7 +1208,7 @@ export default function LessonDetailScreen() {
           <View style={styles.conversationMainArea}>
             <PersistentConversationView
               scenarioId={`lesson-${id}`}
-              level="beginner"
+              level={user?.preferences?.languageLevel || PROFICIENCY_LEVELS.BEGINNER}
               onSessionEnd={() => {
                 setShowRealtimeConversation(false);
                 // If user had started a session, mark practice as completed
@@ -1236,11 +1237,11 @@ export default function LessonDetailScreen() {
                 <View style={styles.practiceStatusItem}>
                   <View style={[
                     styles.statusDot,
-                    { backgroundColor: hasMetMinimumTime ? '#6FC935' : '#FF9500' }
+                    { backgroundColor: hasMetMinimumTime ? BRAND_COLORS.EXPLORER_TEAL : BRAND_COLORS.RUCKSACK_BROWN }
                   ]} />
                   <Text style={styles.statusText}>
-                    {hasMetMinimumTime 
-                      ? "Time requirement met" 
+                    {hasMetMinimumTime
+                      ? "Time requirement met"
                       : `Need ${MIN_CONVERSATION_TIME - (practiceSessionStart ? Math.floor((Date.now() - practiceSessionStart) / 1000) : 0)}s more`
                     }
                   </Text>
@@ -1261,7 +1262,7 @@ export default function LessonDetailScreen() {
                   disabled={!hasMetMinimumTime || isCompletingPractice}
                   loading={isCompletingPractice}
                 />
-                
+
                 {/* Quick Tips */}
                 <View style={styles.quickTipsContainer}>
                   <Text style={styles.quickTipsText}>
@@ -1296,8 +1297,8 @@ export default function LessonDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container,{
-      paddingBottom:40
+    <SafeAreaView style={[styles.container, {
+      paddingBottom: 40
     }]}>
       {/* Loading Overlay for smooth transitions */}
       <LoadingOverlay />
@@ -1341,7 +1342,7 @@ export default function LessonDetailScreen() {
           </View>
 
           {/* Section Content - now directly in main scroll */}
-          <View style={[styles.sectionContent,{
+          <View style={[styles.sectionContent, {
           }]}>{renderSectionContent()}</View>
 
           {/* Navigation - Continue through sections, Finish only on practice */}
@@ -1367,21 +1368,21 @@ export default function LessonDetailScreen() {
                   {
                     // margin: "auto",
                     marginTop: 10,
-                  
+
                   },
                 ]}
               />
             ) : (
               // Full Screen Finish button only on practice section
               <View style={styles.fullScreenButtonContainer}>
-             
+
                 <ModernButton
                   text={
                     storeIsCompletingLesson || isCompletingLesson
                       ? "Completing..."
                       : lessonCompleted
-                      ? "Lesson Complete!"
-                      : getButtonText()
+                        ? "Lesson Complete!"
+                        : getButtonText()
                   }
                   onPress={() => {
                     console.log("🔥 ModernButton onPress triggered!");
@@ -1407,17 +1408,17 @@ export default function LessonDetailScreen() {
                 {/* Helpful message instead of alert */}
                 {!hasCompletedAIPractice && (
                   <View style={styles.requirementIndicator}>
-                    <Ionicons name="mic-outline" size={16} color="#ff6b35" />
+                    <Ionicons name="mic-outline" size={16} color={BRAND_COLORS.WARM_CORAL} />
                     <Text style={styles.requirementText}>
                       Complete AI tutor practice to finish lesson
                     </Text>
                   </View>
                 )}
 
-              
+
                 {error && (
                   <View style={styles.errorIndicator}>
-                    <Ionicons name="alert-circle" size={16} color="#ff4444" />
+                    <Ionicons name="alert-circle" size={16} color={BRAND_COLORS.WARM_CORAL} />
                     <Text style={styles.errorText}>{error}</Text>
                   </View>
                 )}
@@ -1433,7 +1434,7 @@ export default function LessonDetailScreen() {
         <Modal visible={true} transparent={true} animationType="fade">
           <View style={styles.successFeedbackOverlay}>
             <View style={styles.successFeedbackContent}>
-              <Ionicons name="checkmark-circle" size={48} color="#6FC935" />
+              <Ionicons name="checkmark-circle" size={48} color={BRAND_COLORS.EXPLORER_TEAL} />
               <Text style={styles.successFeedbackText}>Lesson Completed!</Text>
               <Text style={styles.successFeedbackSubtext}>Saving your progress...</Text>
             </View>
@@ -1443,4 +1444,3 @@ export default function LessonDetailScreen() {
     </SafeAreaView>
   );
 }
- 

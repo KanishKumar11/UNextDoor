@@ -10,7 +10,9 @@ import { v4 as uuidv4 } from "uuid";
 import config from "../config/index.js";
 import { realtimeSessionService } from "../services/realtimeSessionService.js";
 import { analyticsService } from "../services/analyticsService.js";
-import { createTeachingPrompt } from "../data/promptTemplates.js";
+import { createTeachingPrompt, createContextAwareTeachingPrompt } from "../data/promptTemplates.js";
+import { getUserLevelCached } from "../services/userLevelService.js";
+import { VOICE_CONFIG } from "../services/aiPersonalityService.js";
 
 /**
  * Generate an ephemeral token for OpenAI's Realtime API
@@ -26,34 +28,38 @@ export const getRealtimeToken = async (req, res) => {
     // Extract options from request body
     const {
       model = "gpt-4o-realtime-preview-2025-06-03", // Updated realtime model
-      voice = "alloy-teacher", // Use teacher-style voice
+      voice: requestedVoice,
       scenarioId,
       isScenarioBased = false,
       isLessonBased = false,
       lessonDetails = "",
       conversationId,
-      level,
+      level: requestLevel,
     } = req.body;
 
+    // Use optimized voice for educational content
+    const voice = requestedVoice || VOICE_CONFIG.realtime.primary;
+
+    // Get user's actual proficiency level (this is the key fix!)
+    const level = requestLevel || await getUserLevelCached(userId);
+
     console.log(
-      `🎯 OpenAI token request: model=${model}, scenarioId=${
-        scenarioId || "none"
-      }, level=${level || "not specified"}, isScenarioBased=${
-        isScenarioBased || false
+      `🎯 OpenAI token request: model=${model}, scenarioId=${scenarioId || "none"
+      }, level=${level || "not specified"}, isScenarioBased=${isScenarioBased || false
       }`
     );
 
     // Import scenario prompts
     const { getScenarioPrompt } = await import("../data/scenarioPrompts.js");
 
-    // Generate prompt instructions using centralized template
-    const instructions = createTeachingPrompt({
+    // Generate prompt instructions with conversation context
+    const instructions = await createContextAwareTeachingPrompt({
       isScenarioBased,
       scenarioId,
       isLessonBased,
       lessonDetails,
       level,
-    });
+    }, userId);
 
     // Call OpenAI API to generate token
     const response = await fetch(

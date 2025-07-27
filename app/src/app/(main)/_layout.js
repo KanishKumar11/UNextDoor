@@ -5,6 +5,7 @@ import { useTheme } from "../../shared/context/ThemeContext";
 // Import our custom components
 import FloatingTabBar from "../../shared/components/FloatingTabBar";
 import ModernAppHeader from "../../shared/components/ModernAppHeader";
+import { BRAND_COLORS } from "../../shared/constants/colors";
 
 /**
  * Main tab navigation layout
@@ -24,9 +25,7 @@ export default function MainLayout() {
         ),
         // Wrap each screen in the ScreenPadding component
         contentStyle: {
-          backgroundColor: isDarkMode
-            ? theme.colors.background.default
-            : theme.colors.background.paper,
+          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
         },
       })}
     >

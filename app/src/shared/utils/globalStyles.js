@@ -1,4 +1,5 @@
 import { createGlobalStylesWeb } from "@gluestack-style/react";
+import { BRAND_COLORS } from "../constants/colors";
 
 // Define global styles for web
 export const globalStyles = createGlobalStylesWeb({
@@ -14,8 +15,8 @@ export const globalStyles = createGlobalStylesWeb({
     fontFamily:
       'Montserrat, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     fontWeight: 400,
-    backgroundColor: "#FFFFFF",
-    color: "#000000",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND, // Using constant
+    color: BRAND_COLORS.SHADOW_GREY, // Using constant
     lineHeight: 1.5,
     WebkitFontSmoothing: "antialiased",
     MozOsxFontSmoothing: "grayscale",

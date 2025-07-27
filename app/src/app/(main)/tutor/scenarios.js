@@ -16,6 +16,7 @@ import {
 } from "../../../shared/components";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 import { learningScenarios } from './scenarioData';
 
 /**
@@ -102,11 +103,11 @@ export default function ScenariosScreen() {
               styles.levelTab,
               {
                 backgroundColor: selectedLevel === level
-                  ? theme.colors.brandGreen
-                  : theme.colors.brandWhite,
+                  ? BRAND_COLORS.EXPLORER_TEAL
+                  : BRAND_COLORS.CARD_BACKGROUND,
                 borderColor: selectedLevel === level
-                  ? theme.colors.brandGreen
-                  : theme.colors.neutral[300],
+                  ? BRAND_COLORS.EXPLORER_TEAL
+                  : BRAND_COLORS.EXPLORER_TEAL + "30",
                 marginRight: theme.spacing.sm,
               }
             ]}
@@ -115,8 +116,8 @@ export default function ScenariosScreen() {
               weight="semibold"
               style={{
                 color: selectedLevel === level
-                  ? theme.colors.brandWhite
-                  : theme.colors.neutral[600],
+                  ? BRAND_COLORS.WHISPER_WHITE
+                  : BRAND_COLORS.SHADOW_GREY,
                 fontFamily: theme.typography.fontFamily.semibold,
                 fontSize: 14,
               }}
@@ -137,9 +138,10 @@ export default function ScenariosScreen() {
       style={[
         styles.scenarioCard,
         {
-          backgroundColor: theme.colors.brandWhite,
+          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
           borderColor: scenario.color + "20",
           shadowColor: scenario.color,
+          elevation: 0
         }
       ]}
     >
@@ -165,7 +167,7 @@ export default function ScenariosScreen() {
 
         {scenario.completed && (
           <View style={styles.completedBadge}>
-            <Ionicons name="checkmark-circle" size={20} color={theme.colors.brandGreen} />
+            <Ionicons name="checkmark-circle" size={20} color={BRAND_COLORS.EXPLORER_TEAL} />
           </View>
         )}
       </LinearGradient>
@@ -178,7 +180,7 @@ export default function ScenariosScreen() {
           ellipsizeMode="tail"
           style={[
             styles.scenarioTitle,
-            { color: theme.colors.brandNavy }
+            { color: BRAND_COLORS.OCEAN_BLUE }
           ]}
         >
           {scenario.title}
@@ -189,7 +191,7 @@ export default function ScenariosScreen() {
           ellipsizeMode="tail"
           style={[
             styles.scenarioDescription,
-            { color: theme.colors.neutral[600] }
+            { color: BRAND_COLORS.SHADOW_GREY }
           ]}
         >
           {scenario.description}
@@ -197,12 +199,12 @@ export default function ScenariosScreen() {
 
         {/* Duration */}
         <Row align="center" style={{ marginTop: theme.spacing.sm }}>
-          <Ionicons name="time-outline" size={14} color={theme.colors.neutral[500]} />
+          <Ionicons name="time-outline" size={14} color={BRAND_COLORS.SHADOW_GREY} />
           <Text
             variant="caption"
             style={[
               styles.durationText,
-              { color: theme.colors.neutral[500] }
+              { color: BRAND_COLORS.SHADOW_GREY }
             ]}
           >
             5-10 min
@@ -232,7 +234,7 @@ export default function ScenariosScreen() {
               weight="medium"
               style={[
                 styles.headerLabel,
-                { color: theme.colors.neutral[500] }
+                { color: BRAND_COLORS.SHADOW_GREY }
               ]}
             >
               PRACTICE
@@ -241,7 +243,7 @@ export default function ScenariosScreen() {
               level="h2"
               style={[
                 styles.headerTitle,
-                { color: theme.colors.brandNavy }
+                { color: BRAND_COLORS.OCEAN_BLUE }
               ]}
             >
               Learning Scenarios
@@ -260,7 +262,7 @@ export default function ScenariosScreen() {
           <Text
             style={[
               styles.subtitle,
-              { color: theme.colors.neutral[600] }
+              { color: BRAND_COLORS.SHADOW_GREY }
             ]}
           >
             Choose a scenario to practice with Miles, your AI tutor
@@ -276,13 +278,13 @@ export default function ScenariosScreen() {
               <Ionicons
                 name="chatbubbles-outline"
                 size={64}
-                color={theme.colors.neutral[400]}
+                color={BRAND_COLORS.SHADOW_GREY}
               />
               <Text
                 weight="semibold"
                 style={[
                   styles.emptyTitle,
-                  { color: theme.colors.neutral[600] }
+                  { color: BRAND_COLORS.SHADOW_GREY }
                 ]}
               >
                 No scenarios found
@@ -290,7 +292,7 @@ export default function ScenariosScreen() {
               <Text
                 style={[
                   styles.emptyDescription,
-                  { color: theme.colors.neutral[500] }
+                  { color: BRAND_COLORS.SHADOW_GREY }
                 ]}
               >
                 Try selecting a different level

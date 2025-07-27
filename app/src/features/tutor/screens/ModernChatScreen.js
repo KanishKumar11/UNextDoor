@@ -13,7 +13,8 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "../../../shared/utils/audioUtils";
-import modernTheme from "../../../shared/styles/modernTheme";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
+import { useTheme } from "../../../shared/context/ThemeContext";
 import ModernHeader from "../../../shared/components/ModernHeader";
 import ModernChatBubble from "../../../shared/components/ModernChatBubble";
 import ModernCard from "../../../shared/components/ModernCard";
@@ -24,6 +25,7 @@ import ModernCard from "../../../shared/components/ModernCard";
  */
 const ModernChatScreen = () => {
   const router = useRouter();
+  const theme = useTheme();
   const { scenarioId } = useLocalSearchParams();
   const flatListRef = useRef(null);
 
@@ -354,7 +356,7 @@ const ModernChatScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: modernTheme.colors.background.default,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   container: {
     flex: 1,
@@ -365,20 +367,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   messagesList: {
-    padding: modernTheme.spacing.md,
-    paddingBottom: modernTheme.spacing.xl,
+    padding: 16,
+    paddingBottom: 100, // Space for bottom navigation
   },
   messageBubble: {
-    marginBottom: modernTheme.spacing.sm,
+    marginBottom: 8,
   },
   typingIndicator: {
-    marginHorizontal: modernTheme.spacing.md,
-    marginBottom: modernTheme.spacing.sm,
+    marginHorizontal: 16,
+    marginBottom: 8,
   },
   inputContainer: {
-    margin: modernTheme.spacing.md,
-    padding: modernTheme.spacing.sm,
-    borderRadius: modernTheme.borderRadius.lg,
+    margin: 16,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+    borderWidth: 2,
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + '20',
   },
   inputRow: {
     flexDirection: "row",
@@ -388,32 +393,33 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: modernTheme.colors.primary[500],
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: modernTheme.spacing.sm,
+    marginRight: 8,
   },
   recordingButton: {
-    backgroundColor: modernTheme.colors.error.main,
+    backgroundColor: BRAND_COLORS.WARM_CORAL,
   },
   input: {
     flex: 1,
     minHeight: 40,
     maxHeight: 100,
-    fontSize: modernTheme.typography.fontSize.md,
-    color: modernTheme.colors.text.primary,
+    fontSize: 16,
+    color: BRAND_COLORS.OCEAN_BLUE,
+    fontFamily: 'Montserrat-Regular',
   },
   sendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: modernTheme.colors.primary[500],
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: modernTheme.spacing.sm,
+    marginLeft: 8,
   },
   disabledButton: {
-    backgroundColor: modernTheme.colors.neutral[300],
+    backgroundColor: BRAND_COLORS.SHADOW_GREY + '50',
   },
 });
 

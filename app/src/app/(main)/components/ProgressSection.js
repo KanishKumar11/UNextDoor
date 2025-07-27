@@ -2,16 +2,17 @@ import React from 'react';
 import { View, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../shared/context/ThemeContext';
-import { 
-  Text, 
-  Heading, 
-  ModernCard, 
-  ModernButton, 
-  Row, 
-  Column, 
-  ModernProgressBar 
+import {
+  Text,
+  Heading,
+  ModernCard,
+  ModernButton,
+  Row,
+  Column,
+  ModernProgressBar
 } from '../../../shared/components';
 import { useRouter } from 'expo-router';
+import { BRAND_COLORS } from '../../../shared/constants/colors';
 
 const ProgressSection = ({ progressData, fadeAnim, scaleAnim }) => {
   const { theme } = useTheme();
@@ -23,13 +24,14 @@ const ProgressSection = ({ progressData, fadeAnim, scaleAnim }) => {
         opacity: fadeAnim,
         transform: [{ scale: scaleAnim }],
         paddingHorizontal: theme.spacing.md,
+        backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+
       }}
     >
       {/* Enhanced Progress Card */}
       <ModernCard
         variant="elevated"
         style={{
-          backgroundColor: theme.colors.brandWhite,
           borderRadius: 16,
           shadowColor: "transparent",
           shadowOpacity: 0,
@@ -270,7 +272,7 @@ const ProgressSection = ({ progressData, fadeAnim, scaleAnim }) => {
           iconPosition="left"
           onPress={() => router.push("/tutor/progress")}
           style={{
-            backgroundColor: theme.colors.brandGreen,
+            // backgroundColor: theme.colors.brandGreen,
             borderRadius: 12,
           }}
           textStyle={{

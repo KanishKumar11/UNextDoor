@@ -228,12 +228,22 @@
         }
 
         function displayOrderDetails() {
-            const currency = orderDetails.currency || 'INR';
-            const currencySymbol = getCurrencySymbol(currency);
-            
+            // Use display currency and amount for showing to user
+            const displayCurrency = orderDetails.displayCurrency || orderDetails.currency || 'INR';
+            const displayAmount = orderDetails.displayAmount || orderDetails.amount;
+            const displayCurrencySymbol = getCurrencySymbol(displayCurrency);
+
             document.getElementById('planName').textContent = orderDetails.planDetails.name + ' Plan';
-            document.getElementById('planPrice').textContent = `${currencySymbol}${formatAmount(orderDetails.amount, currency)}`;
+            document.getElementById('planPrice').textContent = `${displayCurrencySymbol}${formatAmount(displayAmount, displayCurrency)}`;
             document.getElementById('planDescription').textContent = orderDetails.planDetails.description;
+
+            // Log for debugging
+            console.log('💰 Display details:', {
+                displayCurrency,
+                displayAmount,
+                paymentCurrency: orderDetails.currency,
+                paymentAmount: orderDetails.amount
+            });
         }
 
         function getCurrencySymbol(currency) {
@@ -368,7 +378,12 @@
                     if (window.ReactNativeWebView) {
                         window.ReactNativeWebView.postMessage(JSON.stringify({
                             type: 'PAYMENT_SUCCESS',
-                            data: verifyData.data
+                            data: {
+                                ...verifyData.data,
+                                paymentId: response.razorpay_payment_id,
+                                orderId: response.razorpay_order_id,
+                                signature: response.razorpay_signature
+                            }
                         }));
                     }
 
@@ -381,7 +396,7 @@
                         } else {
                             window.close();
                         }
-                    }, 3000);
+                    }, 2000); // Reduced delay for better UX
                 } else {
                     const errorMessage = verifyData.message || 'Payment verification failed. Please contact support.';
                     showError(errorMessage);
@@ -389,8 +404,12 @@
                     // Send error message to parent window
                     if (window.ReactNativeWebView) {
                         window.ReactNativeWebView.postMessage(JSON.stringify({
-                            type: 'PAYMENT_ERROR',
-                            error: errorMessage
+                            type: 'PAYMENT_FAILED',
+                            data: {
+                                error: errorMessage,
+                                code: 'VERIFICATION_FAILED',
+                                details: verifyData
+                            }
                         }));
                     }
                 }
@@ -402,8 +421,12 @@
                 // Send error message to parent window
                 if (window.ReactNativeWebView) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({
-                        type: 'PAYMENT_ERROR',
-                        error: errorMessage
+                        type: 'PAYMENT_FAILED',
+                        data: {
+                            error: errorMessage,
+                            code: 'NETWORK_ERROR',
+                            details: error.message
+                        }
                     }));
                 }
             } finally {
@@ -412,8 +435,19 @@
         }
 
         function cancelPayment() {
-            // Redirect back to app
-            window.location.href = 'exp://127.0.0.1:8081/--/(main)/subscription?payment=cancelled';
+            // Send cancellation message to React Native WebView
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'PAYMENT_CANCELLED',
+                    data: {
+                        reason: 'user_cancelled',
+                        message: 'Payment was cancelled by user'
+                    }
+                }));
+            } else {
+                // Fallback for web browsers
+                window.close();
+            }
         }
 
         // Load order details when page loads

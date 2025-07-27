@@ -8,6 +8,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import modernTheme from "../styles/modernTheme";
 import { Text } from "./typography";
+import { BRAND_COLORS } from "../constants/colors";
 
 /**
  * ModernSocialButton component
@@ -40,11 +41,11 @@ const ModernSocialButton = ({
       iconColor: "#4285F4",
     },
     apple: {
-      backgroundColor: "#000000",
-      textColor: "#ffffff",
-      borderColor: "#000000",
+      backgroundColor: modernTheme.colors.shadowGrey,
+      textColor: modernTheme.colors.whisperWhite,
+      borderColor: modernTheme.colors.shadowGrey,
       icon: "logo-apple",
-      iconColor: "#ffffff",
+      iconColor: modernTheme.colors.whisperWhite,
     },
     facebook: {
       backgroundColor: "#1877F2",

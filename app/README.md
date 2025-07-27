@@ -89,6 +89,73 @@ The `VapiClientComponent` provides a real-time voice conversation experience usi
 
 The `audioUtils.js` file provides a compatibility layer for audio functionality, making it easy to migrate from expo-av to expo-audio.
 
+## Authentication Setup
+
+### Apple Sign-In Configuration
+
+Apple Sign-In is automatically configured for iOS devices. To complete the setup:
+
+#### 1. Apple Developer Account Configuration
+
+1. **Enable Sign In with Apple capability**:
+   - Go to [Apple Developer Console](https://developer.apple.com/account/)
+   - Navigate to Certificates, Identifiers & Profiles
+   - Select your App ID and edit it
+   - Enable "Sign In with Apple" capability
+
+2. **Create a Service ID** (for web authentication):
+   - Create a new Services ID
+   - Configure it with your domain and return URLs
+
+3. **Create a Private Key**:
+   - Go to Keys section
+   - Create a new key with "Sign In with Apple" enabled
+   - Download the private key file (.p8)
+
+#### 2. Server Configuration
+
+Add these environment variables to your server `.env` file:
+
+```bash
+# Apple Sign-In Configuration
+APPLE_TEAM_ID=your-team-id
+APPLE_KEY_ID=your-key-id
+APPLE_PRIVATE_KEY=your-private-key-content
+APPLE_BUNDLE_ID=com.UNextDoor.app
+```
+
+#### 3. App Configuration
+
+The app is already configured with:
+- `expo-apple-authentication` package
+- Apple Sign-In plugin in `app.config.js`
+- Proper entitlements and Info.plist configuration
+
+#### 4. Testing
+
+- Apple Sign-In only works on physical iOS devices or iOS Simulator with iOS 13+
+- The feature is automatically available when running on iOS
+- Users will see the "Continue with Apple" button on the login screen
+
+### Google Sign-In Configuration
+
+1. Create a project in the [Google Cloud Console](https://console.cloud.google.com/)
+2. Enable the Google+ API
+3. Create OAuth 2.0 credentials for your app
+4. Update the client IDs in `app.config.js`:
+   ```javascript
+   plugins: [
+     [
+       "./plugins/withGoogleSignIn",
+       {
+         iosClientId: "your-ios-client-id.apps.googleusercontent.com",
+         androidClientId: "your-android-client-id.apps.googleusercontent.com",
+         webClientId: "your-web-client-id.apps.googleusercontent.com",
+       },
+     ],
+   ]
+   ```
+
 ## Permissions
 
 The app requires the following permissions:

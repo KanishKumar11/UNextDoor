@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Text, Heading, ModernButton } from "../../../shared/components";
 import { useTheme } from "../../../shared/context/ThemeContext";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 import { gameService } from "../../../features/games/services/gameService";
 import { curriculumService } from "../../../features/curriculum/services/curriculumService";
 import { useAuth } from "../../../features/auth/context/AuthContext";
@@ -44,7 +45,7 @@ const GamesScreen = () => {
             name: "Match the Word",
             description: "Match Korean words with their meanings",
             icon: "link-outline",
-            color: "#6FC935", // Brand green
+            color: BRAND_COLORS.EXPLORER_TEAL,
             available: true,
             xpReward: 25,
           },
@@ -53,7 +54,7 @@ const GamesScreen = () => {
             name: "Sentence Scramble",
             description: "Arrange words to form correct sentences",
             icon: "shuffle-outline",
-            color: "#FF9800", // Orange
+            color: BRAND_COLORS.RUCKSACK_BROWN,
             available: true,
             xpReward: 30,
           },
@@ -62,7 +63,7 @@ const GamesScreen = () => {
             name: "Pronunciation Challenge",
             description: "Practice speaking Korean words correctly",
             icon: "mic-outline",
-            color: "#2196F3", // Blue
+            color: BRAND_COLORS.OCEAN_BLUE,
             available: true,
             xpReward: 35,
           },
@@ -71,7 +72,7 @@ const GamesScreen = () => {
             name: "Conversation Quest",
             description: "Interactive conversation scenarios",
             icon: "chatbubbles-outline",
-            color: "#0A2240", // Brand navy
+            color: BRAND_COLORS.OCEAN_BLUE,
             available: true,
             xpReward: 40,
           },
@@ -184,7 +185,7 @@ const GamesScreen = () => {
               </View>
               <Text
                 weight="bold"
-                style={[styles.gameName, { color: "#0A2240" }]}
+                style={[styles.gameName, { color: BRAND_COLORS.OCEAN_BLUE }]}
               >
                 {game.name}
               </Text>
@@ -192,7 +193,7 @@ const GamesScreen = () => {
                 {game.description}
               </Text>
               {game.xpReward && (
-                <View style={[styles.xpBadge, { backgroundColor: "#FFD700" }]}>
+                <View style={[styles.xpBadge, { backgroundColor: BRAND_COLORS.RUCKSACK_BROWN }]}>
                   <Text style={styles.xpText}>+{game.xpReward} XP</Text>
                 </View>
               )}
@@ -310,7 +311,7 @@ const styles = StyleSheet.create({
   gameCard: {
     width: (width - 48) / 2,
     // width: "100%",
-    backgroundColor: "#F9F9F9",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -340,7 +341,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: "#3498db",
+    backgroundColor: BRAND_COLORS.OCEAN_BLUE,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#F9F9F9",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#F9F9F9",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
     borderRadius: 12,
     padding: 16,
   },

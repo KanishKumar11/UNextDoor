@@ -33,7 +33,7 @@ import {
 const TransactionsPage = () => {
   const router = useRouter();
   const { theme } = useTheme();
-  
+
   // Subscription hook
   const {
     hasActiveSubscription,
@@ -144,15 +144,15 @@ const TransactionsPage = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
-        return theme.colors.brandGreen; // Use brand green for consistency
+        return BRAND_COLORS.EXPLORER_TEAL; // Use Explorer Teal for consistency
       case 'failed':
-        return '#EF4444'; // Modern red
+        return BRAND_COLORS.WARM_CORAL; // Modern red
       case 'pending':
-        return '#F59E0B'; // Modern amber
+        return BRAND_COLORS.RUCKSACK_BROWN; // Use Rucksack Brown
       case 'refunded':
-        return '#8B5CF6'; // Modern purple
+        return BRAND_COLORS.SKY_AQUA; // Use Sky Aqua
       default:
-        return theme.colors.neutral[500];
+        return BRAND_COLORS.SHADOW_GREY;
     }
   };
 
@@ -201,13 +201,13 @@ const TransactionsPage = () => {
     >
       <ModernCard
         style={{
-          backgroundColor: theme.colors.brandWhite,
+          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
           borderRadius: 16,
           padding: 0,
           marginBottom: theme.spacing.md,
           borderWidth: 1,
-          borderColor: theme.colors.neutral[100],
-          shadowColor: theme.colors.brandNavy,
+          borderColor: BRAND_COLORS.EXPLORER_TEAL + "15",
+          shadowColor: BRAND_COLORS.OCEAN_BLUE,
           shadowOffset: { width: 0, height: 1 },
           shadowOpacity: 0.05,
           shadowRadius: 4,
@@ -216,8 +216,9 @@ const TransactionsPage = () => {
         }}
       >
         {/* First row: Icon, Title, and Date */}
-        <Row align="center" style={{ marginBottom: theme.spacing.md,          padding: theme.spacing.lg,
- }}>
+        <Row align="center" style={{
+          marginBottom: theme.spacing.md, padding: theme.spacing.lg,
+        }}>
           {/* Transaction icon */}
           <View
             style={{
@@ -242,7 +243,7 @@ const TransactionsPage = () => {
             <Text
               weight="semibold"
               style={{
-                color: theme.colors.brandNavy,
+                color: BRAND_COLORS.OCEAN_BLUE,
                 fontSize: 16,
                 marginBottom: 4,
               }}
@@ -252,7 +253,7 @@ const TransactionsPage = () => {
 
             <Text
               style={{
-                color: theme.colors.neutral[600],
+                color: BRAND_COLORS.SHADOW_GREY,
                 fontSize: 13,
               }}
             >
@@ -269,12 +270,13 @@ const TransactionsPage = () => {
         </Row>
 
         {/* Second row: Amount and Transaction ID */}
-        <Row justify="space-between" align="center" style={{ marginBottom: theme.spacing.md,          padding: theme.spacing.lg,
- }}>
+        <Row justify="space-between" align="center" style={{
+          marginBottom: theme.spacing.md, padding: theme.spacing.lg,
+        }}>
           <Column>
             <Text
               style={{
-                color: theme.colors.neutral[500],
+                color: BRAND_COLORS.SHADOW_GREY,
                 fontSize: 12,
                 marginBottom: 2,
               }}
@@ -284,7 +286,7 @@ const TransactionsPage = () => {
             <Text
               weight="bold"
               style={{
-                color: item.type === 'refund' ? '#EF4444' : theme.colors.brandNavy,
+                color: item.type === 'refund' ? BRAND_COLORS.WARM_CORAL : BRAND_COLORS.OCEAN_BLUE,
                 fontSize: 18,
               }}
             >
@@ -295,7 +297,7 @@ const TransactionsPage = () => {
           <Column align="flex-end">
             <Text
               style={{
-                color: theme.colors.neutral[500],
+                color: BRAND_COLORS.SHADOW_GREY,
                 fontSize: 12,
                 marginBottom: 2,
               }}
@@ -305,7 +307,7 @@ const TransactionsPage = () => {
             <Text
               weight="medium"
               style={{
-                color: theme.colors.neutral[700],
+                color: BRAND_COLORS.OCEAN_BLUE,
                 fontSize: 13,
                 fontFamily: 'monospace',
               }}
@@ -322,10 +324,10 @@ const TransactionsPage = () => {
             backgroundColor: getStatusColor(item.status),
             paddingHorizontal: 12,
             width: '100%',
-            textAlign:"Center",
+            textAlign: "Center",
             paddingVertical: 6,
             // borderRadius: 20,
-          
+
             // marginTop: theme.spacing.sm,
             // marginBottom: -theme.spacing.lg, // Negative margin to remove bottom padding
           }}
@@ -333,10 +335,10 @@ const TransactionsPage = () => {
           <Text
             weight="medium"
             style={{
-              color: theme.colors.brandWhite,
+              color: BRAND_COLORS.WHISPER_WHITE,
               fontSize: 12,
               textTransform: 'capitalize',
-              textAlign:'center',
+              textAlign: 'center',
             }}
           >
             {item.status}
@@ -355,7 +357,7 @@ const TransactionsPage = () => {
       <SafeAreaWrapper>
         <Container withPadding>
           <Column align="center" justify="center" style={{ flex: 1 }}>
-            <ActivityIndicator size="large" color={theme.colors.primary[500]} />
+            <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
             <Spacer size="md" />
             <Text>Loading transactions...</Text>
           </Column>
@@ -373,8 +375,8 @@ const TransactionsPage = () => {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.brandGreen]}
-              tintColor={theme.colors.brandGreen}
+              colors={[BRAND_COLORS.EXPLORER_TEAL]}
+              tintColor={BRAND_COLORS.EXPLORER_TEAL}
             />
           }
         >
@@ -384,7 +386,7 @@ const TransactionsPage = () => {
               paddingTop: theme.spacing.lg,
               paddingHorizontal: theme.spacing.md,
               paddingBottom: theme.spacing.xl,
-              backgroundColor: theme.colors.brandWhite,
+              backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
             }}
           >
             <Row align="center" justify="space-between" style={{ marginBottom: theme.spacing.md }}>
@@ -393,7 +395,7 @@ const TransactionsPage = () => {
                   variant="caption"
                   weight="medium"
                   style={{
-                    color: theme.colors.brandGreen,
+                    color: BRAND_COLORS.EXPLORER_TEAL,
                     fontSize: 12,
                     textTransform: 'uppercase',
                     letterSpacing: 1,
@@ -405,7 +407,7 @@ const TransactionsPage = () => {
                 <Heading
                   level="h1"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontSize: 28,
                     fontWeight: '700',
                   }}
@@ -418,18 +420,18 @@ const TransactionsPage = () => {
               {transactions.length > 0 && (
                 <View
                   style={{
-                    backgroundColor: theme.colors.brandGreen + '15',
+                    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + '15',
                     paddingHorizontal: 12,
                     paddingVertical: 6,
                     borderRadius: 20,
                     borderWidth: 1,
-                    borderColor: theme.colors.brandGreen + '30',
+                    borderColor: BRAND_COLORS.EXPLORER_TEAL + '30',
                   }}
                 >
                   <Text
                     weight="bold"
                     style={{
-                      color: theme.colors.brandGreen,
+                      color: BRAND_COLORS.EXPLORER_TEAL,
                       fontSize: 14,
                     }}
                   >
@@ -457,7 +459,7 @@ const TransactionsPage = () => {
                     width: 120,
                     height: 120,
                     borderRadius: 60,
-                    backgroundColor: theme.colors.neutral[100],
+                    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                     justifyContent: 'center',
                     alignItems: 'center',
                     marginBottom: theme.spacing.xl,
@@ -466,13 +468,13 @@ const TransactionsPage = () => {
                   <Ionicons
                     name="receipt-outline"
                     size={48}
-                    color={theme.colors.neutral[400]}
+                    color={BRAND_COLORS.SHADOW_GREY}
                   />
                 </View>
                 <Heading
                   level="h3"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     textAlign: 'center',
                     marginBottom: theme.spacing.sm,
                   }}
@@ -481,7 +483,7 @@ const TransactionsPage = () => {
                 </Heading>
                 <Text
                   style={{
-                    color: theme.colors.neutral[600],
+                    color: BRAND_COLORS.SHADOW_GREY,
                     textAlign: 'center',
                     fontSize: 16,
                     lineHeight: 24,
@@ -499,7 +501,7 @@ const TransactionsPage = () => {
                 <Text
                   weight="bold"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontSize: 16,
                     marginBottom: theme.spacing.lg,
                     marginTop: theme.spacing.md,

@@ -23,9 +23,14 @@ import xpRoutes from "./src/routes/xp.js";
 import subscriptionRoutes from "./src/routes/subscription.js";
 import webhookRoutes from "./src/routes/webhook.js";
 import featureRoutes from "./src/routes/feature.js";
+import cacheRoutes from "./src/routes/cache.js";
+import analyticsRoutes from "./src/routes/analytics.js";
+import monitoringRoutes from "./src/routes/monitoring.js";
 import paymentRecoveryService from "./src/services/paymentRecoveryService.js";
 import subscriptionRenewalService from "./src/services/subscriptionRenewalService.js";
 import { sendSuccess, sendError } from "./src/utils/responseUtils.js";
+import { responseCacheManager } from "./src/services/responseCacheService.js";
+import { requestMonitoringMiddleware } from "./src/services/monitoringService.js";
 
 /**
  * Initialize Express application with middleware and routes
@@ -45,6 +50,9 @@ const initializeApp = () => {
 
   // Apply middleware
   app.use(cors(corsOptions));
+
+  // Add request monitoring middleware
+  app.use(requestMonitoringMiddleware);
 
   // Standard body parsers
   app.use(
@@ -110,6 +118,9 @@ const initializeApp = () => {
   app.use(`${apiPrefix}/subscriptions`, subscriptionRoutes);
   app.use(`${apiPrefix}/webhooks`, webhookRoutes);
   app.use(`${apiPrefix}/features`, featureRoutes);
+  app.use(`${apiPrefix}/cache`, cacheRoutes);
+  app.use(`${apiPrefix}/analytics`, analyticsRoutes);
+  app.use(`${apiPrefix}/monitoring`, monitoringRoutes);
 
   // Root route
   app.get("/", (_req, res) => {
@@ -162,6 +173,9 @@ const startServer = async (app) => {
     initAITutorSocketHandlers(tutorNamespace);
     initializeRealtimeConversationHandlers(realtimeNamespace);
 
+    // Initialize response cache service
+    await responseCacheManager.initialize();
+
     // Start payment recovery service
     paymentRecoveryService.start();
 
@@ -188,8 +202,12 @@ const startServer = async (app) => {
     });
 
     // Handle graceful shutdown
-    process.on("SIGINT", () => {
+    process.on("SIGINT", async () => {
       console.log("Shutting down server...");
+
+      // Disconnect cache service
+      await responseCacheManager.disconnect();
+
       server.close(() => {
         console.log("Server shut down successfully");
         process.exit(0);

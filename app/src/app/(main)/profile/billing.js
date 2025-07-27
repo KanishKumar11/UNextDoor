@@ -14,6 +14,7 @@ import { useTheme } from "../../../shared/context/ThemeContext";
 import { useSubscription } from "../../../shared/hooks/useSubscription";
 import SafeAreaWrapper from "../../../shared/components/SafeAreaWrapper";
 import { subscriptionService } from "../../../shared/services/subscriptionService";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 
 // Import modern components
 import {
@@ -35,7 +36,7 @@ import {
 const BillingPage = () => {
   const router = useRouter();
   const { theme } = useTheme();
-  
+
   // Subscription hook
   const {
     currentPlan,
@@ -68,7 +69,7 @@ const BillingPage = () => {
         if (subscription) {
           setBillingDetails({
             nextBillingDate: subscription.nextBillingDate ? new Date(subscription.nextBillingDate) : null,
-            amount: subscription.planPrice ? (subscription.planPrice ) : 0, // Convert from paise to rupees
+            amount: subscription.planPrice ? (subscription.planPrice) : 0, // Convert from paise to rupees
             currency: subscription.currency || 'INR',
             paymentMethod: latestTransaction?.razorpayPaymentId
               ? `Payment ID ending in ${latestTransaction.razorpayPaymentId.slice(-4)}`
@@ -184,14 +185,14 @@ const BillingPage = () => {
   useEffect(() => {
     fetchBillingDetails();
   }, [hasActiveSubscription, currentPlan?.id, currentPlan?.tier]);
-console.log( billingDetails )
+  console.log(billingDetails)
   console.log(currentPlan)
   if (subscriptionLoading || loading) {
     return (
       <SafeAreaWrapper>
         <Container withPadding>
           <Column align="center" justify="center" style={{ flex: 1 }}>
-            <ActivityIndicator size="large" color={theme.colors.primary[500]} />
+            <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
             <Spacer size="md" />
             <Text>Loading billing details...</Text>
           </Column>
@@ -205,7 +206,7 @@ console.log( billingDetails )
       <SafeAreaWrapper>
         <Container withPadding>
           <View style={{ marginBottom: theme.spacing.lg }}>
-            <Heading level="h2" style={{ color: theme.colors.brandNavy }}>
+            <Heading level="h2" style={{ color: BRAND_COLORS.OCEAN_BLUE }}>
               Billing
             </Heading>
           </View>
@@ -214,14 +215,14 @@ console.log( billingDetails )
             <Ionicons
               name="card-outline"
               size={64}
-              color={theme.colors.neutral[400]}
+              color={BRAND_COLORS.SHADOW_GREY}
             />
             <Spacer size="lg" />
-            <Heading level="h3" style={{ color: theme.colors.brandNavy, textAlign: 'center' }}>
+            <Heading level="h3" style={{ color: BRAND_COLORS.OCEAN_BLUE, textAlign: 'center' }}>
               No Active Subscription
             </Heading>
             <Spacer size="sm" />
-            <Text style={{ color: theme.colors.neutral[600], textAlign: 'center' }}>
+            <Text style={{ color: BRAND_COLORS.SHADOW_GREY, textAlign: 'center' }}>
               You don't have an active subscription. Subscribe to access billing details.
             </Text>
             <Spacer size="lg" />
@@ -245,8 +246,8 @@ console.log( billingDetails )
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.brandGreen]}
-              tintColor={theme.colors.brandGreen}
+              colors={[BRAND_COLORS.EXPLORER_TEAL]}
+              tintColor={BRAND_COLORS.EXPLORER_TEAL}
             />
           }
         >
@@ -256,7 +257,7 @@ console.log( billingDetails )
               paddingTop: theme.spacing.lg,
               paddingHorizontal: theme.spacing.md,
               paddingBottom: theme.spacing.xl,
-              backgroundColor: theme.colors.brandWhite,
+              backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
             }}
           >
             <Row align="center" justify="space-between" style={{ marginBottom: theme.spacing.md }}>
@@ -265,7 +266,7 @@ console.log( billingDetails )
                   variant="caption"
                   weight="medium"
                   style={{
-                    color: theme.colors.brandGreen,
+                    color: BRAND_COLORS.EXPLORER_TEAL,
                     fontSize: 12,
                     textTransform: 'uppercase',
                     letterSpacing: 1,
@@ -277,7 +278,7 @@ console.log( billingDetails )
                 <Heading
                   level="h1"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontSize: 28,
                     fontWeight: '700',
                   }}
@@ -290,18 +291,18 @@ console.log( billingDetails )
               {hasActiveSubscription && (
                 <View
                   style={{
-                    backgroundColor: theme.colors.brandGreen + '15',
+                    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + '15',
                     paddingHorizontal: 12,
                     paddingVertical: 6,
                     borderRadius: 20,
                     borderWidth: 1,
-                    borderColor: theme.colors.brandGreen + '30',
+                    borderColor: BRAND_COLORS.EXPLORER_TEAL + '30',
                   }}
                 >
                   <Text
                     weight="bold"
                     style={{
-                      color: theme.colors.brandGreen,
+                      color: BRAND_COLORS.EXPLORER_TEAL,
                       fontSize: 12,
                     }}
                   >
@@ -323,12 +324,12 @@ console.log( billingDetails )
           <View style={{ paddingHorizontal: theme.spacing.md }}>
             <ModernCard
               style={{
-                backgroundColor: theme.colors.brandWhite,
+                backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                 borderRadius: 16,
                 padding: theme.spacing.md,
                 borderWidth: 1,
-                borderColor: theme.colors.brandNavy + '30',
-                shadowColor: theme.colors.brandNavy,
+                borderColor: BRAND_COLORS.OCEAN_BLUE + '30',
+                shadowColor: BRAND_COLORS.OCEAN_BLUE,
                 shadowOffset: { width: 0, height: 1 },
                 // shadowOpacity: 0.04,
                 shadowRadius: 4,
@@ -342,7 +343,7 @@ console.log( billingDetails )
                     width: 40,
                     height: 40,
                     borderRadius: 12,
-                    backgroundColor: theme.colors.brandGreen + '15',
+                    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + '15',
                     justifyContent: 'center',
                     alignItems: 'center',
                     marginRight: theme.spacing.md,
@@ -351,7 +352,7 @@ console.log( billingDetails )
                   <Ionicons
                     name="diamond"
                     size={20}
-                    color={theme.colors.brandGreen}
+                    color={BRAND_COLORS.EXPLORER_TEAL}
                   />
                 </View>
 
@@ -360,7 +361,7 @@ console.log( billingDetails )
                     variant="caption"
                     weight="medium"
                     style={{
-                      color: theme.colors.brandGreen,
+                      color: BRAND_COLORS.EXPLORER_TEAL,
                       fontSize: 11,
                       textTransform: 'uppercase',
                       letterSpacing: 1,
@@ -372,14 +373,14 @@ console.log( billingDetails )
                   <Heading
                     level="h3"
                     style={{
-                      color: theme.colors.brandNavy,
+                      color: BRAND_COLORS.OCEAN_BLUE,
                       fontSize: 16,
                       fontWeight: '700',
                     }}
                   >
                     {currentPlan.name}
                   </Heading>
-                 
+
                 </Column>
               </Row>
             </ModernCard>
@@ -392,12 +393,12 @@ console.log( billingDetails )
             <View style={{ paddingHorizontal: theme.spacing.md }}>
               <ModernCard
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 20,
                   padding: theme.spacing.lg,
                   borderWidth: 1,
-                  borderColor: theme.colors.neutral[100],
-                  shadowColor: theme.colors.brandNavy,
+                  borderColor: BRAND_COLORS.EXPLORER_TEAL + '15',
+                  shadowColor: BRAND_COLORS.OCEAN_BLUE,
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.04,
                   shadowRadius: 6,
@@ -411,7 +412,7 @@ console.log( billingDetails )
                       width: 48,
                       height: 48,
                       borderRadius: 12,
-                      backgroundColor: theme.colors.brandNavy + '15',
+                      backgroundColor: BRAND_COLORS.OCEAN_BLUE + '15',
                       justifyContent: 'center',
                       alignItems: 'center',
                       marginRight: theme.spacing.md,
@@ -420,7 +421,7 @@ console.log( billingDetails )
                     <Ionicons
                       name="card"
                       size={24}
-                      color={theme.colors.brandNavy}
+                      color={BRAND_COLORS.OCEAN_BLUE}
                     />
                   </View>
 
@@ -429,7 +430,7 @@ console.log( billingDetails )
                       variant="caption"
                       weight="medium"
                       style={{
-                        color: theme.colors.brandNavy,
+                        color: BRAND_COLORS.OCEAN_BLUE,
                         fontSize: 12,
                         textTransform: 'uppercase',
                         letterSpacing: 1,
@@ -441,7 +442,7 @@ console.log( billingDetails )
                     <Heading
                       level="h3"
                       style={{
-                        color: theme.colors.brandNavy,
+                        color: BRAND_COLORS.OCEAN_BLUE,
                         fontSize: 18,
                         fontWeight: '700',
                       }}
@@ -456,7 +457,7 @@ console.log( billingDetails )
                   {/* Next Billing Date */}
                   <View
                     style={{
-                      backgroundColor: theme.colors.neutral[50],
+                      backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "10",
                       borderRadius: 12,
                       padding: theme.spacing.md,
                       marginBottom: theme.spacing.sm,
@@ -464,7 +465,7 @@ console.log( billingDetails )
                   >
                     <Text
                       style={{
-                        color: theme.colors.neutral[500],
+                        color: BRAND_COLORS.SHADOW_GREY,
                         fontSize: 12,
                         marginBottom: 4,
                       }}
@@ -474,17 +475,17 @@ console.log( billingDetails )
                     <Text
                       weight="semibold"
                       style={{
-                        color: theme.colors.brandNavy,
+                        color: BRAND_COLORS.OCEAN_BLUE,
                         fontSize: 16,
                       }}
                     >
                       {billingDetails.nextBillingDate
                         ? new Date(billingDetails.nextBillingDate).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
                         : 'Not available'
                       }
                     </Text>
@@ -493,7 +494,7 @@ console.log( billingDetails )
                   {/* Amount */}
                   <View
                     style={{
-                      backgroundColor: theme.colors.brandGreen + '08',
+                      backgroundColor: BRAND_COLORS.EXPLORER_TEAL + '08',
                       borderRadius: 12,
                       padding: theme.spacing.md,
                       marginBottom: theme.spacing.sm,
@@ -501,7 +502,7 @@ console.log( billingDetails )
                   >
                     <Text
                       style={{
-                        color: theme.colors.neutral[500],
+                        color: BRAND_COLORS.SHADOW_GREY,
                         fontSize: 12,
                         marginBottom: 4,
                       }}
@@ -511,7 +512,7 @@ console.log( billingDetails )
                     <Text
                       weight="bold"
                       style={{
-                        color: theme.colors.brandNavy,
+                        color: BRAND_COLORS.OCEAN_BLUE,
                         fontSize: 20,
                       }}
                     >
@@ -523,7 +524,7 @@ console.log( billingDetails )
                   <TouchableOpacity
                     // onPress={handleUpdatePaymentMethod}
                     style={{
-                      backgroundColor: theme.colors.neutral[50],
+                      backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "10",
                       borderRadius: 12,
                       padding: theme.spacing.md,
                     }}
@@ -532,7 +533,7 @@ console.log( billingDetails )
                       <Column style={{ flex: 1 }}>
                         <Text
                           style={{
-                            color: theme.colors.neutral[500],
+                            color: BRAND_COLORS.SHADOW_GREY,
                             fontSize: 12,
                             marginBottom: 4,
                           }}
@@ -542,7 +543,7 @@ console.log( billingDetails )
                         <Text
                           weight="medium"
                           style={{
-                            color: theme.colors.brandNavy,
+                            color: BRAND_COLORS.OCEAN_BLUE,
                             fontSize: 14,
                           }}
                         >
@@ -552,7 +553,7 @@ console.log( billingDetails )
                       <Ionicons
                         name="chevron-forward"
                         size={20}
-                        color={theme.colors.neutral[400]}
+                        color={BRAND_COLORS.SHADOW_GREY}
                       />
                     </Row>
                   </TouchableOpacity>
@@ -564,7 +565,7 @@ console.log( billingDetails )
           <Spacer size="md" />
 
 
-      
+
           {/* Bottom Padding for Floating Tab Bar */}
           <View style={{ height: 100 }} />
         </ScrollView>

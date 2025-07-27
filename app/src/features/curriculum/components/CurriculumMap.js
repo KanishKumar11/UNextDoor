@@ -10,6 +10,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../../shared/context/ThemeContext";
 import { Text, Heading, Spacer } from "../../../shared/components";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
+import { mapBackendColor } from "../../../shared/utils/colorMapping";
 
 /**
  * CurriculumMap component
@@ -54,11 +56,11 @@ const CurriculumMap = ({
 
     return (
       <View key={`level-${level.id}`} style={styles.levelHeader}>
-        <View style={[styles.levelIndicator, { backgroundColor: level.color }]}>
+        <View style={[styles.levelIndicator, { backgroundColor: mapBackendColor(level.color, BRAND_COLORS.EXPLORER_TEAL) }]}>
           <Ionicons
             name={level.icon || "school-outline"}
             size={20}
-            color="#fff"
+            color={BRAND_COLORS.WHISPER_WHITE}
           />
         </View>
 
@@ -66,7 +68,7 @@ const CurriculumMap = ({
           <View style={styles.levelTitleRow}>
             <Heading
               level="h3"
-              style={[styles.levelTitle, { color: level.color }]}
+              style={[styles.levelTitle, { color: mapBackendColor(level.color, BRAND_COLORS.OCEAN_BLUE) }]}
             >
               {level.name}
             </Heading>
@@ -74,18 +76,18 @@ const CurriculumMap = ({
               <View
                 style={[
                   styles.currentLevelBadge,
-                  { backgroundColor: level.color },
+                  { backgroundColor: mapBackendColor(level.color, BRAND_COLORS.EXPLORER_TEAL) },
                 ]}
               >
-                <Text variant="caption" color="#fff" weight="bold">
+                <Text variant="caption" color={BRAND_COLORS.WHISPER_WHITE} weight="bold">
                   Current
                 </Text>
               </View>
             )}
             {!isUnlocked && (
               <View style={styles.lockedLevelBadge}>
-                <Ionicons name="lock-closed" size={12} color="#999" />
-                <Text variant="caption" color="#999" style={{ marginLeft: 4 }}>
+                <Ionicons name="lock-closed" size={12} color={BRAND_COLORS.SHADOW_GREY} />
+                <Text variant="caption" color={BRAND_COLORS.SHADOW_GREY} style={{ marginLeft: 4 }}>
                   {level.requiredXp} XP required
                 </Text>
               </View>
@@ -94,7 +96,7 @@ const CurriculumMap = ({
 
           <Text
             variant="body2"
-            color={theme.colors.text?.secondary || "#666"}
+            color={BRAND_COLORS.SHADOW_GREY}
             style={styles.levelDescription}
           >
             {level.description}
@@ -125,8 +127,8 @@ const CurriculumMap = ({
             styles.moduleHeader,
             {
               backgroundColor: isLocked
-                ? theme.colors.neutral?.[400] || "#999"
-                : module.color || theme.colors.primary,
+                ? BRAND_COLORS.SHADOW_GREY + "30"
+                : mapBackendColor(module.color, BRAND_COLORS.EXPLORER_TEAL),
             },
           ]}
           onPress={() => handleModuleSelect(module.id, isLocked)}
@@ -137,22 +139,29 @@ const CurriculumMap = ({
               <Ionicons
                 name="lock-closed"
                 size={24}
-                color="rgba(255, 255, 255, 0.8)"
+                color={BRAND_COLORS.SHADOW_GREY}
               />
             ) : (
               <Ionicons
                 name={module.icon || "book-outline"}
                 size={24}
-                color="#fff"
+                color={BRAND_COLORS.WHISPER_WHITE}
               />
             )}
 
             <View style={styles.moduleHeaderText}>
-              <Text weight="bold" color="#fff" style={styles.moduleName}>
+              <Text
+                weight="bold"
+                color={isLocked ? BRAND_COLORS.SHADOW_GREY : BRAND_COLORS.WHISPER_WHITE}
+                style={styles.moduleName}
+              >
                 {module.name}
               </Text>
 
-              <Text variant="caption" color="rgba(255, 255, 255, 0.8)">
+              <Text
+                variant="caption"
+                color={isLocked ? BRAND_COLORS.SHADOW_GREY : BRAND_COLORS.WHISPER_WHITE + "CC"}
+              >
                 {isLocked
                   ? userProgress?.showSyllabus
                     ? "Tap to preview content"
@@ -166,12 +175,12 @@ const CurriculumMap = ({
             {!isLocked && moduleProgress.completed ? (
               // Show completion badge for completed modules
               <View style={styles.completedBadge}>
-                <Ionicons name="checkmark" size={20} color="#fff" />
+                <Ionicons name="checkmark" size={20} color={BRAND_COLORS.WHISPER_WHITE} />
               </View>
             ) : !isLocked ? (
               // Show progress circle for in-progress modules
               <View style={styles.progressCircle}>
-                <Text weight="bold" color="#fff" style={styles.progressText}>
+                <Text weight="bold" color={BRAND_COLORS.WHISPER_WHITE} style={styles.progressText}>
                   {Math.round(moduleProgress.progress)}%
                 </Text>
               </View>
@@ -180,7 +189,7 @@ const CurriculumMap = ({
             <Ionicons
               name="chevron-forward"
               size={24}
-              color="rgba(255, 255, 255, 0.8)"
+              color={isLocked ? BRAND_COLORS.SHADOW_GREY : BRAND_COLORS.WHISPER_WHITE + "CC"}
             />
           </View>
         </TouchableOpacity>
@@ -268,7 +277,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
-    shadowColor: "#000",
+    shadowColor: BRAND_COLORS.SHADOW_GREY,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -302,7 +311,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
     borderRadius: 12,
     marginLeft: 8,
   },
@@ -311,7 +320,7 @@ const styles = StyleSheet.create({
   },
   levelSeparator: {
     height: 1,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "20",
     marginTop: 20,
     marginHorizontal: 20,
   },
@@ -319,12 +328,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+    borderWidth: 1,
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + "20",
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 0,
   },
   moduleHeader: {
     flexDirection: "row",
@@ -375,11 +386,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.3)",
   },
   lessonList: {
-    backgroundColor: "#fff",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   lessonItem: {
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: BRAND_COLORS.EXPLORER_TEAL + "15",
     padding: 16,
   },
   lessonContent: {
@@ -397,20 +408,20 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "20",
     justifyContent: "center",
     alignItems: "center",
   },
   currentLessonNumber: {
-    backgroundColor: "#6FC935", // Primary green color
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
   },
   lessonNumberText: {
     fontSize: 14,
     fontWeight: "bold",
-    color: "#555",
+    color: BRAND_COLORS.SHADOW_GREY,
   },
   currentLessonNumberText: {
-    color: "#fff",
+    color: BRAND_COLORS.WHISPER_WHITE,
   },
   lessonDetails: {
     flex: 1,
@@ -433,20 +444,20 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   completedLesson: {
-    backgroundColor: "rgba(111, 201, 53, 0.05)", // Light green background
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "10", // Light Explorer Teal background
   },
   currentLesson: {
     borderLeftWidth: 4,
-    borderLeftColor: "#6FC935", // Primary green color
+    borderLeftColor: BRAND_COLORS.EXPLORER_TEAL, // Explorer Teal color
   },
   lockedLesson: {
     opacity: 0.7,
   },
   lockedText: {
-    color: "#999",
+    color: BRAND_COLORS.SHADOW_GREY,
   },
   lockedModule: {
-    opacity: 0.8,
+    opacity: 0.9,
   },
 });
 

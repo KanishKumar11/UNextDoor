@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import modernTheme from "../styles/modernTheme";
+import { BRAND_COLORS } from "../constants/colors";
 
 /**
  * ModernInput component
@@ -89,7 +90,7 @@ const ModernInput = ({
             borderColor: getBorderColor(),
             backgroundColor: isDisabled
               ? modernTheme.colors.neutral[100]
-              : modernTheme.colors.background.paper,
+              : BRAND_COLORS.WHISPER_WHITE,
           },
           isFocused && styles.inputContainerFocused,
         ]}
@@ -177,6 +178,7 @@ const ModernInput = ({
 const styles = StyleSheet.create({
   container: {
     marginBottom: modernTheme.spacing.md,
+    elevation: 0
   },
   labelContainer: {
     flexDirection: "row",
@@ -196,7 +198,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderRadius: modernTheme.borderRadius.md,
+    borderRadius: 8,
     paddingHorizontal: modernTheme.spacing.sm,
     height: 48,
   },

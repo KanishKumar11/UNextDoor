@@ -2,13 +2,14 @@ import React from 'react';
 import { View, TouchableOpacity, Animated, StyleSheet, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../shared/context/ThemeContext';
-import { 
-  Text, 
-  Heading, 
-  Row, 
-  Column 
+import {
+  Text,
+  Heading,
+  Row,
+  Column
 } from '../../../shared/components';
 import { useRouter } from 'expo-router';
+import { BRAND_COLORS } from '../../../shared/constants/colors';
 
 const { width } = Dimensions.get("window");
 
@@ -19,12 +20,13 @@ const GamesSection = ({ fadeAnim, scaleAnim }) => {
   const styles = StyleSheet.create({
     gameCard: {
       width: (width - 48) / 2,
-      backgroundColor: theme.colors.brandWhite,
+      backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
       borderRadius: 12,
       padding: 16,
       marginBottom: 16,
       marginHorizontal: 4,
       position: "relative",
+      elevation: 0,
     },
     gameIconContainer: {
       width: 56,
@@ -89,7 +91,7 @@ const GamesSection = ({ fadeAnim, scaleAnim }) => {
           <Heading
             level="h3"
             style={{
-              color: theme.colors.brandNavy,
+              color: theme.colors.oceanBlue,
               fontFamily: theme.typography.fontFamily.bold,
               fontSize: 20,
             }}
@@ -100,27 +102,27 @@ const GamesSection = ({ fadeAnim, scaleAnim }) => {
         <TouchableOpacity
           onPress={() => router.push("/games")}
           style={{
-            backgroundColor: theme.colors.brandGreen + "15",
+            backgroundColor: theme.colors.explorerTeal + "15",
             paddingHorizontal: 12,
             paddingVertical: 6,
             borderRadius: 16,
             borderWidth: 1,
-            borderColor: theme.colors.brandGreen + "30",
+            borderColor: theme.colors.explorerTeal + "30",
           }}
         >
           <Text
             weight="semibold"
             style={{
-              color: theme.colors.brandGreen,
+              color: theme.colors.explorerTeal,
               fontFamily: theme.typography.fontFamily.semibold,
               fontSize: 12,
             }}
           >
-            See All
+            View All
           </Text>
         </TouchableOpacity>
       </Row>
-      
+
       {/* 2x2 Grid Layout for Games */}
       <View
         style={{
@@ -137,20 +139,20 @@ const GamesSection = ({ fadeAnim, scaleAnim }) => {
             styles.gameCard,
             {
               borderWidth: 1,
-              borderColor: theme.colors.brandGreen + "30",
+              borderColor: theme.colors.explorerTeal + "30",
             },
           ]}
         >
           <View
             style={[
               styles.gameIconContainer,
-              { backgroundColor: theme.colors.brandGreen + "15" },
+              { backgroundColor: theme.colors.explorerTeal + "15" },
             ]}
           >
             <Ionicons
               name="link-outline"
               size={32}
-              color={theme.colors.brandGreen}
+              color={theme.colors.explorerTeal}
             />
           </View>
           <Text
@@ -158,7 +160,7 @@ const GamesSection = ({ fadeAnim, scaleAnim }) => {
             style={[
               styles.gameName,
               {
-                color: theme.colors.brandNavy,
+                color: theme.colors.oceanBlue,
                 fontFamily: theme.typography.fontFamily.semibold,
               },
             ]}
@@ -176,7 +178,7 @@ const GamesSection = ({ fadeAnim, scaleAnim }) => {
           >
             Match Korean words with meanings
           </Text>
-          <View style={[styles.xpBadge, { backgroundColor: "#FFD700" }]}>
+          <View style={[styles.xpBadge, { backgroundColor: BRAND_COLORS.OCEAN_BLUE }]}>
             <Text style={styles.xpText}>+25 XP</Text>
           </View>
         </TouchableOpacity>
@@ -188,17 +190,17 @@ const GamesSection = ({ fadeAnim, scaleAnim }) => {
             styles.gameCard,
             {
               borderWidth: 1,
-              borderColor: "#FF9800" + "30",
+              borderColor: BRAND_COLORS.RUCKSACK_BROWN + "30",
             },
           ]}
         >
           <View
             style={[
               styles.gameIconContainer,
-              { backgroundColor: "#FF9800" + "15" },
+              { backgroundColor: BRAND_COLORS.RUCKSACK_BROWN + "15" },
             ]}
           >
-            <Ionicons name="shuffle-outline" size={32} color="#FF9800" />
+            <Ionicons name="shuffle-outline" size={32} color={BRAND_COLORS.RUCKSACK_BROWN} />
           </View>
           <Text
             weight="bold"
@@ -223,7 +225,7 @@ const GamesSection = ({ fadeAnim, scaleAnim }) => {
           >
             Arrange words to form sentences
           </Text>
-          <View style={[styles.xpBadge, { backgroundColor: "#FFD700" }]}>
+          <View style={[styles.xpBadge, { backgroundColor: BRAND_COLORS.OCEAN_BLUE }]}>
             <Text style={styles.xpText}>+30 XP</Text>
           </View>
         </TouchableOpacity>
@@ -235,17 +237,17 @@ const GamesSection = ({ fadeAnim, scaleAnim }) => {
             styles.gameCard,
             {
               borderWidth: 1,
-              borderColor: "#2196F3" + "30",
+              borderColor: BRAND_COLORS.SKY_AQUA + "30",
             },
           ]}
         >
           <View
             style={[
               styles.gameIconContainer,
-              { backgroundColor: "#2196F3" + "15" },
+              { backgroundColor: BRAND_COLORS.SKY_AQUA + "15" },
             ]}
           >
-            <Ionicons name="mic-outline" size={32} color="#2196F3" />
+            <Ionicons name="mic-outline" size={32} color={BRAND_COLORS.SKY_AQUA} />
           </View>
           <Text
             weight="bold"
@@ -270,7 +272,7 @@ const GamesSection = ({ fadeAnim, scaleAnim }) => {
           >
             Practice speaking correctly
           </Text>
-          <View style={[styles.xpBadge, { backgroundColor: "#FFD700" }]}>
+          <View style={[styles.xpBadge, { backgroundColor: BRAND_COLORS.OCEAN_BLUE }]}>
             <Text style={styles.xpText}>+35 XP</Text>
           </View>
         </TouchableOpacity>
@@ -291,20 +293,20 @@ const GamesSection = ({ fadeAnim, scaleAnim }) => {
             styles.gameCard,
             {
               borderWidth: 1,
-              borderColor: "#9C27B0" + "30",
+              borderColor: BRAND_COLORS.EXPLORER_TEAL + "30",
             },
           ]}
         >
           <View
             style={[
               styles.gameIconContainer,
-              { backgroundColor: "#9C27B0" + "15" },
+              { backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15" },
             ]}
           >
             <Ionicons
               name="chatbubbles-outline"
               size={32}
-              color="#9C27B0"
+              color={BRAND_COLORS.EXPLORER_TEAL}
             />
           </View>
           <Text
@@ -330,7 +332,7 @@ const GamesSection = ({ fadeAnim, scaleAnim }) => {
           >
             Interactive conversation scenarios
           </Text>
-          <View style={[styles.xpBadge, { backgroundColor: "#FFD700" }]}>
+          <View style={[styles.xpBadge, { backgroundColor: BRAND_COLORS.OCEAN_BLUE }]}>
             <Text style={styles.xpText}>+40 XP</Text>
           </View>
         </TouchableOpacity>

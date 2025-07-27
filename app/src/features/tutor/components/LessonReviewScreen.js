@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
   SafeAreaView,
   Pressable
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../shared/context/ThemeContext';
-import { 
-  Text, 
+import {
+  Text,
   ModernButton,
 } from '../../../shared/components';
 import { Audio } from 'expo-av';
+import { BRAND_COLORS } from '../../../shared/constants/colors';
 
 /**
  * LessonReviewScreen component
@@ -27,7 +28,7 @@ import { Audio } from 'expo-av';
  * @param {Function} props.onContinue - Function to call when continue button is pressed
  * @param {Function} props.onClose - Function to call when close button is pressed
  */
-const LessonReviewScreen = ({ 
+const LessonReviewScreen = ({
   title = 'Review',
   description = "Let's review what you've learned in this lesson. This will help you remember the new words and phrases.",
   vocabulary = [],
@@ -38,7 +39,7 @@ const LessonReviewScreen = ({
   const { theme } = useTheme();
   const [playingAudio, setPlayingAudio] = useState(null);
   const [sound, setSound] = useState(null);
-  
+
   // Play audio for a vocabulary item
   const playAudio = async (audioUrl, itemId) => {
     try {
@@ -47,16 +48,16 @@ const LessonReviewScreen = ({
         await sound.stopAsync();
         await sound.unloadAsync();
       }
-      
+
       // Load and play the new audio
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: audioUrl },
         { shouldPlay: true }
       );
-      
+
       setSound(newSound);
       setPlayingAudio(itemId);
-      
+
       // When audio finishes playing
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.didJustFinish) {
@@ -68,24 +69,24 @@ const LessonReviewScreen = ({
       setPlayingAudio(null);
     }
   };
-  
+
   // Render a vocabulary item
   const renderVocabularyItem = (item, index) => {
     const isPlaying = playingAudio === item.id;
-    
+
     return (
       <View key={item.id || index} style={styles.vocabularyItem}>
         <TouchableOpacity
           style={styles.audioButton}
           onPress={() => playAudio(item.audioUrl, item.id)}
         >
-          <Ionicons 
-            name={isPlaying ? "volume-high" : "volume-medium"} 
-            size={24} 
-            color="#6FC935" 
+          <Ionicons
+            name={isPlaying ? "volume-high" : "volume-medium"}
+            size={24}
+            color={BRAND_COLORS.EXPLORER_TEAL}
           />
         </TouchableOpacity>
-        
+
         <View style={styles.vocabularyContent}>
           <Text style={styles.koreanText}>{item.korean}</Text>
           <Text style={styles.englishText}>{item.english}</Text>
@@ -93,36 +94,36 @@ const LessonReviewScreen = ({
       </View>
     );
   };
-  
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.closeButton}
           onPress={onClose || (() => router.back())}
         >
           <Ionicons name="close" size={24} color="#000" />
         </TouchableOpacity>
-        
+
         <View style={styles.titleContainer}>
           <Text style={styles.title}>{title}</Text>
         </View>
-        
+
         <View style={styles.headerRight} />
       </View>
-      
+
       <ScrollView style={styles.content}>
         {/* Description */}
         <View style={styles.descriptionContainer}>
           <Text style={styles.lessonTitle}>Lesson Review</Text>
           <Text style={styles.description}>{description}</Text>
         </View>
-        
+
         {/* Vocabulary section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Vocabulary</Text>
-          
+
           <View style={styles.vocabularyList}>
             {vocabulary.length > 0 ? (
               vocabulary.map(renderVocabularyItem)
@@ -140,7 +141,7 @@ const LessonReviewScreen = ({
           </View>
         </View>
       </ScrollView>
-      
+
       {/* Continue button */}
       <View style={styles.continueButtonContainer}>
         <ModernButton

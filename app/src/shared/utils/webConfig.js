@@ -52,7 +52,7 @@ export const injectWebFonts = () => {
   link.onload = () => {
     console.log('Montserrat fonts loaded from Google Fonts');
   };
-  
+
   document.head.appendChild(link);
 };
 
@@ -64,7 +64,7 @@ export const getPlatformFontFamily = (weight = 'regular') => {
   if (Platform.OS === 'web') {
     return 'Montserrat, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
   }
-  
+
   // Mobile font families
   const mobileFonts = {
     light: 'Montserrat-Light',
@@ -75,7 +75,7 @@ export const getPlatformFontFamily = (weight = 'regular') => {
     extrabold: 'Montserrat-ExtraBold',
     italic: 'Montserrat-Italic',
   };
-  
+
   return mobileFonts[weight] || mobileFonts.regular;
 };
 
@@ -93,7 +93,7 @@ export const getPlatformFontWeight = (weight = 'regular') => {
     extrabold: '800',
     black: '900',
   };
-  
+
   return weights[weight] || weights.regular;
 };
 
@@ -109,19 +109,22 @@ export const initializeWebConfig = async () => {
   try {
     // Inject font CSS
     injectWebFonts();
-    
+
     // Wait for fonts to load
     await loadWebFonts();
-    
+
     // Add CSS custom properties for brand colors
     if (typeof document !== 'undefined') {
       const style = document.createElement('style');
       style.textContent = `
         :root {
-          --color-primary: #6FC935;
-          --color-secondary: #003366;
-          --color-tertiary: #000000;
-          --color-white: #FFFFFF;
+          --color-primary: #5BC4B3;
+          --color-secondary: #36798A;
+          --color-tertiary: #4F4F4F;
+          --color-accent: #A3E8DC;
+          --color-canvas: #F7E7C1;
+          --color-brown: #A46E3E;
+          --color-white: #FAFAFA;
           --font-montserrat: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
         
@@ -137,7 +140,7 @@ export const initializeWebConfig = async () => {
       `;
       document.head.appendChild(style);
     }
-    
+
     console.log('Web configuration initialized successfully');
   } catch (error) {
     console.error('Error initializing web configuration:', error);
@@ -169,7 +172,7 @@ export const getBreakpoints = () => {
   }
 
   const width = window.innerWidth;
-  
+
   return {
     isSmall: width < 375,
     isMedium: width >= 375 && width < 768,

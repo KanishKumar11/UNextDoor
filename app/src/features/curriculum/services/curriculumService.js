@@ -1,5 +1,6 @@
 import { apiClient } from "../../../shared/api/apiClient";
 import { ENDPOINTS } from "../../../shared/config/api";
+import { mapObjectColors } from "../../../shared/utils/colorMapping";
 
 /**
  * Service for interacting with the curriculum API
@@ -12,7 +13,12 @@ class CurriculumService {
   async getCurriculumLevels() {
     try {
       const response = await apiClient.get(ENDPOINTS.CURRICULUM.LEVELS);
-      return response.data;
+      // Map backend colors to brand colors
+      const mappedData = {
+        ...response.data,
+        levels: response.data.levels?.map(level => mapObjectColors(level)) || []
+      };
+      return mappedData;
     } catch (error) {
       console.error("Error getting curriculum levels:", error);
       throw error;
@@ -29,7 +35,13 @@ class CurriculumService {
       const response = await apiClient.get(
         `${ENDPOINTS.CURRICULUM.LEVELS}/${levelId}/modules`
       );
-      return response.data;
+      // Map backend colors to brand colors
+      const mappedData = {
+        ...response.data,
+        level: response.data.level ? mapObjectColors(response.data.level) : null,
+        modules: response.data.modules?.map(module => mapObjectColors(module)) || []
+      };
+      return mappedData;
     } catch (error) {
       console.error(`Error getting modules for level ${levelId}:`, error);
       throw error;
@@ -46,7 +58,9 @@ class CurriculumService {
       const response = await apiClient.get(
         `${ENDPOINTS.CURRICULUM.MODULES}/${moduleId}`
       );
-      return response.data;
+      // Map backend colors to brand colors
+      const mappedData = mapObjectColors(response.data);
+      return mappedData;
     } catch (error) {
       console.error(`Error getting module ${moduleId}:`, error);
       throw error;

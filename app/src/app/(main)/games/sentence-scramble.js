@@ -199,6 +199,7 @@ const SentenceScrambleGameScreen = () => {
         }}
       >
         <SentenceScrambleGame
+          key={`sentence-scramble-${lessonId}-${Date.now()}`} // Force remount on each navigation
           lessonId={lessonId}
           sentences={sentences}
           onComplete={handleGameComplete}

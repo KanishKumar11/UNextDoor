@@ -11,6 +11,26 @@ import {
   saveAIResponseToConversation,
 } from "../conversationService.js";
 
+/**
+ * Generate enhanced instructions using prompt templates
+ * @param {Object} options - Options for prompt generation
+ * @returns {Promise<string>} Enhanced instructions
+ */
+async function generateEnhancedInstructions(options = {}) {
+  try {
+    console.log("⚠️ Generating enhanced instructions for WebSocket service");
+    const { createTeachingPrompt } = await import('../../data/promptTemplates.js');
+    return createTeachingPrompt({
+      isScenarioBased: options.isScenarioBased || false,
+      scenarioId: options.scenarioId || null,
+      level: options.level || 'beginner'
+    });
+  } catch (error) {
+    console.error("❌ Failed to generate enhanced instructions:", error);
+    return `You are Miles, a helpful AI Korean language tutor. The user's proficiency level is ${options.level || "beginner"}. Start with a friendly greeting and teach Korean step by step.`;
+  }
+}
+
 // Active socket connections
 const activeSockets = new Map();
 
@@ -55,12 +75,7 @@ export const initializeRealtimeConversationHandlers = (namespace) => {
           userId,
           {
             ...options,
-            instructions:
-              options.instructions ||
-              `You are a helpful AI language tutor specializing in teaching Korean to English speakers.
-            The user's proficiency level is ${options.level || "beginner"}.
-            Respond in Korean with English translations when appropriate.
-            Keep your responses concise and focused on helping the user learn Korean.`,
+            instructions: options.instructions || await generateEnhancedInstructions(options),
           }
         );
 

@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import modernTheme from "../styles/modernTheme";
 import ModernAvatar from "./ModernAvatar";
+import { BRAND_COLORS } from "../constants/colors";
 
 /**
  * ModernHeader component
@@ -66,7 +67,7 @@ const ModernHeader = ({
   };
 
   return (
-    <View style={[styles.container, style]} {...props}>
+    <View style={[styles.container, style,]} {...props}>
       <View style={styles.leftSection}>
         {showBackButton && (
           <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
@@ -100,7 +101,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: modernTheme.spacing.md,
     paddingVertical: modernTheme.spacing.md,
-    backgroundColor: modernTheme.colors.background.paper,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
     borderBottomWidth: 1,
     borderBottomColor: modernTheme.colors.neutral[200],
   },

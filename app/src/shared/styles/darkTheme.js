@@ -5,129 +5,132 @@
 
 import lightTheme from "./modernTheme";
 
-// Color palette based on UNextDoor brand guidelines for dark mode
+// Miles-Inspired Color Palette for UNextDoor (Dark Mode)
 const colors = {
-  // Primary colors - Green from brand guidelines (darker shades for dark mode)
+  // Primary colors - Explorer Teal (darker shades for dark mode)
   primary: {
-    50: "#204311",
-    100: "#34651A",
-    200: "#478623",
-    300: "#5BA82C",
-    400: "#6FC935",
-    500: "#8FD95F", // Main primary color (lighter for dark mode)
-    600: "#A7DF85",
-    700: "#BDE7A3",
-    800: "#D3EFC2",
-    900: "#E9F7E0",
+    50: "#132727",
+    100: "#264E4A",
+    200: "#38766D",
+    300: "#4A9D90",
+    400: "#5BC4B3",
+    500: "#75D5C9", // Main primary color (lighter for dark mode)
+    600: "#A3E3DB",
+    700: "#D1F1ED",
+    800: "#E8F8F6",
+    900: "#F4FDFC",
   },
 
-  // Secondary colors - Navy blue from brand guidelines (lighter shades for dark mode)
+  // Secondary colors - Ocean Blue (lighter shades for dark mode)
   secondary: {
-    50: "#000A14",
-    100: "#001429",
-    200: "#001F3D",
-    300: "#002952",
-    400: "#003366",
-    500: "#3385FF", // Main secondary color (lighter for dark mode)
-    600: "#66A3FF",
-    700: "#99C2FF",
-    800: "#CCE0FF",
-    900: "#E6F0FF",
+    50: "#0A181C",
+    100: "#153137",
+    200: "#204953",
+    300: "#2B616E",
+    400: "#36798A",
+    500: "#4F97A7", // Main secondary color (lighter for dark mode)
+    600: "#7BB1BD",
+    700: "#A7CBD3",
+    800: "#D3E5E9",
+    900: "#E9F2F4",
   },
 
-  // Tertiary colors - Black from brand guidelines (lighter shades for dark mode)
+  // Tertiary colors - Shadow Grey (lighter shades for dark mode)
   tertiary: {
-    50: "#000000",
-    100: "#000000",
-    200: "#000000",
-    300: "#000000",
-    400: "#000000",
-    500: "#757575", // Main tertiary color (lighter for dark mode)
-    600: "#9E9E9E",
-    700: "#BDBDBD",
-    800: "#E0E0E0",
-    900: "#F5F5F5",
+    50: "#0F0F0F",
+    100: "#1F1F1F",
+    200: "#2F2F2F",
+    300: "#3F3F3F",
+    400: "#4F4F4F",
+    500: "#BFBFBF", // Main tertiary color (lighter for dark mode)
+    600: "#CFCFCF",
+    700: "#DFDFDF",
+    800: "#EFEFEF",
+    900: "#F7F7F7",
   },
 
-  // Accent colors - Using primary green (darker shades for dark mode)
+  // Accent colors - Sky Aqua (darker shades for dark mode)
   accent: {
-    50: "#204311",
-    100: "#34651A",
-    200: "#478623",
-    300: "#5BA82C",
-    400: "#6FC935",
-    500: "#8FD95F", // Main accent color (same as primary)
-    600: "#A7DF85",
-    700: "#BDE7A3",
-    800: "#D3EFC2",
-    900: "#E9F7E0",
+    50: "#212E2C",
+    100: "#415D58",
+    200: "#628B84",
+    300: "#82BAB0",
+    400: "#A3E8DC",
+    500: "#BDF3ED", // Main accent color (lighter for dark mode)
+    600: "#D3F7F3",
+    700: "#E9FBF9",
+    800: "#F4FDFC",
+    900: "#FAFEFE",
   },
 
-  // Neutral colors
+  // Neutral colors - Canvas Beige and darker tones
   neutral: {
-    50: "#121212",
-    100: "#1E1E1E",
-    200: "#2C2C2C",
-    300: "#3A3A3A",
-    400: "#484848",
-    500: "#5C5C5C",
+    50: "#1A1A1A",
+    100: "#2A2A2A",
+    200: "#3A3A3A",
+    300: "#4A4A4A",
+    400: "#5A5A5A",
+    500: "#6A6A6A",
     600: "#7A7A7A",
-    700: "#989898",
-    800: "#B6B6B6",
-    900: "#D4D4D4",
+    700: "#8A8A8A",
+    800: "#9A9A9A",
+    900: "#AAAAAA",
   },
 
   // Semantic colors
   success: {
-    light: "#478623",
-    main: "#6FC935", // Using brand green for success
-    dark: "#A7DF85",
+    light: "#BDF3ED", // Sky Aqua for light success
+    main: "#75D5C9", // Explorer Teal for success (lighter for dark mode)
+    dark: "#38766D",
   },
 
   warning: {
-    light: "#78350F",
-    main: "#F59E0B",
-    dark: "#FDE68A",
+    light: "#E2C376", // Canvas Beige for light warning
+    main: "#C5A454", // Rucksack Brown for warning (lighter for dark mode)
+    dark: "#836B39",
   },
 
   error: {
-    light: "#7F1D1D",
-    main: "#EF4444",
-    dark: "#FCA5A5",
+    light: "#FFB3B3",
+    main: "#FF8888",
+    dark: "#CC5555",
   },
 
   info: {
-    light: "#99C2FF",
-    main: "#3385FF", // Using secondary navy blue for info
-    dark: "#001F3D",
+    light: "#BDF3ED", // Sky Aqua for light info
+    main: "#4F97A7", // Ocean Blue for info (lighter for dark mode)
+    dark: "#204953",
   },
 
   // Text colors
   text: {
-    primary: "#FFFFFF",
-    secondary: "#99C2FF", // Navy blue for secondary text
-    tertiary: "#B6B6B6", // Gray for tertiary text
-    disabled: "#5C5C5C",
+    primary: "#F7F7F7", // Light Shadow Grey for primary text
+    secondary: "#A7CBD3", // Light Ocean Blue for secondary text
+    tertiary: "#E2C376", // Light Rucksack Brown for tertiary text
+    disabled: "#6A6A6A",
     hint: "#7A7A7A",
-    white: "#FFFFFF",
+    white: "#FAFAFA", // Whisper White
   },
 
   // Background colors
   background: {
-    default: "#121212",
-    paper: "#1E1E1E",
-    card: "#2C2C2C",
-    dark: "#000000",
+    default: "#1A1A1A", // Dark neutral background
+    paper: "#2A2A2A", // Slightly lighter dark background
+    card: "#3A3A3A", // Card background
+    dark: "#0F0F0F", // Darkest background
   },
 
   // Divider color
-  divider: "#003366", // Navy blue for dividers
+  divider: "#4A4A4A", // Dark neutral for dividers
 
-  // Brand-specific colors
-  brandGreen: "#6FC935", // Primary Green from brand guidelines
-  brandNavy: "#3385FF", // Secondary Navy Blue from brand guidelines (lighter for dark mode)
-  brandBlack: "#757575", // Tertiary Black from brand guidelines (lighter for dark mode)
-  brandWhite: "#FFFFFF", // White from brand guidelines
+  // Miles-inspired brand colors (adjusted for dark mode)
+  explorerTeal: "#75D5C9", // Primary brand highlight (lighter)
+  skyAqua: "#BDF3ED", // Backgrounds, UI containers (lighter)
+  oceanBlue: "#4F97A7", // Headings, text highlights (lighter)
+  canvasBeige: "#E2C376", // Backgrounds, card elements (lighter)
+  rucksackBrown: "#C5A454", // Borders, shadows, accents (lighter)
+  shadowGrey: "#BFBFBF", // Text, outlines, icons (lighter)
+  whisperWhite: "#FAFAFA", // Background base, UI space
 };
 
 // Create dark theme by extending the light theme

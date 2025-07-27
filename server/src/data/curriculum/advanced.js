@@ -17,7 +17,7 @@ export const advancedModules = [
     requiredXp: 0,
     order: 1,
     icon: "globe-outline",
-    color: "#9b59b6", // Purple color
+    color: "#8B5A96", // Deep Purple
     lessons: [
       {
         id: "advanced-culture-customs",
@@ -514,7 +514,7 @@ export const advancedModules = [
     requiredXp: 400,
     order: 2,
     icon: "business-outline",
-    color: "#2ecc71", // Green color
+    color: "#5BC4B3", // Explorer Teal
     lessons: [
       {
         id: "advanced-business",

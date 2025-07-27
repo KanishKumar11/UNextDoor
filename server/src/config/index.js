@@ -146,6 +146,15 @@ const config = {
     assistantId: process.env.VAPI_ASSISTANT_ID,
   },
 
+  // Redis configuration for caching
+  redis: {
+    url: process.env.REDIS_URL || process.env.REDISCLOUD_URL,
+    host: process.env.REDIS_HOST || "localhost",
+    port: parseInt(process.env.REDIS_PORT || "6379", 10),
+    password: process.env.REDIS_PASSWORD,
+    db: parseInt(process.env.REDIS_DB || "0", 10),
+  },
+
   // Payment configuration
   payments: {
     enabled: process.env.ENABLE_PAYMENTS === "true",
@@ -160,6 +169,14 @@ const config = {
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  },
+
+  // Apple Sign-In configuration
+  apple: {
+    teamId: process.env.APPLE_TEAM_ID,
+    keyId: process.env.APPLE_KEY_ID,
+    privateKey: process.env.APPLE_PRIVATE_KEY,
+    bundleId: process.env.APPLE_BUNDLE_ID || "com.UNextDoor.app",
   },
 
   // Feature flags

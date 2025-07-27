@@ -2,7 +2,7 @@ import React from "react";
 import { View, StyleSheet, Text, SafeAreaView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import PersistentConversationView from "../components/PersistentConversationView";
-import modernTheme from "../../../shared/styles/modernTheme";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 
 /**
@@ -40,8 +40,8 @@ export default function StandaloneConversationScreen() {
       <View style={styles.header}>
         <Ionicons
           name="arrow-back"
-          size={24}
-          color={modernTheme.colors.text.primary}
+          size={18}
+          color={BRAND_COLORS.SHADOW_GREY}
           onPress={handleBack}
           style={styles.backButton}
         />
@@ -69,48 +69,56 @@ export default function StandaloneConversationScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: modernTheme.colors.background.main,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: modernTheme.colors.neutral[200],
+    borderBottomWidth: 2,
+    borderBottomColor: BRAND_COLORS.EXPLORER_TEAL + '20',
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   backButton: {
     marginRight: 16,
-    padding: 4,
+    padding: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: BRAND_COLORS.SHADOW_GREY + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    fontFamily: modernTheme.typography.fontFamily.bold,
-    fontSize: modernTheme.typography.fontSize.xl,
-    color: modernTheme.colors.text.primary,
+    fontFamily: 'Montserrat-Bold',
+    fontSize: 18,
+    color: BRAND_COLORS.OCEAN_BLUE,
     flex: 1,
   },
   levelBadge: {
-    backgroundColor: modernTheme.colors.primary[100],
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + '20',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: modernTheme.borderRadius.full,
+    borderRadius: 16,
     alignSelf: "flex-start",
     margin: 16,
     marginTop: 0,
   },
   levelText: {
-    fontFamily: modernTheme.typography.fontFamily.medium,
-    fontSize: modernTheme.typography.fontSize.sm,
-    color: modernTheme.colors.primary[700],
+    fontFamily: 'Montserrat-Medium',
+    fontSize: 14,
+    color: BRAND_COLORS.EXPLORER_TEAL,
   },
 
   conversationContainer: {
     flex: 1,
     padding: 16,
     paddingTop: 0,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   conversationComponent: {
     flex: 1,
     minHeight: 500,
-    marginBottom: 16,
+    marginBottom: 100, // Space for bottom navigation
   },
 });

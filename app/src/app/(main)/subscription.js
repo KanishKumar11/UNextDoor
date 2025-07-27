@@ -11,16 +11,19 @@ import {
   Easing,
   Linking,
   Modal,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { useTheme } from '../../shared/context/ThemeContext';
 import { SubscriptionService } from '../../shared/services/subscriptionService';
 import { useSubscription } from '../../shared/hooks/useSubscription';
 import { CurrencyService, SUPPORTED_CURRENCIES } from '../../shared/services/currencyService';
 import { apiClient } from '../../shared/api/apiClient';
+import { BRAND_COLORS } from '../../shared/constants/colors';
 
 // Import UI components
 import SafeAreaWrapper from '../../shared/components/SafeAreaWrapper';
@@ -46,11 +49,29 @@ import {
 
 const { width } = Dimensions.get('window');
 
+// Helper function for cross-platform font families
+const getFontFamily = (weight = 'regular') => {
+  if (Platform.OS === 'web') {
+    return 'Montserrat, sans-serif';
+  }
+
+  const fontMap = {
+    light: 'Montserrat-Light',
+    regular: 'Montserrat-Regular',
+    medium: 'Montserrat-Medium',
+    semibold: 'Montserrat-SemiBold',
+    bold: 'Montserrat-Bold',
+    extrabold: 'Montserrat-ExtraBold',
+  };
+
+  return fontMap[weight] || fontMap.regular;
+};
+
 export default function SubscriptionScreen() {
   const router = useRouter();
   const { user, token, getProfile } = useAuth();
   const { theme } = useTheme();
-  
+
   // Use the subscription hook for real-time data
   const {
     currentPlan,
@@ -114,6 +135,13 @@ export default function SubscriptionScreen() {
     planName: '',
     amount: null,
     message: '',
+  });
+
+  const [failureDialog, setFailureDialog] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    errorCode: null
   });
 
   // Animation state
@@ -331,12 +359,12 @@ export default function SubscriptionScreen() {
   const handleRefresh = async () => {
     setRefreshing(true);
     setError(null);
-    
+
     // Refresh subscription data
     if (typeof refreshSubscription === 'function') {
       refreshSubscription();
     }
-    
+
     await fetchSubscriptionData();
     setRefreshing(false);
   };
@@ -457,9 +485,10 @@ export default function SubscriptionScreen() {
     setUpgradeLoading(planId);
 
     try {
-      // Get current currency for the subscription
-      const currency = await CurrencyService.getCurrency();
+      // Use current currency state (which reflects the latest selection)
+      const currency = currentCurrency || await CurrencyService.getCurrency();
       console.log('💰 Using currency for subscription:', currency);
+      console.log('💰 Current currency state:', currentCurrency);
 
       // Create recurring subscription (new flow)
       const subscriptionData = await SubscriptionService.createRecurringSubscription(planId, {
@@ -472,7 +501,12 @@ export default function SubscriptionScreen() {
 
         // Open payment dialog with subscription details
         const selectedPlan = plans.find(p => p.id === planId);
-        console.log('🔍 Looking for plan:', planId, 'in plans:', plans.map(p => ({ id: p.id, name: p.name })));
+        console.log('🔍 Looking for plan:', planId, 'in plans:', plans.map(p => ({
+          id: p.id,
+          name: p.name,
+          currency: p.currency,
+          price: p.price
+        })));
         console.log('📋 Selected plan:', selectedPlan);
 
         // Safety check - ensure we have plan details
@@ -482,10 +516,24 @@ export default function SubscriptionScreen() {
           return;
         }
 
+        // Verify the plan has the correct currency
+        if (selectedPlan.currency !== currency.code) {
+          console.warn('⚠️ Plan currency mismatch:', {
+            planCurrency: selectedPlan.currency,
+            expectedCurrency: currency.code
+          });
+          Alert.alert('Warning', 'Currency mismatch detected. Please refresh and try again.');
+          return;
+        }
+
         console.log('💳 Opening payment dialog with recurring subscription data:', {
           orderDetails: subscriptionData.data,
           planDetails: selectedPlan,
-          isRecurring: true
+          isRecurring: true,
+          currency: currency,
+          displayAmount: subscriptionData.data.displayAmount,
+          displayCurrency: subscriptionData.data.displayCurrency,
+          paymentAmountINR: subscriptionData.data.paymentAmountINR
         });
 
         setPaymentDialog({
@@ -501,7 +549,7 @@ export default function SubscriptionScreen() {
       }
     } catch (error) {
       console.error('Error creating recurring subscription:', error);
-      
+
       // Show better error message based on the error
       let errorMessage = 'Failed to initiate recurring subscription';
       if (error.response?.status === 503) {
@@ -509,7 +557,7 @@ export default function SubscriptionScreen() {
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
-      
+
       Alert.alert('Subscription Error', errorMessage);
     } finally {
       setUpgradeLoading(null);
@@ -626,17 +674,24 @@ export default function SubscriptionScreen() {
       const originalAmount = orderDetails?.originalAmount;
       const previousSubscription = orderDetails?.previousSubscription;
 
+      // Get currency information for success dialog
+      const displayCurrency = orderDetails?.displayCurrency || purchasedPlan?.currency || currentCurrency?.code || 'INR';
+      const displayAmount = orderDetails?.displayAmount || orderDetails?.amount || paymentData.amount;
+      const currencySymbol = displayCurrency === 'USD' ? '$' : '₹';
+
       // Show success dialog with the correct plan information
       setSuccessDialog({
         visible: true,
         planName: purchasedPlan?.name || 'Subscription',
-        amount: orderDetails?.amount || paymentData.amount,
+        amount: displayAmount,
+        currency: displayCurrency,
+        currencySymbol: currencySymbol,
         originalAmount: originalAmount,
         prorationCredit: prorationCredit,
         isUpgrade: isUpgrade,
         previousPlan: previousSubscription,
         message: isUpgrade
-          ? `Your ${purchasedPlan?.name || 'subscription'} upgrade has been activated! ${prorationCredit > 0 ? `You received ₹${prorationCredit} credit for your previous subscription. ` : ''}Auto-renewal is enabled, and you'll receive email reminders before each payment.`
+          ? `Your ${purchasedPlan?.name || 'subscription'} upgrade has been activated! ${prorationCredit > 0 ? `You received ${currencySymbol}${prorationCredit} credit for your previous subscription. ` : ''}Auto-renewal is enabled, and you'll receive email reminders before each payment.`
           : `Your ${purchasedPlan?.name || 'subscription'} plan has been activated! Auto-renewal is enabled, and you'll receive email reminders before each payment.`,
       });
     } catch (error) {
@@ -653,11 +708,12 @@ export default function SubscriptionScreen() {
   };
 
   const handlePaymentFailure = (errorData) => {
-    Alert.alert(
-      'Payment Failed',
-      errorData.error || 'Payment could not be completed. Please try again.',
-      [{ text: 'OK' }]
-    );
+    setFailureDialog({
+      visible: true,
+      title: 'Payment Failed',
+      message: errorData.error || 'Payment could not be completed. Please try again.',
+      errorCode: errorData.code || null,
+    });
   };
 
   const handleDialogClose = () => {
@@ -668,14 +724,14 @@ export default function SubscriptionScreen() {
   const handleToggleAutoRenewal = async (enabled) => {
     try {
       const response = await SubscriptionService.updateAutoRenewal(enabled);
-      
+
       if (response.success) {
         // Refresh subscription data to reflect changes
         await refreshSubscription();
-        
+
         Alert.alert(
           'Auto-Renewal Updated',
-          enabled 
+          enabled
             ? 'Auto-renewal has been enabled. You\'ll receive email reminders before each payment.'
             : 'Auto-renewal has been disabled. Your subscription will expire at the end of the current billing period.',
           [{ text: 'OK' }]
@@ -697,35 +753,35 @@ export default function SubscriptionScreen() {
         isManualSelection: currencyDialog.isManualSelection,
         currentPlansCount: plans.length
       });
-      
+
       setCurrencyDialog(prev => ({ ...prev, loading: true }));
-      
+
       // Save the currency selection
       console.log('💰 Saving currency to backend...', selectedCurrency);
       await CurrencyService.setCurrency(selectedCurrency);
-      
+
       // Update local state
       setCurrentCurrency(selectedCurrency);
       setNeedsPlanRefresh(true); // Mark that plans need to be refreshed
-      
+
       console.log('💰 Currency saved successfully:', selectedCurrency);
-      
+
       // Increased delay to ensure backend has processed the preference update
       console.log('💰 Waiting for backend to process preference update...');
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       // Close dialog
-      setCurrencyDialog({ 
-        visible: false, 
-        detectedCurrency: null, 
-        loading: false, 
-        isManualSelection: false 
+      setCurrencyDialog({
+        visible: false,
+        detectedCurrency: null,
+        loading: false,
+        isManualSelection: false
       });
-      
+
       // Always reload plans when currency is changed to show updated prices
       console.log('💰 Reloading plans with new currency:', selectedCurrency.code);
       setLoading(true);
-      
+
       try {
         // Add debugging to check what plans are returned
         console.log('💰 Making getPlans request...');
@@ -737,28 +793,28 @@ export default function SubscriptionScreen() {
           firstPlanSymbol: plansData.data?.plans?.[0]?.currencySymbol,
           firstPlanPrice: plansData.data?.plans?.[1]?.price, // Basic plan price
         });
-        
+
         if (plansData.success) {
           setPlans(plansData.data.plans);
           setLastPlansFetch(Date.now());
           setNeedsPlanRefresh(false);
-          console.log('💰 Plans reloaded successfully with currency:', 
+          console.log('💰 Plans reloaded successfully with currency:',
             plansData.data.plans?.[0]?.currency);
-          
+
           // Show success message if currency actually changed
           const newCurrency = plansData.data.plans?.[0]?.currency;
           if (newCurrency === selectedCurrency.code) {
             console.log('💰 Currency change successful - plans now show', newCurrency);
           } else {
             console.warn('💰 Currency change may not have taken effect - plans still show', newCurrency);
-            Alert.alert('Warning', 
+            Alert.alert('Warning',
               `Plans are still showing ${newCurrency} prices. This might be a temporary delay. Please refresh the page if prices don't update.`);
           }
         } else {
           console.error('💰 Failed to reload plans:', plansData.message);
           Alert.alert('Error', 'Failed to refresh plans with new currency. Please try again.');
         }
-        
+
         // Only check pending payments during first-time setup
         if (!currencyDialog.isManualSelection) {
           await checkPendingPayments();
@@ -769,7 +825,7 @@ export default function SubscriptionScreen() {
       } finally {
         setLoading(false);
       }
-      
+
     } catch (error) {
       console.error('Error confirming currency:', error);
       Alert.alert('Error', 'Failed to save currency preference. Please try again.');
@@ -842,7 +898,7 @@ export default function SubscriptionScreen() {
           onPress: async () => {
             try {
               const response = await SubscriptionService.cancelSubscription();
-              
+
               if (response.success) {
                 await refreshSubscription();
                 Alert.alert(
@@ -866,7 +922,7 @@ export default function SubscriptionScreen() {
   const handleReactivateSubscription = async () => {
     try {
       const response = await SubscriptionService.reactivateSubscription();
-      
+
       if (response.success) {
         await refreshSubscription();
         Alert.alert(
@@ -896,12 +952,12 @@ export default function SubscriptionScreen() {
 
   const getPlanColor = (planId) => {
     const colors = {
-      free: theme.colors.neutral[500],
-      basic_monthly: theme.colors.warning.main,
-      standard_quarterly: theme.colors.info.main,
-      pro_yearly: theme.colors.success.main,
+      free: BRAND_COLORS.SHADOW_GREY,
+      basic_monthly: BRAND_COLORS.GOLDEN_AMBER,
+      standard_quarterly: BRAND_COLORS.SKY_AQUA,
+      pro_yearly: BRAND_COLORS.EXPLORER_TEAL,
     };
-    return colors[planId] || theme.colors.neutral[400];
+    return colors[planId] || BRAND_COLORS.SHADOW_GREY;
   };
 
   const getCurrencySymbol = (currency) => {
@@ -938,7 +994,7 @@ export default function SubscriptionScreen() {
         console.error('Error initializing currency:', error);
       }
     };
-    
+
     initializeCurrency();
     fetchSubscriptionData();
   }, []);
@@ -960,7 +1016,7 @@ export default function SubscriptionScreen() {
         // This would be set when redirecting back from payment page
         const urlParams = new URLSearchParams(window.location?.search || '');
         const paymentStatus = urlParams.get('payment');
-        
+
         if (paymentStatus === 'success') {
           // Show success dialog
           setSuccessDialog({
@@ -999,7 +1055,7 @@ export default function SubscriptionScreen() {
       <SafeAreaWrapper>
         <Container withPadding>
           <Column align="center" justify="center" style={{ flex: 1 }}>
-            <ActivityIndicator size="large" color={theme.colors.brandGreen} />
+            <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
             <Spacer size="md" />
             <Text>Loading subscription details...</Text>
           </Column>
@@ -1017,10 +1073,10 @@ export default function SubscriptionScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[theme.colors.brandGreen]}
-              tintColor={theme.colors.brandGreen}
+              colors={[BRAND_COLORS.EXPLORER_TEAL]}
+              tintColor={BRAND_COLORS.EXPLORER_TEAL}
               title="Pull to refresh"
-              titleColor={theme.colors.neutral[600]}
+              titleColor={BRAND_COLORS.SHADOW_GREY}
             />
           }
           style={{ flex: 1 }}
@@ -1037,7 +1093,7 @@ export default function SubscriptionScreen() {
               align="center"
               style={{
                 padding: theme.spacing.md,
-                backgroundColor: theme.colors.brandWhite,
+                backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
               }}
             >
               <Column style={{ flex: 1, marginRight: 12 }}>
@@ -1047,7 +1103,7 @@ export default function SubscriptionScreen() {
                 <Heading
                   level="h2"
                   style={{
-                    color: theme.colors.brandNavy,
+                    color: BRAND_COLORS.OCEAN_BLUE,
                     fontFamily: theme.typography.fontFamily.bold,
                     flexWrap: 'wrap',
                     flexShrink: 1,
@@ -1058,7 +1114,7 @@ export default function SubscriptionScreen() {
                   Choose Your Plan
                 </Heading>
               </Column>
-              
+
               <Row align="center">
                 {/* Currency Selector */}
                 <TouchableOpacity
@@ -1072,7 +1128,7 @@ export default function SubscriptionScreen() {
                     });
                   }}
                   style={{
-                    backgroundColor: theme.colors.neutral[100],
+                    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                     borderRadius: 16,
                     paddingHorizontal: 12,
                     paddingVertical: 6,
@@ -1084,38 +1140,22 @@ export default function SubscriptionScreen() {
                   <Text variant="caption" weight="medium" color="neutral.700" style={{ marginRight: 4 }}>
                     {currentCurrency?.symbol || (plans.length > 0 && plans[0].currency === 'INR' ? '₹' : '$')}
                   </Text>
-                  <Ionicons name="chevron-down" size={12} color={theme.colors.neutral[600]} />
+                  <Ionicons name="chevron-down" size={12} color={BRAND_COLORS.SHADOW_GREY} />
                 </TouchableOpacity>
 
-                {/* Debug button for testing currency dialog */}
-                {__DEV__ && (
-                  <TouchableOpacity
-                    onPress={forceCurrencyCheck}
-                    style={{
-                      backgroundColor: theme.colors.error.main,
-                      borderRadius: 16,
-                      paddingHorizontal: 8,
-                      paddingVertical: 6,
-                      marginRight: 8,
-                    }}
-                  >
-                    <Text variant="caption" weight="medium" color="brandWhite">
-                      DEBUG
-                    </Text>
-                  </TouchableOpacity>
-                )}
+
 
                 <TouchableOpacity
                   onPress={() => router.back()}
                   style={{
-                    backgroundColor: theme.colors.neutral[100],
+                    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
                     borderRadius: 20,
                     paddingHorizontal: 16,
                     paddingVertical: 8,
                     flexShrink: 0,
                   }}
                 >
-                  <Ionicons name="close" size={16} color={theme.colors.brandNavy} />
+                  <Ionicons name="close" size={16} color={BRAND_COLORS.OCEAN_BLUE} />
                 </TouchableOpacity>
               </Row>
             </Row>
@@ -1133,18 +1173,18 @@ export default function SubscriptionScreen() {
             <View style={{ paddingHorizontal: theme.spacing.md }}>
               <ModernCard
                 style={{
-                  backgroundColor: theme.colors.brandWhite,
+                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                   borderRadius: 16,
                   // padding: theme.spacing.lg,
-                  elevation:0
+                  elevation: 0
                 }}
               >
                 <Text
                   variant="caption"
                   weight="medium"
                   style={{
-                    color: theme.colors.neutral[600],
-                    fontFamily: theme.typography.fontFamily.medium,
+                    color: BRAND_COLORS.SHADOW_GREY,
+                    fontFamily: getFontFamily('medium'),
                     marginBottom: 8,
                   }}
                 >
@@ -1153,8 +1193,8 @@ export default function SubscriptionScreen() {
                 <Heading
                   level="h3"
                   style={{
-                    color: theme.colors.brandNavy,
-                    fontFamily: theme.typography.fontFamily.bold,
+                    color: BRAND_COLORS.OCEAN_BLUE,
+                    fontFamily: getFontFamily('bold'),
                     marginBottom: theme.spacing.md,
                   }}
                 >
@@ -1182,9 +1222,9 @@ export default function SubscriptionScreen() {
                           width: 48,
                           height: 48,
                           borderRadius: 24,
-                          backgroundColor: currentPlan.tier === 'free' 
-                            ? theme.colors.warning.main + "20" 
-                            : theme.colors.success.main + "20",
+                          backgroundColor: currentPlan.tier === 'free'
+                            ? BRAND_COLORS.WARM_CORAL + "20"
+                            : BRAND_COLORS.EXPLORER_TEAL + "20",
                           alignItems: "center",
                           justifyContent: "center",
                           marginRight: 12,
@@ -1193,15 +1233,15 @@ export default function SubscriptionScreen() {
                         <Ionicons
                           name={currentPlan.tier === 'free' ? "star-outline" : "checkmark-circle"}
                           size={24}
-                          color={currentPlan.tier === 'free' ? theme.colors.warning.main : theme.colors.success.main}
+                          color={currentPlan.tier === 'free' ? BRAND_COLORS.WARM_CORAL : BRAND_COLORS.EXPLORER_TEAL}
                         />
                       </View>
                       <Column style={{ flex: 1, flexShrink: 1 }}>
                         <Text
                           weight="semibold"
                           style={{
-                            color: theme.colors.brandNavy,
-                            fontFamily: theme.typography.fontFamily.semibold,
+                            color: BRAND_COLORS.OCEAN_BLUE,
+                            fontFamily: getFontFamily('semibold'),
                             fontSize: 16,
                             flexWrap: 'wrap',
                           }}
@@ -1213,9 +1253,9 @@ export default function SubscriptionScreen() {
                         <Text
                           variant="caption"
                           style={{
-                            color: theme.colors.neutral[600],
+                            color: BRAND_COLORS.SHADOW_GREY,
                             marginTop: -16,
-                            fontFamily: theme.typography.fontFamily.light,
+                            fontFamily: getFontFamily('light'),
                             flexWrap: 'wrap',
                             flexShrink: 1,
                           }}
@@ -1229,21 +1269,26 @@ export default function SubscriptionScreen() {
 
                     <View
                       style={{
-                        backgroundColor: currentPlan.tier === 'free' 
-                          ? theme.colors.warning.main 
-                          : theme.colors.success.main,
+                        backgroundColor: currentPlan.tier === 'free'
+                          ? BRAND_COLORS.WARM_CORAL
+                          : BRAND_COLORS.EXPLORER_TEAL,
                         borderRadius: 16,
                         paddingHorizontal: 12,
                         paddingVertical: 6,
                         flexShrink: 0,
+                        elevation: 1,
+                        shadowColor: BRAND_COLORS.OCEAN_BLUE,
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 2,
                       }}
                     >
                       <Text
                         weight="semibold"
                         style={{
-                          color: theme.colors.brandWhite,
+                          color: BRAND_COLORS.WHISPER_WHITE,
                           fontSize: 12,
-                          fontFamily: theme.typography.fontFamily.semibold,
+                          fontFamily: getFontFamily('semibold'),
                         }}
                         numberOfLines={1}
                       >
@@ -1266,22 +1311,22 @@ export default function SubscriptionScreen() {
                       >
                         THIS MONTH'S USAGE
                       </Text>
-                      
+
                       <View
                         style={{
-                          backgroundColor: theme.colors.brandWhite,
+                          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                           borderRadius: 8,
                           padding: 12,
                         }}
                       >
                         <Row justify="space-between" align="center" style={{ marginBottom: 8 }}>
                           <Row align="center" style={{ flex: 1, marginRight: 8 }}>
-                            <Ionicons name="book-outline" size={16} color={theme.colors.brandGreen} style={{ marginRight: 8, flexShrink: 0 }} />
+                            <Ionicons name="book-outline" size={16} color={BRAND_COLORS.EXPLORER_TEAL} style={{ marginRight: 8, flexShrink: 0 }} />
                             <Text
                               variant="caption"
                               style={{
-                                color: theme.colors.neutral[700],
-                                fontFamily: theme.typography.fontFamily.regular,
+                                color: BRAND_COLORS.SHADOW_GREY,
+                                fontFamily: getFontFamily('regular'),
                                 flex: 1,
                                 flexShrink: 1,
                               }}
@@ -1295,8 +1340,8 @@ export default function SubscriptionScreen() {
                             variant="caption"
                             weight="medium"
                             style={{
-                              color: hasReachedLimit('lessons') ? theme.colors.error.main : theme.colors.success.main,
-                              fontFamily: theme.typography.fontFamily.medium,
+                              color: hasReachedLimit('lessons') ? BRAND_COLORS.WARM_CORAL : BRAND_COLORS.EXPLORER_TEAL,
+                              fontFamily: getFontFamily('medium'),
                               flexShrink: 0,
                             }}
                             numberOfLines={1}
@@ -1309,7 +1354,7 @@ export default function SubscriptionScreen() {
                         {currentPlan?.tier !== 'free' && (
                           <Row justify="space-between" align="center">
                             <Row align="center" style={{ flex: 1, marginRight: 8 }}>
-                              <Ionicons name="chatbubble-outline" size={16} color={theme.colors.brandGreen} style={{ marginRight: 8, flexShrink: 0 }} />
+                              <Ionicons name="chatbubble-outline" size={16} color={BRAND_COLORS.EXPLORER_TEAL} style={{ marginRight: 8, flexShrink: 0 }} />
                               <Text
                                 variant="caption"
                                 style={{
@@ -1343,21 +1388,22 @@ export default function SubscriptionScreen() {
                         {(hasReachedLimit('lessons') || (currentPlan?.tier !== 'free' && hasReachedLimit('aiSessions'))) && (
                           <View
                             style={{
-                              backgroundColor: theme.colors.error.main + "10",
-                              borderRadius: 6,
-                              padding: 8,
+                              backgroundColor: BRAND_COLORS.WARM_CORAL + "10",
+                              borderRadius: 8,
+                              padding: 12,
                               marginTop: 8,
                               borderWidth: 1,
-                              borderColor: theme.colors.error.main + "20",
+                              borderColor: BRAND_COLORS.WARM_CORAL + "30",
                             }}
                           >
                             <Text
                               variant="caption"
                               weight="medium"
                               style={{
-                                color: theme.colors.error.main,
+                                color: BRAND_COLORS.WARM_CORAL,
                                 textAlign: "center",
-                                fontSize: 11,
+                                fontSize: 12,
+                                fontFamily: getFontFamily('medium'),
                               }}
                             >
                               Limit reached! Upgrade to continue learning.
@@ -1376,7 +1422,7 @@ export default function SubscriptionScreen() {
               <>
                 <Spacer size="md" />
                 <View style={{ paddingHorizontal: theme.spacing.md }}>
-                  <AutoRenewalManagement 
+                  <AutoRenewalManagement
                     currentPlan={currentPlan}
                     onToggleAutoRenewal={handleToggleAutoRenewal}
                     onCancelSubscription={handleCancelSubscription}
@@ -1411,8 +1457,8 @@ export default function SubscriptionScreen() {
               <Heading
                 level="h3"
                 style={{
-                  color: theme.colors.brandNavy,
-                  fontFamily: theme.typography.fontFamily.bold,
+                  color: BRAND_COLORS.OCEAN_BLUE,
+                  fontFamily: getFontFamily('bold'),
                   marginBottom: theme.spacing.md,
                 }}
               >
@@ -1423,12 +1469,17 @@ export default function SubscriptionScreen() {
                 <ModernCard
                   key={plan.id}
                   style={{
-                    backgroundColor: theme.colors.brandWhite,
+                    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                     borderRadius: 16,
                     padding: theme.spacing.lg,
                     marginBottom: theme.spacing.md,
                     borderWidth: plan.popular ? 2 : 1,
-                    borderColor: plan.popular ? theme.colors.brandGreen : theme.colors.neutral[200],
+                    borderColor: plan.popular ? BRAND_COLORS.EXPLORER_TEAL : BRAND_COLORS.EXPLORER_TEAL + "20",
+                    elevation: plan.popular ? 4 : 0,
+                    shadowColor: plan.popular ? BRAND_COLORS.EXPLORER_TEAL : 'transparent',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: plan.popular ? 0.1 : 0,
+                    shadowRadius: plan.popular ? 8 : 0,
                   }}
                 >
                   {plan.popular && (
@@ -1437,18 +1488,23 @@ export default function SubscriptionScreen() {
                         position: 'absolute',
                         top: -8,
                         left: 16,
-                        backgroundColor: theme.colors.brandGreen,
+                        backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
                         borderRadius: 12,
                         paddingHorizontal: 12,
                         paddingVertical: 4,
+                        shadowColor: BRAND_COLORS.OCEAN_BLUE,
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 2,
                       }}
                     >
                       <Text
                         weight="semibold"
                         style={{
-                          color: theme.colors.brandWhite,
+                          color: BRAND_COLORS.WHISPER_WHITE,
                           fontSize: 10,
-                          fontFamily: theme.typography.fontFamily.semibold,
+                          fontFamily: getFontFamily('bold'),
                         }}
                       >
                         MOST POPULAR
@@ -1456,50 +1512,50 @@ export default function SubscriptionScreen() {
                     </View>
                   )}
 
-                  <View style={{ marginTop: plan.popular ? 8 : 0 ,marginBottom: theme.spacing.sm }}>
+                  <View style={{ marginTop: plan.popular ? 8 : 0, marginBottom: theme.spacing.sm }}>
                     {/* Plan Header */}
-                    <Row align="center" justifyContent="space-between" style={{ marginBottom: 16,}}>
-                    <View style={{flexDirection: 'row', alignItems: 'center',}}>
+                    <Row align="center" justifyContent="space-between" style={{ marginBottom: 16, }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', }}>
                         <View
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 16,
-                          backgroundColor: getPlanColor(plan.id) + "20",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          marginRight: 10,
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Ionicons
-                          name={getPlanIcon(plan.id)}
-                          size={18}
-                          color={getPlanColor(plan.id)}
-                        />
-                      </View>
-                      <View style={{ flex: 0, minWidth: 0,marginRight: "auto" }}>
-                        <Text
-                          weight="semibold"
                           style={{
-                            color: theme.colors.brandNavy,
-                            fontFamily: theme.typography.fontFamily.bold,
-                            fontSize: 22,
+                            width: 32,
+                            height: 32,
+                            borderRadius: 16,
+                            backgroundColor: getPlanColor(plan.id) + "20",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            marginRight: 10,
+                            flexShrink: 0,
                           }}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
                         >
-                          {plan.name}
-                        </Text>
+                          <Ionicons
+                            name={getPlanIcon(plan.id)}
+                            size={18}
+                            color={getPlanColor(plan.id)}
+                          />
+                        </View>
+                        <View style={{ flex: 0, minWidth: 0, marginRight: "auto" }}>
+                          <Text
+                            weight="semibold"
+                            style={{
+                              color: BRAND_COLORS.OCEAN_BLUE,
+                              fontFamily: getFontFamily('bold'),
+                              fontSize: 22,
+                            }}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {plan.name}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
                       <Text
                         weight="bold"
                         style={{
-                          flex:1,
-                          width:"100%",
-                          color: theme.colors.brandNavy,
-                          fontFamily: theme.typography.fontFamily.bold,
+                          flex: 1,
+                          width: "100%",
+                          color: BRAND_COLORS.OCEAN_BLUE,
+                          fontFamily: getFontFamily('bold'),
                           fontSize: 18,
                           marginLeft: "auto",
                         }}
@@ -1509,13 +1565,13 @@ export default function SubscriptionScreen() {
                         {formatPrice(plan.price, plan.interval, plan.intervalCount, plan.currency, plan.currencySymbol)}
                       </Text>
                     </Row>
-                    
+
                     {/* Plan Description */}
                     <Text
                       variant="caption"
                       style={{
-                        color: theme.colors.neutral[600],
-                        fontFamily: theme.typography.fontFamily.regular,
+                        color: BRAND_COLORS.SHADOW_GREY,
+                        fontFamily: getFontFamily('regular'),
                         marginBottom: 8,
                         lineHeight: 16,
                       }}
@@ -1529,25 +1585,25 @@ export default function SubscriptionScreen() {
                   <Spacer size="md" />
 
                   {/* Plan Features */}
-                  <View style={{ marginBottom: theme.spacing.md,width:"94%" }}>
+                  <View style={{ marginBottom: theme.spacing.md, width: "94%" }}>
                     {/* Main Features */}
                     {Object.entries(plan.features || {}).map(([key, feature]) => {
                       // Skip additionalPerks as it's handled separately
                       if (key === 'additionalPerks') return null;
-                      
+
                       return (
                         <Row align="flex-start" key={key} style={{ marginBottom: 10, }}>
                           <Ionicons
                             name="checkmark-circle"
                             size={14}
-                            color={theme.colors.success.main}
+                            color={BRAND_COLORS.EXPLORER_TEAL}
                             style={{ marginRight: 8, marginTop: 1, flexShrink: 0 }}
                           />
                           <Text
                             variant="caption"
                             style={{
-                              color: theme.colors.neutral[700],
-                              fontFamily: theme.typography.fontFamily.regular,
+                              color: BRAND_COLORS.SHADOW_GREY,
+                              fontFamily: getFontFamily('regular'),
                               flex: 1,
                               lineHeight: 20,
                             }}
@@ -1561,7 +1617,7 @@ export default function SubscriptionScreen() {
                     })}
 
                     {/* Additional Perks */}
-                    {plan.features?.additionalPerks && Array.isArray(plan.features.additionalPerks) && 
+                    {plan.features?.additionalPerks && Array.isArray(plan.features.additionalPerks) &&
                       plan.features.additionalPerks.map((perk, index) => (
                         <Row align="flex-start" key={`perk-${index}`} style={{ marginBottom: 10 }}>
                           <Ionicons
@@ -1598,38 +1654,47 @@ export default function SubscriptionScreen() {
                           : (!hasActiveSubscription && plan.id === 'free')
                             ? "Current Plan"
                             : (() => {
-                                const currentPlanId = hasActiveSubscription && currentPlan?.id ? currentPlan.id : 'free';
-                                if (isDowngrade(currentPlanId, plan.id)) {
-                                  return "Downgrade";
-                                } else if (currentPlanId === 'free') {
-                                  return "Get Started";
-                                } else {
-                                  return "Upgrade";
-                                }
-                              })()
+                              const currentPlanId = hasActiveSubscription && currentPlan?.id ? currentPlan.id : 'free';
+                              if (isDowngrade(currentPlanId, plan.id)) {
+                                return "Downgrade";
+                              } else if (currentPlanId === 'free') {
+                                return "Get Started";
+                              } else {
+                                return "Upgrade";
+                              }
+                            })()
                     }
                     variant={plan.popular ? "solid" : "outline"}
                     size="md"
                     disabled={upgradeLoading === plan.id || currentPlan?.id === plan.id || plan.id === 'free'}
                     style={{
-                      backgroundColor: 
+                      backgroundColor:
                         currentPlan?.id === plan.id || plan.id === 'free'
-                          ? theme.colors.neutral[200]
-                          : plan.popular 
-                            ? theme.colors.brandGreen 
+                          ? BRAND_COLORS.SHADOW_GREY + "30"
+                          : plan.popular
+                            ? BRAND_COLORS.EXPLORER_TEAL
                             : "transparent",
-                      borderColor: 
+                      borderColor:
                         currentPlan?.id === plan.id || plan.id === 'free'
-                          ? theme.colors.neutral[400]
-                          : theme.colors.brandGreen,
+                          ? BRAND_COLORS.SHADOW_GREY + "60"
+                          : BRAND_COLORS.EXPLORER_TEAL,
+                      borderRadius: 12,
+                      paddingVertical: 16,
+                      elevation: currentPlan?.id === plan.id || plan.id === 'free' ? 0 : 0,
+                      shadowColor: BRAND_COLORS.OCEAN_BLUE,
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: currentPlan?.id === plan.id || plan.id === 'free' ? 0 : 0.1,
+                      shadowRadius: currentPlan?.id === plan.id || plan.id === 'free' ? 0 : 4,
                     }}
                     textStyle={{
-                      color: 
+                      color:
                         currentPlan?.id === plan.id || plan.id === 'free'
-                          ? theme.colors.neutral[600]
-                          : plan.popular 
-                            ? theme.colors.brandWhite 
-                            : theme.colors.brandGreen,
+                          ? BRAND_COLORS.SHADOW_GREY
+                          : plan.popular
+                            ? BRAND_COLORS.WHISPER_WHITE
+                            : BRAND_COLORS.EXPLORER_TEAL,
+                      fontFamily: getFontFamily('semibold'),
+                      fontSize: 16,
                     }}
                     onPress={() => {
                       if (currentPlan?.id === plan.id || plan.id === 'free') {
@@ -1676,7 +1741,21 @@ export default function SubscriptionScreen() {
           onClose={() => setSuccessDialog({ visible: false, planName: '', amount: null, message: '' })}
           planName={successDialog.planName}
           amount={successDialog.amount}
+          currency={successDialog.currency}
+          currencySymbol={successDialog.currencySymbol}
+          originalAmount={successDialog.originalAmount}
+          prorationCredit={successDialog.prorationCredit}
+          isUpgrade={successDialog.isUpgrade}
+          previousPlan={successDialog.previousPlan}
           message={successDialog.message}
+        />
+
+        <PaymentFailureDialog
+          visible={failureDialog.visible}
+          onClose={() => setFailureDialog({ visible: false, title: '', message: '', errorCode: null })}
+          title={failureDialog.title}
+          message={failureDialog.message}
+          errorCode={failureDialog.errorCode}
         />
 
         <CurrencyConfirmationDialog
@@ -1732,7 +1811,7 @@ const AutoRenewalManagement = ({ currentPlan, onToggleAutoRenewal, onCancelSubsc
   return (
     <ModernCard
       style={{
-        backgroundColor: theme.colors.brandWhite,
+        backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
         borderRadius: 16,
         padding: theme.spacing.md, // Reduced padding for better space utilization
         elevation: 0,
@@ -1852,12 +1931,13 @@ const AutoRenewalManagement = ({ currentPlan, onToggleAutoRenewal, onCancelSubsc
         style={{
           backgroundColor: theme.colors.neutral[50],
           borderRadius: 12,
+
           padding: theme.spacing.sm,
           marginBottom: theme.spacing.md,
         }}
       >
-        <Row justify="space-between" align="center">
-          <Column style={{ flex: 1, marginRight:10, width:"90%" }}>
+        <Row justify="space-between" align="center" >
+          <Column style={{ flex: 1, marginRight: 10, width: "80%", gap: 0 }}>
             <Text
               style={{
                 color: theme.colors.brandNavy,
@@ -1899,7 +1979,7 @@ const AutoRenewalManagement = ({ currentPlan, onToggleAutoRenewal, onCancelSubsc
                 width: 24,
                 height: 24,
                 borderRadius: 12,
-                backgroundColor: theme.colors.brandWhite,
+                backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
                 transform: [{ translateX: autoRenewalEnabled ? 18 : 2 }],
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 1 },
@@ -1933,21 +2013,17 @@ const AutoRenewalManagement = ({ currentPlan, onToggleAutoRenewal, onCancelSubsc
           />
         ) : (
           <ModernButton
-            title="Cancel Subscription"
+            text="Cancel Subscription"
             onPress={onCancelSubscription}
             variant="outline"
+            color="error"
             style={{
-              borderColor: theme.colors.error.main,
+              borderColor: '#FF6B6B',
               borderWidth: 1.5,
-              borderRadius: 12,
-              paddingVertical: 14,
-              backgroundColor: theme.colors.brandWhite,
+              borderRadius: 16, // Consistent with design system
+              backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
               width: '100%',
-            }}
-            textStyle={{
-              color: theme.colors.error.main,
-              fontFamily: theme.typography.fontFamily.semibold,
-              fontSize: 15,
+              elevation: 0, // Consistent with design system
             }}
           />
         )}
@@ -2002,10 +2078,10 @@ const SubscriptionStatusWarnings = ({ currentPlan }) => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
@@ -2068,24 +2144,24 @@ const SubscriptionStatusWarnings = ({ currentPlan }) => {
       }}
     >
       <Row align="center" style={{ marginBottom: 8 }}>
-        <Ionicons 
-          name={iconName} 
-          size={20} 
-          color={colors[warningType]} 
+        <Ionicons
+          name={iconName}
+          size={20}
+          color={colors[warningType]}
           style={{ marginRight: 8 }}
         />
-        <Text 
-          variant="body1" 
-          weight="semibold" 
+        <Text
+          variant="body1"
+          weight="semibold"
           style={{ color: colors[warningType], flex: 1 }}
         >
           {title}
         </Text>
       </Row>
-      
-      <Text 
-        variant="body2" 
-        color="neutral.700" 
+
+      <Text
+        variant="body2"
+        color="neutral.700"
         style={{ lineHeight: 20 }}
       >
         {message}
@@ -2093,9 +2169,9 @@ const SubscriptionStatusWarnings = ({ currentPlan }) => {
 
       {/* Action suggestions */}
       {hasExpired && (
-        <Text 
-          variant="caption" 
-          color="neutral.600" 
+        <Text
+          variant="caption"
+          color="neutral.600"
           style={{ marginTop: 8, fontStyle: 'italic' }}
         >
           Choose a plan below to reactivate your subscription.
@@ -2105,36 +2181,9 @@ const SubscriptionStatusWarnings = ({ currentPlan }) => {
   );
 };
 
-// Currency Confirmation Dialog Component
-const CurrencyConfirmationDialog = ({ visible, detectedCurrency, onConfirm, onClose, loading, isManualSelection }) => {
-  const { theme } = useTheme();
-
+// Modern Payment Failure Dialog Component
+const PaymentFailureDialog = ({ visible, onClose, title, message, errorCode }) => {
   if (!visible) return null;
-
-  // Always show selection interface for first-time setup or manual selection
-  const isIndianDetection = detectedCurrency && detectedCurrency.code === 'INR';
-
-  const dialogTitle = isManualSelection 
-    ? "Select Currency" 
-    : isIndianDetection 
-      ? "Confirm Your Region" 
-      : "Select Currency";
-
-  const dialogMessage = isManualSelection
-    ? "Choose your preferred currency for subscription pricing:"
-    : isIndianDetection
-      ? `We detected you're in ${detectedCurrency.country}. INR is your natural currency, but you can choose USD if you prefer:`
-      : "We couldn't detect your location automatically. Please choose your preferred currency for subscription pricing:";
-
-  const detectionFailureMessage = !isManualSelection && !isIndianDetection
-    ? "💡 Tip: We use location services to suggest the best currency for you. You can change this anytime in settings."
-    : null;
-
-  const handleBackdropPress = () => {
-    if (!loading) {
-      onClose();
-    }
-  };
 
   return (
     <Modal
@@ -2142,260 +2191,526 @@ const CurrencyConfirmationDialog = ({ visible, detectedCurrency, onConfirm, onCl
       transparent
       animationType="fade"
       statusBarTranslucent
-      onRequestClose={handleBackdropPress}
+      onRequestClose={onClose}
     >
       <View
         style={{
           flex: 1,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)', // Keep black overlay as requested
           justifyContent: 'center',
           alignItems: 'center',
-          paddingHorizontal: theme.spacing.lg,
+          paddingHorizontal: 24,
         }}
       >
         <TouchableOpacity
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           activeOpacity={1}
-          onPress={handleBackdropPress}
+          onPress={onClose}
         />
-        
+
         <View
           style={{
-            backgroundColor: theme.colors.brandWhite,
-            borderRadius: 20,
-            padding: theme.spacing.xl,
+            backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+            borderRadius: 16,
+            padding: 32,
             maxWidth: 400,
             width: '100%',
-            elevation: 10,
-            shadowColor: theme.colors.brandNavy,
+            elevation: 0,
+            shadowColor: BRAND_COLORS.SHADOW_GREY,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.1,
-            shadowRadius: 20,
+            shadowRadius: 16,
+            alignItems: 'center',
           }}
         >
-          {/* Header */}
-          <Row justify="space-between" align="flex-start" style={{ marginBottom: 16 }}>
-            <Row align="center" style={{ flex: 1, marginRight: 12 }}>
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  backgroundColor: theme.colors.info.main + '20',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 12,
-                }}
-              >
-                <Ionicons
-                  name="globe-outline"
-                  size={20}
-                  color={theme.colors.info.main}
-                />
-              </View>
-              <Heading
-                level="h3"
-                style={{
-                  color: theme.colors.brandNavy,
-                  fontFamily: theme.typography.fontFamily.bold,
-                  flex: 1,
-                }}
-              >
-                {dialogTitle}
-              </Heading>
-            </Row>
-            
-            {!loading && (
-              <TouchableOpacity
-                onPress={onClose}
-                style={{
-                  backgroundColor: theme.colors.neutral[100],
-                  borderRadius: 16,
-                  padding: 8,
-                }}
-              >
-                <Ionicons name="close" size={16} color={theme.colors.neutral[600]} />
-              </TouchableOpacity>
-            )}
-          </Row>
+          {/* Error Icon */}
+          <View
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: '#FF6B6B20',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 24,
+            }}
+          >
+            <Ionicons name="close-circle" size={48} color="#FF6B6B" />
+          </View>
+
+          {/* Title */}
+          <Text
+            style={{
+              fontSize: 24,
+              fontFamily: getFontFamily('bold'),
+              color: BRAND_COLORS.OCEAN_BLUE,
+              textAlign: 'center',
+              marginBottom: 8,
+            }}
+          >
+            {title}
+          </Text>
 
           {/* Message */}
           <Text
             style={{
-              color: theme.colors.neutral[700],
-              fontFamily: theme.typography.fontFamily.regular,
+              fontSize: 16,
+              fontFamily: getFontFamily('regular'),
+              color: BRAND_COLORS.SHADOW_GREY,
+              textAlign: 'center',
               lineHeight: 22,
-              marginBottom: detectionFailureMessage ? 12 : 24,
+              marginBottom: errorCode ? 16 : 24,
             }}
           >
-            {dialogMessage}
+            {message}
           </Text>
 
-          {/* Detection failure tip */}
-          {detectionFailureMessage && (
+          {/* Error Code */}
+          {errorCode && (
             <View
               style={{
-                backgroundColor: theme.colors.info.main + '10',
-                borderRadius: 8,
+                backgroundColor: '#FF6B6B15',
+                borderRadius: 12,
                 padding: 12,
                 marginBottom: 24,
-                borderLeftWidth: 3,
-                borderLeftColor: theme.colors.info.main,
+                width: '100%',
               }}
             >
               <Text
-                variant="caption"
                 style={{
-                  color: theme.colors.info.main,
-                  fontFamily: theme.typography.fontFamily.medium,
-                  lineHeight: 18,
+                  fontSize: 12,
+                  fontFamily: getFontFamily('medium'),
+                  color: '#FF6B6B',
+                  textAlign: 'center',
                 }}
               >
-                {detectionFailureMessage}
+                Error Code: {errorCode}
               </Text>
             </View>
           )}
 
-          {/* Currency Options */}
-          <View style={{ marginBottom: 16 }}>
-            <TouchableOpacity
-              onPress={() => onConfirm(SUPPORTED_CURRENCIES.IN)}
-              disabled={loading}
+          {/* Action Button */}
+          <TouchableOpacity
+            onPress={onClose}
+            style={{
+              backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
+              borderRadius: 16,
+              paddingVertical: 16,
+              paddingHorizontal: 32,
+              elevation: 0,
+              width: '100%',
+              alignItems: 'center',
+            }}
+          >
+            <Text
               style={{
-                backgroundColor: isIndianDetection ? theme.colors.brandGreen + '10' : theme.colors.neutral[50],
-                borderRadius: 12,
-                padding: 18,
-                marginBottom: 12,
-                borderWidth: isIndianDetection ? 2 : 1,
-                borderColor: isIndianDetection ? theme.colors.brandGreen : theme.colors.neutral[200],
+                fontSize: 16,
+                fontFamily: getFontFamily('semibold'),
+                color: BRAND_COLORS.WHISPER_WHITE,
               }}
             >
-              <Row align="center">
-                <Text style={{ fontSize: 28, marginRight: 16 }}>🇮🇳</Text>
-                <Column style={{ flex: 1 }}>
-                  <Text 
-                    weight="semibold" 
-                    color="brandNavy" 
-                    style={{ 
-                      fontSize: 18,
-                      // lineHeight: 24,
-                      marginBottom: -20,
-                    }}
-                  >
-                    India
-                  </Text>
-                  <Text 
-                    variant="caption" 
-                    color="neutral.600"
-                    style={{
-                      fontSize: 14,
-                      lineHeight: 18,
-                    }}
-                  >
-                    {SUPPORTED_CURRENCIES.IN.symbol} {SUPPORTED_CURRENCIES.IN.name} ({SUPPORTED_CURRENCIES.IN.code})
-                  </Text>
-                </Column>
-                {isIndianDetection && (
-                  <View
-                    style={{
-                      backgroundColor: theme.colors.brandGreen,
-                      borderRadius: 8,
-                      paddingHorizontal: 10,
-                      paddingVertical: 6,
-                    }}
-                  >
-                    <Text 
-                      variant="caption" 
-                      weight="medium" 
-                      style={{ 
-                        color: theme.colors.brandWhite,
-                        fontSize: 11,
-                        lineHeight: 14,
-                      }}
-                    >
-                      DETECTED
-                    </Text>
-                  </View>
-                )}
-              </Row>
-            </TouchableOpacity>
+              Try Again
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
-            <TouchableOpacity
-              onPress={() => onConfirm(SUPPORTED_CURRENCIES.DEFAULT)}
-              disabled={loading}
+// Modern Currency Selection Dialog Component
+const CurrencyConfirmationDialog = ({ visible, detectedCurrency, onConfirm, onClose, loading, isManualSelection }) => {
+  const { theme } = useTheme();
+  const [selectedCurrency, setSelectedCurrency] = useState(null);
+
+  // Auto-select recommended currency when dialog opens
+  useEffect(() => {
+    if (visible && !selectedCurrency) {
+      const isIndianDetection = detectedCurrency && detectedCurrency.code === 'INR';
+      if (isIndianDetection) {
+        setSelectedCurrency(SUPPORTED_CURRENCIES.IN);
+      } else if (!isManualSelection) {
+        // For first-time setup without detection, pre-select USD
+        setSelectedCurrency(SUPPORTED_CURRENCIES.DEFAULT);
+      }
+    }
+  }, [visible, detectedCurrency, isManualSelection, selectedCurrency]);
+
+  // Reset selection when dialog closes
+  useEffect(() => {
+    if (!visible) {
+      setSelectedCurrency(null);
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  // Always show selection interface for first-time setup or manual selection
+  const isIndianDetection = detectedCurrency && detectedCurrency.code === 'INR';
+
+  const dialogTitle = isManualSelection
+    ? "Select Currency"
+    : isIndianDetection
+      ? "Confirm Your Region"
+      : "Choose Your Currency";
+
+  const dialogSubtitle = isManualSelection
+    ? "Choose your preferred currency for subscription pricing"
+    : isIndianDetection
+      ? `We detected you're in ${detectedCurrency.country}. Select your preferred currency:`
+      : "We couldn't detect your location. Please choose your preferred currency:";
+
+  const currencyOptions = [
+    {
+      ...SUPPORTED_CURRENCIES.IN,
+      flag: "🇮🇳",
+      region: "India",
+      benefits: ["Prices in Indian Rupees", "No currency conversion fees", "Local payment methods"],
+      recommended: isIndianDetection,
+      samplePrice: "₹149",
+      conversionNote: "Direct pricing in INR"
+    },
+    {
+      ...SUPPORTED_CURRENCIES.DEFAULT,
+      flag: "🌍",
+      region: "International",
+      benefits: ["Prices in US Dollars", "International standard", "Global payment options"],
+      recommended: !isIndianDetection,
+      samplePrice: "$1.99",
+      conversionNote: "≈ ₹166 INR will be charged"
+    }
+  ];
+
+  const handleBackdropPress = () => {
+    if (!loading) {
+      onClose();
+    }
+  };
+
+  const handleCurrencySelect = (currency) => {
+    setSelectedCurrency(currency);
+    // Add haptic feedback for better UX
+    if (Haptics?.impactAsync) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const handleConfirm = () => {
+    if (selectedCurrency) {
+      onConfirm(selectedCurrency);
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      statusBarTranslucent
+      onRequestClose={handleBackdropPress}
+    >
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(10, 34, 64, 0.6)', // Using brand navy with opacity
+          justifyContent: 'flex-end',
+          paddingHorizontal: 0,
+        }}
+      >
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          activeOpacity={1}
+          onPress={handleBackdropPress}
+        />
+
+        <View
+          style={{
+            backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            paddingTop: 8,
+            paddingHorizontal: 24,
+            paddingBottom: 40,
+            maxHeight: '80%',
+            elevation: 0,
+            shadowColor: BRAND_COLORS.SHADOW_GREY,
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 16,
+          }}
+        >
+          {/* Modern Header with Handle */}
+          <View style={{ alignItems: 'center', marginBottom: 24 }}>
+            <View
               style={{
-                backgroundColor: !isIndianDetection ? theme.colors.brandGreen + '10' : theme.colors.neutral[50],
-                borderRadius: 12,
-                padding: 18,
-                borderWidth: !isIndianDetection ? 2 : 1,
-                borderColor: !isIndianDetection ? theme.colors.brandGreen : theme.colors.neutral[200],
+                width: 40,
+                height: 4,
+                backgroundColor: BRAND_COLORS.SHADOW_GREY,
+                borderRadius: 2,
+                marginBottom: 20,
+              }}
+            />
+
+            <Row justify="space-between" align="center" style={{ width: '100%', marginBottom: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 24,
+                    fontFamily: getFontFamily('bold'),
+                    color: BRAND_COLORS.OCEAN_BLUE,
+                    lineHeight: 32,
+                  }}
+                >
+                  {dialogTitle}
+                </Text>
+              </View>
+
+              {!loading && (
+                <TouchableOpacity
+                  onPress={onClose}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: BRAND_COLORS.SHADOW_GREY + '20',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="close" size={18} color={BRAND_COLORS.SHADOW_GREY} />
+                </TouchableOpacity>
+              )}
+            </Row>
+
+            <Text
+              style={{
+                fontSize: 16,
+                fontFamily: getFontFamily('regular'),
+                color: BRAND_COLORS.SHADOW_GREY,
+                lineHeight: 22,
+                textAlign: 'left',
+                width: '100%',
               }}
             >
-              <Row align="center">
-                <Text style={{ fontSize: 28, marginRight: 16 }}>🌍</Text>
-                <Column style={{ flex: 1 }}>
-                  <Text 
-                    weight="semibold" 
-                    color="brandNavy" 
-                    style={{ 
-                      fontSize: 18,
-                      // lineHeight: 40,
-                      marginBottom: -20,
-                    }}
-                  >
-                    International
-                  </Text>
-                  <Text 
-                    variant="caption" 
-                    color="neutral.600"
-                    style={{
-                      fontSize: 14,
-                      lineHeight: 18,
-                    }}
-                  >
-                    {SUPPORTED_CURRENCIES.DEFAULT.symbol} {SUPPORTED_CURRENCIES.DEFAULT.name} ({SUPPORTED_CURRENCIES.DEFAULT.code})
-                  </Text>
-                </Column>
-                {!isIndianDetection && (
-                  <View
-                    style={{
-                      backgroundColor: theme.colors.info.main,
-                      borderRadius: 8,
-                      paddingHorizontal: 10,
-                      paddingVertical: 6,
-                    }}
-                  >
-                    <Text 
-                      variant="caption" 
-                      weight="medium" 
-                      style={{ 
-                        color: theme.colors.brandWhite,
-                        fontSize: 11,
-                        lineHeight: 14,
-                      }}
-                    >
-                      GLOBAL
-                    </Text>
-                  </View>
-                )}
-              </Row>
-            </TouchableOpacity>
+              {dialogSubtitle}
+            </Text>
           </View>
 
-          {/* Retry detection button for failed auto-detection */}
-          {!isManualSelection && !isIndianDetection && !loading && (
+          {/* Modern Currency Options */}
+          <View style={{ marginBottom: 24 }}>
+            {currencyOptions.map((option, index) => {
+              const isSelected = selectedCurrency?.code === option.code;
+              const isRecommended = option.recommended;
+
+              return (
+                <TouchableOpacity
+                  key={option.code}
+                  onPress={() => handleCurrencySelect(option)}
+                  disabled={loading}
+                  style={{
+                    backgroundColor: isSelected
+                      ? BRAND_COLORS.EXPLORER_TEAL + '15'
+                      : BRAND_COLORS.CARD_BACKGROUND,
+                    borderRadius: 16,
+                    padding: 20,
+                    marginBottom: index < currencyOptions.length - 1 ? 16 : 0,
+                    borderWidth: isSelected ? 2 : 1,
+                    borderColor: isSelected
+                      ? BRAND_COLORS.EXPLORER_TEAL
+                      : BRAND_COLORS.SHADOW_GREY + '30',
+                    elevation: 0,
+                    shadowColor: BRAND_COLORS.SHADOW_GREY,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: isSelected ? 0.1 : 0.05,
+                    shadowRadius: 8,
+                  }}
+                >
+                  <Row align="center" justify="space-between">
+                    <Row align="center" style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 32, marginRight: 16 }}>{option.flag}</Text>
+
+                      <Column style={{ flex: 1 }}>
+                        <Row align="center" style={{ marginBottom: 4 }}>
+                          <Text
+                            style={{
+                              fontSize: 18,
+                              fontFamily: getFontFamily('semibold'),
+                              color: BRAND_COLORS.OCEAN_BLUE,
+                              marginRight: 8,
+                            }}
+                          >
+                            {option.region}
+                          </Text>
+                          {isRecommended && (
+                            <View
+                              style={{
+                                backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
+                                borderRadius: 8,
+                                paddingHorizontal: 8,
+                                paddingVertical: 1,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 10,
+                                  fontFamily: getFontFamily('bold'),
+                                  color: 'white',
+                                  textTransform: 'uppercase',
+                                }}
+                              >
+                                Recommended
+                              </Text>
+                            </View>
+                          )}
+                        </Row>
+
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            fontFamily: getFontFamily('medium'),
+                            color: BRAND_COLORS.SHADOW_GREY,
+                            marginBottom: 8,
+                            marginTop: -16,
+                          }}
+                        >
+                          {option.symbol} {option.name} ({option.code})
+                        </Text>
+
+                        {/* <Text
+                          style={{
+                            fontSize: 12,
+                            fontFamily: getFontFamily('regular'),
+                            color: BRAND_COLORS.SHADOW_GREY,
+                            lineHeight: 16,
+                            marginBottom: 4,
+                          }}
+                        >
+                          {option.benefits.join(' • ')}
+                        </Text> */}
+
+                        {/* <Text
+                          style={{
+                            fontSize: 11,
+                            fontFamily: getFontFamily('medium'),
+                            color: option.code === 'USD' ? BRAND_COLORS.EXPLORER_TEAL : BRAND_COLORS.SHADOW_GREY,
+                            fontStyle: option.code === 'USD' ? 'italic' : 'normal',
+                          }}
+                        >
+                          {option.conversionNote}
+                        </Text> */}
+                      </Column>
+                    </Row>
+
+                    <Column align="flex-end">
+                      <Text></Text>
+                      {isSelected && (
+                        <View
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: 10,
+                            backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Ionicons name="checkmark" size={12} color="white" />
+                        </View>
+                      )}
+                    </Column>
+                  </Row>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          {/* Modern Action Buttons */}
+          {selectedCurrency && (
+            <View style={{ marginBottom: 16 }}>
+              <TouchableOpacity
+                onPress={handleConfirm}
+                disabled={loading}
+                style={{
+                  backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
+                  borderRadius: 16,
+                  padding: 16,
+                  alignItems: 'center',
+                  elevation: 0,
+                  shadowColor: BRAND_COLORS.EXPLORER_TEAL,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 8,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontFamily: getFontFamily('semibold'),
+                    color: 'white',
+                  }}
+                >
+                  Continue with {selectedCurrency.name}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Info Section */}
+          {!isManualSelection && !isIndianDetection && (
+            <View
+              style={{
+                backgroundColor: BRAND_COLORS.EXPLORER_TEAL + '10',
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 16,
+                borderLeftWidth: 4,
+                borderLeftColor: BRAND_COLORS.EXPLORER_TEAL,
+              }}
+            >
+              <Row align="center" style={{ marginBottom: 8 }}>
+                <Ionicons
+                  name="information-circle"
+                  size={16}
+                  color={BRAND_COLORS.EXPLORER_TEAL}
+                  style={{ marginRight: 8 }}
+                />
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontFamily: getFontFamily('semibold'),
+                    color: BRAND_COLORS.EXPLORER_TEAL,
+                  }}
+                >
+                  Currency Detection
+                </Text>
+              </Row>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontFamily: getFontFamily('regular'),
+                  color: BRAND_COLORS.SHADOW_GREY,
+                  lineHeight: 18,
+                }}
+              >
+                We use timezone-based detection to suggest the best currency for you. You can change this anytime in settings.
+              </Text>
+            </View>
+          )}
+
+          {/* Modern Retry Button */}
+          {!isManualSelection && !isIndianDetection && !loading && !selectedCurrency && (
             <TouchableOpacity
               onPress={async () => {
                 try {
                   console.log('🔄 Retrying currency detection...');
+                  if (Haptics?.impactAsync) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
                   const newDetectedCurrency = await CurrencyService.detectCurrency();
                   console.log('🔄 Retry result:', newDetectedCurrency);
 
                   if (newDetectedCurrency.code === 'INR') {
-                    // Auto-select INR if detected
-                    onConfirm(newDetectedCurrency);
+                    setSelectedCurrency(newDetectedCurrency);
                   } else {
-                    // Show updated dialog with new detection
                     Alert.alert(
                       'Detection Complete',
                       `We still couldn't detect your exact location. Please select your preferred currency manually.`,
@@ -2412,24 +2727,27 @@ const CurrencyConfirmationDialog = ({ visible, detectedCurrency, onConfirm, onCl
                 }
               }}
               style={{
-                backgroundColor: theme.colors.neutral[100],
-                borderRadius: 8,
-                padding: 12,
-                marginTop: 16,
+                backgroundColor: BRAND_COLORS.SHADOW_GREY + '10',
+                borderRadius: 12,
+                padding: 14,
                 alignItems: 'center',
+                borderWidth: 1,
+                borderColor: BRAND_COLORS.SHADOW_GREY + '20',
               }}
             >
               <Row align="center">
                 <Ionicons
                   name="refresh-outline"
-                  size={16}
-                  color={theme.colors.neutral[600]}
+                  size={18}
+                  color={BRAND_COLORS.SHADOW_GREY}
                   style={{ marginRight: 8 }}
                 />
                 <Text
-                  variant="caption"
-                  weight="medium"
-                  style={{ color: theme.colors.neutral[600] }}
+                  style={{
+                    fontSize: 14,
+                    fontFamily: getFontFamily('medium'),
+                    color: BRAND_COLORS.SHADOW_GREY,
+                  }}
                 >
                   Try detecting my location again
                 </Text>
@@ -2437,11 +2755,18 @@ const CurrencyConfirmationDialog = ({ visible, detectedCurrency, onConfirm, onCl
             </TouchableOpacity>
           )}
 
-          {/* Loading indicator */}
+          {/* Modern Loading Indicator */}
           {loading && (
-            <View style={{ alignItems: 'center', marginTop: 16 }}>
-              <ActivityIndicator size="small" color={theme.colors.brandGreen} />
-              <Text variant="caption" color="neutral.600" style={{ marginTop: 8 }}>
+            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+              <ActivityIndicator size="small" color={BRAND_COLORS.EXPLORER_TEAL} />
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontFamily: getFontFamily('medium'),
+                  color: BRAND_COLORS.SHADOW_GREY,
+                  marginTop: 12,
+                }}
+              >
                 Saving your preference...
               </Text>
             </View>

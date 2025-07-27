@@ -1,20 +1,22 @@
+﻿/**
+ * Match Word Game Component - Modernized with GameResultsPage Integration
+ * A game where users match Korean words with their English translations
+ * Now uses the reusable GameResultsPage component for consistent results display
+ */
+
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   TouchableOpacity,
   Animated,
-  Dimensions,
   ActivityIndicator,
-  Easing,
-  ScrollView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import ConfettiCannon from "react-native-confetti-cannon";
-import { useTheme } from "../../../shared/context/ThemeContext";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 import {
   Text,
-  Heading,
   Row,
   Column,
   ModernCard,
@@ -25,27 +27,40 @@ import { gameService } from "../services/gameService";
 import { xpService } from "../../../shared/services/xpService";
 import gameContentService from "../services/gameContentService";
 import { useAuth } from "../../auth/hooks/useAuth";
+import GameResultsPage from "./GameResultsPage";
 
-const { width } = Dimensions.get("window");
+// Helper function for cross-platform font families
+const getFontFamily = (weight = 'regular') => {
+  if (Platform.OS === 'web') {
+    return 'Montserrat, sans-serif';
+  }
+
+  const fontMap = {
+    light: 'Montserrat-Light',
+    regular: 'Montserrat-Regular',
+    medium: 'Montserrat-Medium',
+    semibold: 'Montserrat-SemiBold',
+    bold: 'Montserrat-Bold',
+    extrabold: 'Montserrat-ExtraBold',
+  };
+
+  return fontMap[weight] || fontMap.regular;
+};
 
 /**
  * Match Word Game Component
  * A game where users match Korean words with their English translations
  *
- * @param {Object} props - Component props
- * @param {string} props.lessonId - ID of the lesson this game is for
- * @param {Array} props.words - Array of word pairs to match
- * @param {Function} props.onComplete - Function to call when game is completed
- * @param {Function} props.onClose - Function to call when game is closed
+ * @param {Object} props
+ * @param {string} props.lessonId - ID of the lesson (optional)
+ * @param {Array} props.words - Array of word objects (optional)
+ * @param {Function} props.onComplete - Callback when game is completed
+ * @param {Function} props.onClose - Callback when game is closed
  */
 const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
   const router = useRouter();
-  const { theme } = useTheme();
-  const { checkAchievements } = useAchievements();
   const { user } = useAuth();
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const slideInAnim = useRef(new Animated.Value(50)).current;
-  // const progressAnim = useRef(new Animated.Value(0)).current;
+  const { checkAchievements } = useAchievements();
 
   // Game state
   const [gameWords, setGameWords] = useState([]);
@@ -57,21 +72,27 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
   const [gameCompleted, setGameCompleted] = useState(false);
   const [gameResults, setGameResults] = useState(null);
   const [startTime, setStartTime] = useState(null);
-  const [endTime, setEndTime] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentOptions, setCurrentOptions] = useState([]);
 
-  // Animation values
+  // Animation refs
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
   const feedbackAnim = useRef(new Animated.Value(1)).current;
 
-  // Confetti ref
-  const confettiRef = useRef(null);
-
   // Initialize game
   useEffect(() => {
+    // Reset game state when component mounts to ensure fresh start
+    setGameCompleted(false);
+    setGameResults(null);
+    setCurrentWordIndex(0);
+    setSelectedOption(null);
+    setScore(0);
+    setCorrectAnswers(0);
+    setIsTransitioning(false);
+    setStartTime(Date.now());
+
     if (words.length > 0) {
       initializeGame(words);
     } else if (lessonId && lessonId !== "practice") {
@@ -85,7 +106,7 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
     setStartTime(Date.now());
   }, [lessonId, words]);
 
-  // Load content from the new game content service
+  // Load content from the new game content service with comprehensive error handling
   const loadContentFromService = async () => {
     try {
       setIsLoading(true);
@@ -94,51 +115,104 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
       const userLevel = user?.preferences?.languageLevel || "beginner";
 
       console.log(`🎮 Loading Match Word content for level: ${userLevel}`);
+      console.log(`🔍 Attempting to connect to game content API...`);
 
-      // Get content from the new service
-      const content = await gameContentService.getMatchWordContent({
-        level: userLevel,
-        count: 10,
-      });
+      try {
+        // Get content from the new service
+        const content = await gameContentService.getMatchWordContent({
+          level: userLevel,
+          count: 10,
+        });
 
-      console.log(`✅ Loaded ${content.length} words from content service`);
+        console.log(`✅ Successfully loaded ${content.length} words from API service`);
 
-      if (content && content.length > 0) {
-        initializeGame(content);
-      } else {
-        // Fallback to default words if service fails
-        console.warn("⚠️ No content from service, using fallback");
-        loadFallbackWords();
+        if (content && content.length > 0) {
+          console.log(`🎯 Initializing game with fresh API content - server connection successful!`);
+          initializeGame(content);
+          return;
+        } else {
+          console.warn(`⚠️ API returned empty content, using fallback`);
+        }
+      } catch (serviceError) {
+        // Categorize the error for better user feedback
+        if (serviceError.message.includes('API_ENDPOINT_NOT_FOUND')) {
+          console.warn("🔧 API endpoint not available - server may be down or endpoint missing");
+        } else if (serviceError.message.includes('API_AUTH_ERROR')) {
+          console.warn("🔐 Authentication issue - user may need to log in again");
+        } else if (serviceError.message.includes('API_NETWORK_ERROR')) {
+          console.warn("🌐 Network connectivity issue - check internet connection");
+        } else {
+          console.warn("⚠️ Unknown API error:", serviceError.message);
+        }
+
+        console.log("🔄 Falling back to offline content to ensure game functionality");
       }
+
+      // Always fallback to ensure game works
+      loadFallbackWords();
     } catch (error) {
-      console.error("❌ Error loading content from service:", error);
-      // Fallback to default words on error
+      console.error("❌ Critical error in content loading:", error);
+      // Ensure game always works with fallback content
       loadFallbackWords();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Fallback words if content service fails
+  // Comprehensive fallback words if content service fails
   const loadFallbackWords = () => {
     const fallbackWords = [
+      // Essential Greetings
       {
         korean: "안녕하세요",
         english: "Hello",
         romanization: "annyeonghaseyo",
       },
       {
+        korean: "안녕히 가세요",
+        english: "Goodbye",
+        romanization: "annyeonghi gaseyo",
+      },
+      {
         korean: "감사합니다",
         english: "Thank you",
         romanization: "gamsahamnida",
       },
+      {
+        korean: "죄송합니다",
+        english: "I'm sorry",
+        romanization: "joesonghamnida",
+      },
+      {
+        korean: "실례합니다",
+        english: "Excuse me",
+        romanization: "sillyehamnida",
+      },
+
+      // Basic Responses
       { korean: "네", english: "Yes", romanization: "ne" },
       { korean: "아니요", english: "No", romanization: "aniyo" },
+      { korean: "괜찮아요", english: "It's okay", romanization: "gwaenchanayo" },
+
+      // Essential Nouns
       { korean: "이름", english: "Name", romanization: "ireum" },
       { korean: "물", english: "Water", romanization: "mul" },
-      { korean: "밥", english: "Rice", romanization: "bap" },
+      { korean: "밥", english: "Rice/Food", romanization: "bap" },
       { korean: "집", english: "House", romanization: "jip" },
+      { korean: "학교", english: "School", romanization: "hakgyo" },
+      { korean: "친구", english: "Friend", romanization: "chingu" },
+      { korean: "가족", english: "Family", romanization: "gajok" },
+
+      // Numbers (1-5)
+      { korean: "하나", english: "One", romanization: "hana" },
+      { korean: "둘", english: "Two", romanization: "dul" },
+      { korean: "셋", english: "Three", romanization: "set" },
+      { korean: "넷", english: "Four", romanization: "net" },
+      { korean: "다섯", english: "Five", romanization: "daseot" },
     ];
+
+    console.log(`🔄 Using comprehensive fallback content (${fallbackWords.length} words)`);
+    console.log(`📚 Fallback content ensures game functionality when API is unavailable`);
     initializeGame(fallbackWords);
   };
 
@@ -205,19 +279,18 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
   // Generate options for current word
   const generateOptionsForWord = (currentWord, allWords) => {
     const correctOption = currentWord.english;
-    const otherOptions = allWords
+    const incorrectOptions = allWords
       .filter((word) => word.english !== correctOption)
       .map((word) => word.english)
-      .sort(() => Math.random() - 0.5)
+      .sort(() => 0.5 - Math.random())
       .slice(0, 3);
 
-    return [correctOption, ...otherOptions].sort(() => Math.random() - 0.5);
+    return [correctOption, ...incorrectOptions].sort(() => 0.5 - Math.random());
   };
 
   // Initialize game with words
-  const initializeGame = (wordList) => {
-    // Shuffle words and create game state
-    const shuffledWords = [...wordList].sort(() => Math.random() - 0.5);
+  const initializeGame = (wordsList) => {
+    const shuffledWords = [...wordsList].sort(() => 0.5 - Math.random());
     const gameWordsList = shuffledWords.slice(0, 10); // Limit to 10 words for game
     setGameWords(gameWordsList);
 
@@ -237,20 +310,19 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
   };
 
   // Handle option selection
-  const handleOptionSelect = (option) => {
-    if (isTransitioning) return; // Prevent multiple selections during transition
+  const handleOptionSelect = (selectedOption) => {
+    if (isTransitioning) return;
 
-    setSelectedOption(option);
+    setSelectedOption(selectedOption);
     setIsTransitioning(true);
 
-    // Check if answer is correct
     const currentWord = gameWords[currentWordIndex];
-    const isCorrect = option === currentWord.english;
+    const isCorrect = selectedOption === currentWord.english;
 
-    // Add subtle feedback animation
-    Animated.sequence([
+    // Animate feedback
+    Animated.parallel([
       Animated.timing(feedbackAnim, {
-        toValue: 0.95,
+        toValue: 1.1,
         duration: 100,
         useNativeDriver: true,
       }),
@@ -271,65 +343,51 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
     const nextProgress = (currentWordIndex + 1) / gameWords.length;
     Animated.timing(progressAnim, {
       toValue: nextProgress,
-      duration: 600,
+      duration: 300,
       useNativeDriver: false,
-      easing: Easing.out(Easing.cubic),
     }).start();
 
-    // Show feedback briefly, then transition smoothly
+    // Move to next question after delay
     setTimeout(() => {
-      // Move to next word or end game
       if (currentWordIndex < gameWords.length - 1) {
-        const nextWordIndex = currentWordIndex + 1;
+        // Move to next word
+        const nextIndex = currentWordIndex + 1;
+        const nextWord = gameWords[nextIndex];
+        const nextOptions = generateOptionsForWord(nextWord, gameWords);
 
-        // Prepare next word data before animation
-        const nextWordOptions = generateOptionsForWord(
-          gameWords[nextWordIndex],
-          gameWords
-        );
-
-        // Smooth transition animation
-        Animated.sequence([
-          // Fade out current question
+        // Animate transition
+        Animated.parallel([
           Animated.timing(fadeAnim, {
             toValue: 0,
-            duration: 250,
-            useNativeDriver: true,
-            easing: Easing.out(Easing.cubic),
-          }),
-          // Slide out current question
-          Animated.timing(slideAnim, {
-            toValue: -width * 0.3,
             duration: 200,
             useNativeDriver: true,
-            easing: Easing.in(Easing.cubic),
+          }),
+          Animated.timing(slideAnim, {
+            toValue: -50,
+            duration: 200,
+            useNativeDriver: true,
           }),
         ]).start(() => {
-          // Update state for next word
-          setCurrentWordIndex(nextWordIndex);
+          // Update state
+          setCurrentWordIndex(nextIndex);
+          setCurrentOptions(nextOptions);
           setSelectedOption(null);
-          setCurrentOptions(nextWordOptions);
+          setIsTransitioning(false);
 
-          // Reset position for slide in
-          slideAnim.setValue(width * 0.3);
-
-          // Slide in and fade in new question
+          // Animate in new content
+          slideAnim.setValue(50);
           Animated.parallel([
-            Animated.timing(slideAnim, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: true,
-              easing: Easing.out(Easing.cubic),
-            }),
             Animated.timing(fadeAnim, {
               toValue: 1,
-              duration: 300,
+              duration: 200,
               useNativeDriver: true,
-              easing: Easing.out(Easing.cubic),
             }),
-          ]).start(() => {
-            setIsTransitioning(false);
-          });
+            Animated.timing(slideAnim, {
+              toValue: 0,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+          ]).start();
         });
       } else {
         // Game completed - fade out before showing results
@@ -346,28 +404,17 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
 
   // Complete game and show results
   const completeGame = () => {
-    const endTimeValue = Date.now();
-    setEndTime(endTimeValue);
+    const endTime = Date.now();
+    const totalTime = Math.floor((endTime - startTime) / 1000);
+    const accuracy = Math.round((correctAnswers / gameWords.length) * 100);
 
-    const totalTime = (endTimeValue - startTime) / 1000; // in seconds
-    const accuracy = (correctAnswers / gameWords.length) * 100;
-
-    // Calculate time bonus (faster = more points)
-    const timeBonus = Math.max(0, 500 - Math.floor(totalTime) * 2);
-
-    // Calculate accuracy bonus
-    const accuracyBonus = Math.floor(accuracy) * 5;
-
-    // Calculate final score
-    const finalScore = score + timeBonus + accuracyBonus;
-
-    // Prepare game results
     const results = {
-      score: finalScore,
-      accuracy: Math.round(accuracy),
-      correctAnswers,
-      totalQuestions: gameWords.length,
+      score: score,
+      accuracy: accuracy,
       timeSpent: totalTime,
+      correctAnswers: correctAnswers,
+      totalQuestions: gameWords.length,
+      longestStreak: correctAnswers, // Simplified for now
       rewards: [],
     };
 
@@ -399,13 +446,6 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
     setGameResults(results);
     setGameCompleted(true);
 
-    // Trigger confetti for good performance
-    setTimeout(() => {
-      if (confettiRef.current && accuracy >= 70) {
-        confettiRef.current.start();
-      }
-    }, 500);
-
     // Check for achievements
     if (checkAchievements) {
       checkAchievements();
@@ -415,7 +455,7 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
   // Award XP for game completion
   const awardGameXP = async (results) => {
     try {
-      console.log("🎮 Awarding XP for match-word game completion");
+      console.log("🎯 Awarding XP for game completion...");
 
       const xpResult = await xpService.awardGameXP(
         "match-word",
@@ -432,9 +472,6 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
       if (xpResult.success) {
         const xpAwarded = xpResult.data?.xpAwarded || xpResult.xpAwarded || 0;
         console.log(`✅ XP awarded: ${xpAwarded} XP`);
-
-        // Show XP notification or update UI if needed
-        // You could add a toast notification here
       } else {
         console.warn("⚠️ XP award failed:", xpResult.error);
       }
@@ -447,19 +484,13 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
   // Save game results to backend
   const saveGameResults = async (lessonId, results) => {
     try {
-      console.log("🎮 Saving game results for lesson:", lessonId);
+      console.log("💾 Saving game results...");
 
-      // Only save if we have a valid lesson ID (not "practice")
-      if (
-        lessonId &&
-        lessonId !== "practice" &&
-        !lessonId.includes("practice")
-      ) {
-        // Update lesson progress
-        await curriculumService.updateLessonProgress(
-          lessonId,
-          results.accuracy >= 70, // Mark as completed if accuracy is at least 70%
-          results.score,
+      // Only save to API if not practice mode
+      if (lessonId !== "practice") {
+        // Award XP first
+        await xpService.awardXP(
+          user.id,
           results.score, // XP earned equals score
           "game-match-word"
         );
@@ -496,700 +527,78 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
     }
   };
 
-  // Handle retry button
-  const handleRetry = () => {
-    // Reset all game state
-    setCurrentWordIndex(0);
-    setSelectedOption(null);
-    setScore(0);
-    setCorrectAnswers(0);
-    setGameCompleted(false);
-    setGameResults(null);
-    setIsTransitioning(false);
+  // Render game results screen with new reusable component
+  if (gameCompleted && gameResults) {
+    // Prepare data for the new GameResultsPage component
+    const resultsData = {
+      score: gameResults.score,
+      totalQuestions: gameWords.length,
+      accuracy: gameResults.accuracy,
+      timeSpent: gameResults.timeSpent,
+      xpEarned: Math.floor(gameResults.score * 0.25), // Calculate XP based on score
+      correctAnswers: gameResults.correctAnswers,
+      incorrectAnswers: gameWords.length - gameResults.correctAnswers,
+    };
 
-    // Reset animations
-    fadeAnim.setValue(1);
-    slideAnim.setValue(0);
-    progressAnim.setValue(0);
-    feedbackAnim.setValue(1);
+    // Custom metrics specific to Match Word Game
+    const customMetrics = {
+      averageResponseTime: `${(gameResults.timeSpent / gameWords.length).toFixed(1)}s`,
+      longestStreak: gameResults.longestStreak || 0,
+      vocabularyLevel: user?.preferences?.languageLevel || "Beginner",
+      wordsLearned: gameResults.correctAnswers,
+    };
 
-    // Regenerate options for first word
-    if (gameWords.length > 0) {
-      const firstWordOptions = generateOptionsForWord(gameWords[0], gameWords);
-      setCurrentOptions(firstWordOptions);
+    // Mock achievements for demonstration (replace with real achievement system)
+    const achievements = [];
+    if (gameResults.accuracy === 100) {
+      achievements.push({
+        id: "perfect_score",
+        name: "Perfect Score!",
+        icon: "trophy-outline",
+        description: "Got 100% accuracy"
+      });
+    }
+    if (gameResults.timeSpent < 60) {
+      achievements.push({
+        id: "speed_demon",
+        name: "Speed Demon",
+        icon: "flash-outline",
+        description: "Completed in under 1 minute"
+      });
     }
 
-    // Restart timer
-    setStartTime(Date.now());
-    setEndTime(null);
-
-    console.log("🔄 Game restarted");
-  };
-
-  // Render game results screen
-  if (gameCompleted && gameResults) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: theme.colors.brandWhite,
+      <GameResultsPage
+        results={resultsData}
+        gameType="match-word"
+        onPlayAgain={() => {
+          // Reset game state and start new game
+          setGameCompleted(false);
+          setGameResults(null);
+          setCurrentWordIndex(0);
+          setSelectedOption(null);
+          setScore(0);
+          setCorrectAnswers(0);
+          setIsTransitioning(false);
+          setStartTime(Date.now());
+
+          // Reinitialize game with current words
+          if (gameWords.length > 0) {
+            const firstWordOptions = generateOptionsForWord(gameWords[0], gameWords);
+            setCurrentOptions(firstWordOptions);
+          }
+
+          // Reset animations
+          fadeAnim.setValue(1);
+          slideAnim.setValue(0);
+          progressAnim.setValue(0);
+          feedbackAnim.setValue(1);
         }}
-      >
-        {/* Enhanced Confetti with multiple triggers */}
-        {gameResults.accuracy >= 70 && (
-          <ConfettiCannon
-            ref={confettiRef}
-            count={200}
-            origin={{ x: width / 2, y: height * 0.1 }}
-            autoStart={false}
-            fadeOut={true}
-            explosionSpeed={400}
-            fallSpeed={1500}
-            colors={[
-              theme.colors.brandGreen,
-              "#FFD700",
-              "#FF6B35",
-              "#9B59B6",
-              "#3498DB",
-              "#E74C3C",
-            ]}
-          />
-        )}
-
-        {/* Header with enhanced styling */}
-        <View
-          style={{
-            paddingHorizontal: theme.spacing.md,
-            paddingVertical: theme.spacing.md,
-            backgroundColor: theme.colors.brandWhite,
-            borderBottomWidth: 1,
-            borderBottomColor: theme.colors.neutral[100],
-            shadowColor: theme.colors.neutral[200],
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 2,
-          }}
-        >
-          <Row justify="space-between" align="center">
-            <Text
-              style={{
-                fontSize: 20,
-                color: theme.colors.brandNavy,
-                fontFamily: theme.typography.fontFamily.bold,
-              }}
-            >
-              Game Results
-            </Text>
-            <TouchableOpacity
-              onPress={handleClose}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: theme.colors.neutral[100],
-                alignItems: "center",
-                justifyContent: "center",
-                shadowColor: theme.colors.neutral[300],
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.15,
-                shadowRadius: 3,
-                elevation: 2,
-              }}
-            >
-              <Ionicons
-                name="close"
-                size={20}
-                color={theme.colors.neutral[600]}
-              />
-            </TouchableOpacity>
-          </Row>
-        </View>
-
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{
-            paddingHorizontal: theme.spacing.md,
-            paddingTop: theme.spacing.lg,
-            paddingBottom: 120,
-          }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Enhanced Celebration Card with gradient background */}
-          <ModernCard
-            style={{
-              alignItems: "center",
-              padding: theme.spacing.xl,
-              // marginBottom: theme.spacing.xl,
-              backgroundColor:
-                gameResults.accuracy >= 70
-                  ? "linear-gradient(135deg, " +
-                    theme.colors.brandGreen +
-                    "15, " +
-                    theme.colors.brandGreen +
-                    "05)"
-                  : theme.colors.brandWhite,
-              borderRadius: 24,
-              borderWidth: gameResults.accuracy >= 70 ? 2 : 1,
-              borderColor:
-                gameResults.accuracy >= 70
-                  ? theme.colors.brandGreen
-                  : theme.colors.neutral[200],
-              shadowColor:
-                gameResults.accuracy >= 70
-                  ? theme.colors.brandGreen
-                  : theme.colors.neutral[300],
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: gameResults.accuracy >= 70 ? 0.2 : 0.1,
-              shadowRadius: 16,
-              elevation: 8,
-            }}
-          >
-            {/* Animated emoji with pulse effect */}
-            <Animated.View
-              style={{
-                transform: [{ scale: pulseAnim }],
-              }}
-            >
-              <Text
-                style={{ fontSize: 80, marginBottom: 20, textAlign: "center" }}
-              >
-                {gameResults.accuracy >= 90
-                  ? "🏆"
-                  : gameResults.accuracy >= 70
-                  ? "🎉"
-                  : gameResults.accuracy >= 50
-                  ? "👏"
-                  : "💪"}
-              </Text>
-            </Animated.View>
-
-            <Heading
-              level="h1"
-              style={{
-                textAlign: "center",
-                marginBottom: 12,
-                color: theme.colors.brandNavy,
-                fontFamily: theme.typography.fontFamily.bold,
-                fontSize: 28,
-                letterSpacing: 0.5,
-              }}
-            >
-              {gameResults.accuracy >= 90
-                ? "Outstanding!"
-                : gameResults.accuracy >= 70
-                ? "Excellent!"
-                : gameResults.accuracy >= 50
-                ? "Well Done!"
-                : "Keep Going!"}
-            </Heading>
-
-            <Text
-              style={{
-                textAlign: "center",
-                color: theme.colors.neutral[600],
-                fontFamily: theme.typography.fontFamily.medium,
-                fontSize: 16,
-                lineHeight: 22,
-                paddingHorizontal: theme.spacing.sm,
-              }}
-            >
-              {gameResults.accuracy >= 90
-                ? "Perfect performance! You're a word master!"
-                : gameResults.accuracy >= 70
-                ? "Great job mastering the word matching!"
-                : gameResults.accuracy >= 50
-                ? "Good progress! Keep practicing to improve!"
-                : "Every attempt makes you better. Try again!"}
-            </Text>
-
-            {/* Progress indicator */}
-            <View
-              style={{
-                width: "100%",
-                height: 6,
-                backgroundColor: theme.colors.neutral[200],
-                borderRadius: 3,
-                marginTop: theme.spacing.lg,
-                overflow: "hidden",
-              }}
-            >
-              <Animated.View
-                style={{
-                  width: `${gameResults.accuracy}%`,
-                  height: "100%",
-                  backgroundColor:
-                    gameResults.accuracy >= 70
-                      ? theme.colors.brandGreen
-                      : theme.colors.neutral[400],
-                  borderRadius: 3,
-                  transform: [{ scaleX: progressAnim }],
-                }}
-              />
-            </View>
-          </ModernCard>
-
-          {/* Enhanced Stats Cards with better spacing and animations */}
-          <Row
-            justify="space-between"
-            style={{ marginBottom: theme.spacing["2xl"] }}
-          >
-            <Animated.View
-              style={{
-                flex: 1,
-                marginRight: theme.spacing.sm,
-                transform: [{ translateY: slideInAnim }],
-              }}
-            >
-              <ModernCard
-                variant="outlined"
-                style={{
-                  backgroundColor: theme.colors.brandWhite,
-                  borderRadius: 20,
-                  padding: theme.spacing.lg,
-                  alignItems: "center",
-                  borderWidth: 2,
-                  borderColor: theme.colors.brandGreen + "30",
-                  shadowColor: theme.colors.brandGreen,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 4,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 36,
-                    color: theme.colors.brandGreen,
-                    fontFamily: theme.typography.fontFamily.bold,
-                    marginBottom: 8,
-                    textAlign: "center",
-                  }}
-                >
-                  {gameResults.score}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: theme.colors.neutral[600],
-                    fontFamily: theme.typography.fontFamily.semibold,
-                    textTransform: "uppercase",
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  SCORE
-                </Text>
-              </ModernCard>
-            </Animated.View>
-
-            <Animated.View
-              style={{
-                flex: 1,
-                marginLeft: theme.spacing.sm,
-                transform: [{ translateY: slideInAnim }],
-              }}
-            >
-              <ModernCard
-                variant="outlined"
-                style={{
-                  backgroundColor: theme.colors.brandWhite,
-                  borderRadius: 20,
-                  padding: theme.spacing.lg,
-                  alignItems: "center",
-                  borderWidth: 2,
-                  borderColor:
-                    gameResults.accuracy >= 70
-                      ? theme.colors.brandGreen + "30"
-                      : theme.colors.neutral[300],
-                  shadowColor:
-                    gameResults.accuracy >= 70
-                      ? theme.colors.brandGreen
-                      : theme.colors.neutral[400],
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 4,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 36,
-                    color:
-                      gameResults.accuracy >= 70
-                        ? theme.colors.brandGreen
-                        : theme.colors.neutral[600],
-                    fontFamily: theme.typography.fontFamily.bold,
-                    marginBottom: 8,
-                    textAlign: "center",
-                  }}
-                >
-                  {gameResults.accuracy}%
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: theme.colors.neutral[600],
-                    fontFamily: theme.typography.fontFamily.semibold,
-                    textTransform: "uppercase",
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  ACCURACY
-                </Text>
-              </ModernCard>
-            </Animated.View>
-          </Row>
-
-          {/* Enhanced Performance Breakdown */}
-          <ModernCard
-            style={{
-              backgroundColor: theme.colors.brandWhite,
-              borderRadius: 20,
-              padding: theme.spacing.lg,
-              marginBottom: theme.spacing.lg,
-              borderWidth: 1,
-              borderColor: theme.colors.neutral[200],
-              shadowColor: theme.colors.neutral[300],
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.08,
-              shadowRadius: 12,
-              elevation: 3,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 18,
-                color: theme.colors.brandNavy,
-                fontFamily: theme.typography.fontFamily.bold,
-                marginBottom: theme.spacing.md,
-              }}
-            >
-              Performance Breakdown
-            </Text>
-
-            <Row
-              justify="space-between"
-              style={{ marginBottom: theme.spacing.sm }}
-            >
-              <Text
-                style={{
-                  color: theme.colors.neutral[600],
-                  fontSize: 15,
-                  fontFamily: theme.typography.fontFamily.medium,
-                }}
-              >
-                Correct Answers
-              </Text>
-              <Text
-                style={{
-                  color: theme.colors.brandGreen,
-                  fontSize: 15,
-                  fontFamily: theme.typography.fontFamily.bold,
-                }}
-              >
-                {Math.round((gameResults.score * gameResults.accuracy) / 100)} /{" "}
-                {gameResults.score}
-              </Text>
-            </Row>
-
-            <Row
-              justify="space-between"
-              style={{ marginBottom: theme.spacing.sm }}
-            >
-              <Text
-                style={{
-                  color: theme.colors.neutral[600],
-                  fontSize: 15,
-                  fontFamily: theme.typography.fontFamily.medium,
-                }}
-              >
-                Time Bonus
-              </Text>
-              <Text
-                style={{
-                  color: theme.colors.brandGreen,
-                  fontSize: 15,
-                  fontFamily: theme.typography.fontFamily.bold,
-                }}
-              >
-                +{Math.floor(gameResults.score * 0.1)} pts
-              </Text>
-            </Row>
-
-            <View
-              style={{
-                height: 1,
-                backgroundColor: theme.colors.neutral[200],
-                marginVertical: theme.spacing.sm,
-              }}
-            />
-
-            <Row justify="space-between">
-              <Text
-                style={{
-                  color: theme.colors.brandNavy,
-                  fontSize: 16,
-                  fontFamily: theme.typography.fontFamily.bold,
-                }}
-              >
-                Performance Level
-              </Text>
-              <View
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 4,
-                  borderRadius: 12,
-                  backgroundColor:
-                    gameResults.accuracy >= 90
-                      ? "#FFD700" + "20"
-                      : gameResults.accuracy >= 70
-                      ? theme.colors.brandGreen + "20"
-                      : gameResults.accuracy >= 50
-                      ? "#FF6B35" + "20"
-                      : theme.colors.neutral[300],
-                }}
-              >
-                <Text
-                  style={{
-                    color:
-                      gameResults.accuracy >= 90
-                        ? "#B8860B"
-                        : gameResults.accuracy >= 70
-                        ? theme.colors.brandGreen
-                        : gameResults.accuracy >= 50
-                        ? "#FF6B35"
-                        : theme.colors.neutral[600],
-                    fontSize: 13,
-                    fontFamily: theme.typography.fontFamily.bold,
-                  }}
-                >
-                  {gameResults.accuracy >= 90
-                    ? "EXPERT"
-                    : gameResults.accuracy >= 70
-                    ? "ADVANCED"
-                    : gameResults.accuracy >= 50
-                    ? "INTERMEDIATE"
-                    : "BEGINNER"}
-                </Text>
-              </View>
-            </Row>
-          </ModernCard>
-
-          {/* Enhanced Rewards Section */}
-          {gameResults.rewards && gameResults.rewards.length > 0 && (
-            <ModernCard
-              style={{
-                backgroundColor: theme.colors.brandWhite,
-                borderRadius: 20,
-                padding: theme.spacing.lg,
-                marginBottom: theme.spacing.lg,
-                borderWidth: 1,
-                borderColor: theme.colors.neutral[200],
-                shadowColor: theme.colors.neutral[300],
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.08,
-                shadowRadius: 12,
-                elevation: 3,
-              }}
-            >
-              <Row align="center" style={{ marginBottom: theme.spacing.md }}>
-                <Text
-                  style={{
-                    fontSize: 18,
-                    color: theme.colors.brandNavy,
-                    fontFamily: theme.typography.fontFamily.bold,
-                    flex: 1,
-                  }}
-                >
-                  Rewards Earned
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: theme.colors.brandGreen,
-                    fontFamily: theme.typography.fontFamily.semibold,
-                    backgroundColor: theme.colors.brandGreen + "15",
-                    paddingHorizontal: 12,
-                    paddingVertical: 4,
-                    borderRadius: 12,
-                  }}
-                >
-                  +
-                  {gameResults.rewards.reduce(
-                    (sum, reward) => sum + reward.points,
-                    0
-                  )}{" "}
-                  pts
-                </Text>
-              </Row>
-
-              {gameResults.rewards.map((reward, index) => (
-                <Animated.View
-                  key={index}
-                  style={{
-                    backgroundColor: theme.colors.neutral[50],
-                    borderRadius: 16,
-                    padding: theme.spacing.md,
-                    marginBottom:
-                      index < gameResults.rewards.length - 1 ? 12 : 0,
-                    borderWidth: 1,
-                    borderColor: theme.colors.neutral[100],
-                    // transform: [
-                    //   {
-                    //     translateX: new Animated.Value(-50).interpolate({
-                    //       inputRange: [-50, 0],
-                    //       outputRange: [-50, 0],
-                    //     }),
-                    //   },
-                    // ],
-                  }}
-                >
-                  <Row align="center">
-                    <View
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 24,
-                        backgroundColor: theme.colors.brandGreen + "20",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginRight: 16,
-                        borderWidth: 2,
-                        borderColor: theme.colors.brandGreen + "30",
-                      }}
-                    >
-                      <Ionicons
-                        name={reward.icon || "trophy"}
-                        size={24}
-                        color={theme.colors.brandGreen}
-                      />
-                    </View>
-                    <Column style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          color: theme.colors.brandNavy,
-                          fontFamily: theme.typography.fontFamily.bold,
-                          marginBottom: 4,
-                        }}
-                      >
-                        {reward.type}
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 14,
-                          color: theme.colors.neutral[600],
-                          fontFamily: theme.typography.fontFamily.medium,
-                        }}
-                      >
-                        +{reward.points} points earned
-                      </Text>
-                    </Column>
-                    <View
-                      style={{
-                        backgroundColor: theme.colors.brandGreen,
-                        borderRadius: 8,
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        marginLeft: 16,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: theme.colors.brandWhite,
-                          fontSize: 12,
-                          fontFamily: theme.typography.fontFamily.bold,
-                        }}
-                      >
-                        +{reward.points}
-                      </Text>
-                    </View>
-                  </Row>
-                </Animated.View>
-              ))}
-            </ModernCard>
-          )}
-
-          {/* Action Buttons */}
-          <Row
-            style={{
-              marginBottom: theme.spacing.lg,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {/* {gameResults.accuracy < 70 && (
-              <TouchableOpacity
-                onPress={handleRetry}
-                style={{
-                  flex: 1,
-                  backgroundColor: theme.colors.neutral[100],
-                  borderRadius: 16,
-                  padding: theme.spacing.lg,
-                  alignItems: "center",
-                  marginRight: theme.spacing.sm,
-                  borderWidth: 2,
-                  borderColor: theme.colors.neutral[200],
-                }}
-              >
-                <Ionicons
-                  name="refresh"
-                  size={20}
-                  color={theme.colors.neutral[600]}
-                  style={{ marginBottom: 4 }}
-                />
-                <Text
-                  style={{
-                    color: theme.colors.neutral[700],
-                    fontSize: 15,
-                    fontFamily: theme.typography.fontFamily.semibold,
-                  }}
-                >
-                  Try Again
-                </Text>
-              </TouchableOpacity>
-            )} */}
-
-            <TouchableOpacity
-              onPress={handleContinue}
-              style={{
-                // flex: gameResults.accuracy < 70 ? 1 : 2,
-                backgroundColor: theme.colors.brandGreen,
-                borderRadius: 16,
-                padding: theme.spacing.lg,
-
-                width: "100%",
-                alignItems: "center",
-                marginHorizontal: "auto",
-                // marginLeft: gameResults.accuracy < 70 ? theme.spacing.sm : 0,
-                shadowColor: theme.colors.brandGreen,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 6,
-              }}
-            >
-              <Row align="center">
-                <Text
-                  style={{
-                    color: theme.colors.brandWhite,
-                    fontSize: 16,
-                    fontFamily: theme.typography.fontFamily.bold,
-                    marginRight: 8,
-                  }}
-                >
-                  Continue
-                </Text>
-                <Ionicons
-                  name="arrow-forward"
-                  size={20}
-                  color={theme.colors.brandWhite}
-                />
-              </Row>
-            </TouchableOpacity>
-          </Row>
-        </ScrollView>
-      </View>
+        onContinue={handleContinue}
+        onBackToGames={handleClose}
+        achievements={achievements}
+        customMetrics={customMetrics}
+      />
     );
   }
 
@@ -1201,16 +610,16 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: theme.colors.brandWhite,
+          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
         }}
       >
-        <ActivityIndicator size="large" color={theme.colors.brandGreen} />
+        <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
         <Text
           style={{
             marginTop: 16,
             fontSize: 16,
-            color: theme.colors.neutral[600],
-            fontFamily: theme.typography.fontFamily.medium,
+            color: BRAND_COLORS.SHADOW_GREY,
+            fontFamily: getFontFamily('medium'),
           }}
         >
           Loading game...
@@ -1233,16 +642,16 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: theme.colors.brandWhite,
+          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
         }}
       >
-        <ActivityIndicator size="large" color={theme.colors.brandGreen} />
+        <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
         <Text
           style={{
             marginTop: 16,
             fontSize: 16,
-            color: theme.colors.neutral[600],
-            fontFamily: theme.typography.fontFamily.medium,
+            color: BRAND_COLORS.SHADOW_GREY,
+            fontFamily: getFontFamily('medium'),
           }}
         >
           Preparing game...
@@ -1256,24 +665,24 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
     <View
       style={{
         flex: 1,
-        backgroundColor: theme.colors.brandWhite,
+        backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
       }}
     >
       {/* Modern Progress Section */}
       <View
         style={{
-          paddingHorizontal: theme.spacing.md,
-          paddingVertical: theme.spacing.sm,
-          backgroundColor: theme.colors.brandWhite,
+          paddingHorizontal: 16, // theme.spacing.md
+          paddingVertical: 8,    // theme.spacing.sm
+          backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
         }}
       >
         {/* Game Title */}
-        <Row justify="space-between" align="center" style={{ marginBottom: 8 }}>
+        <Row justify="space-between" align="center" style={{}}>
           <Text
             style={{
               fontSize: 18,
-              color: theme.colors.brandNavy,
-              fontFamily: theme.typography.fontFamily.bold,
+              color: BRAND_COLORS.OCEAN_BLUE,
+              fontFamily: getFontFamily('bold'),
             }}
           >
             Match Word Game
@@ -1284,7 +693,7 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
               width: 32,
               height: 32,
               borderRadius: 16,
-              backgroundColor: theme.colors.neutral[100],
+              backgroundColor: BRAND_COLORS.SHADOW_GREY + "20",
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -1292,7 +701,7 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
             <Ionicons
               name="close"
               size={18}
-              color={theme.colors.neutral[600]}
+              color={BRAND_COLORS.SHADOW_GREY}
             />
           </TouchableOpacity>
         </Row>
@@ -1306,8 +715,8 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
           <Text
             style={{
               fontSize: 14,
-              color: theme.colors.neutral[600],
-              fontFamily: theme.typography.fontFamily.medium,
+              color: BRAND_COLORS.SHADOW_GREY,
+              fontFamily: getFontFamily('medium'),
             }}
           >
             Question {currentWordIndex + 1} of {gameWords.length}
@@ -1315,8 +724,8 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
           <Text
             style={{
               fontSize: 14,
-              color: theme.colors.brandGreen,
-              fontFamily: theme.typography.fontFamily.semibold,
+              color: BRAND_COLORS.EXPLORER_TEAL,
+              fontFamily: getFontFamily('semibold'),
             }}
           >
             Score: {score}
@@ -1327,7 +736,7 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
         <View
           style={{
             height: 8,
-            backgroundColor: theme.colors.neutral[100],
+            backgroundColor: BRAND_COLORS.SHADOW_GREY + "30",
             borderRadius: 4,
             overflow: "hidden",
           }}
@@ -1335,7 +744,7 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
           <Animated.View
             style={{
               height: "100%",
-              backgroundColor: theme.colors.brandGreen,
+              backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
               borderRadius: 4,
               width: progressAnim.interpolate({
                 inputRange: [0, 1],
@@ -1350,8 +759,7 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
       <Animated.View
         style={{
           flex: 1,
-          paddingHorizontal: theme.spacing.md,
-          // paddingTop: theme.spacing.lg,
+          paddingHorizontal: 16, // theme.spacing.md
           opacity: fadeAnim,
           transform: [{ translateX: slideAnim }],
         }}
@@ -1359,20 +767,18 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
         {/* Korean Word Display */}
         <ModernCard
           style={{
-            backgroundColor: theme.colors.brandWhite,
+            backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+            elevation: 0,
             borderRadius: 16,
-            // borderWidth: 2,
-            padding: theme.spacing.xl,
             alignItems: "center",
-            marginBottom: theme.spacing.lg,
             elevation: 0,
           }}
         >
           <Text
             style={{
               fontSize: 12,
-              color: theme.colors.neutral[500],
-              fontFamily: theme.typography.fontFamily.medium,
+              color: BRAND_COLORS.SHADOW_GREY,
+              fontFamily: getFontFamily('medium'),
               marginBottom: 8,
               textTransform: "uppercase",
               letterSpacing: 1,
@@ -1383,8 +789,8 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
           <Text
             style={{
               fontSize: 32,
-              color: theme.colors.brandNavy,
-              fontFamily: theme.typography.fontFamily.bold,
+              color: BRAND_COLORS.OCEAN_BLUE,
+              fontFamily: getFontFamily('bold'),
               textAlign: "center",
               lineHeight: 70,
             }}
@@ -1411,17 +817,17 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
                   style={{
                     backgroundColor: showFeedback
                       ? isCorrect
-                        ? theme.colors.brandGreen + "15"
-                        : "#FF5757" + "15"
-                      : theme.colors.neutral[50],
+                        ? BRAND_COLORS.EXPLORER_TEAL + "15"
+                        : BRAND_COLORS.WARM_CORAL + "15"
+                      : BRAND_COLORS.CARD_BACKGROUND,
                     borderRadius: 16,
-                    padding: theme.spacing.md,
+                    padding: 16, // theme.spacing.md
                     borderWidth: 2,
                     borderColor: showFeedback
                       ? isCorrect
-                        ? theme.colors.brandGreen
-                        : "#FF5757"
-                      : theme.colors.neutral[200],
+                        ? BRAND_COLORS.EXPLORER_TEAL
+                        : BRAND_COLORS.WARM_CORAL
+                      : BRAND_COLORS.EXPLORER_TEAL + "30",
                   }}
                   onPress={() => handleOptionSelect(option)}
                   disabled={selectedOption !== null || isTransitioning}
@@ -1434,12 +840,12 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
                         justify: "center",
                         color: showFeedback
                           ? isCorrect
-                            ? theme.colors.brandGreen
-                            : "#FF5757"
-                          : theme.colors.brandNavy,
+                            ? BRAND_COLORS.EXPLORER_TEAL
+                            : BRAND_COLORS.WARM_CORAL
+                          : BRAND_COLORS.OCEAN_BLUE,
                         fontFamily: showFeedback
-                          ? theme.typography.fontFamily.semibold
-                          : theme.typography.fontFamily.medium,
+                          ? getFontFamily('semibold')
+                          : getFontFamily('medium'),
                       }}
                     >
                       {option}
@@ -1448,7 +854,7 @@ const MatchWordGame = ({ lessonId, words = [], onComplete, onClose }) => {
                       <Ionicons
                         name={isCorrect ? "checkmark-circle" : "close-circle"}
                         size={24}
-                        color={isCorrect ? theme.colors.brandGreen : "#FF5757"}
+                        color={isCorrect ? BRAND_COLORS.EXPLORER_TEAL : BRAND_COLORS.WARM_CORAL}
                       />
                     )}
                   </Row>

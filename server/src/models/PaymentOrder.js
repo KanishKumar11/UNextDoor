@@ -28,6 +28,18 @@ const paymentOrderSchema = new mongoose.Schema({
     type: String,
     default: 'INR'
   },
+  displayAmount: {
+    type: Number,
+    required: false // Optional for backward compatibility
+  },
+  displayCurrency: {
+    type: String,
+    required: false // Optional for backward compatibility
+  },
+  paymentAmountINR: {
+    type: Number,
+    required: false // Optional for backward compatibility
+  },
   status: {
     type: String,
     enum: ['created', 'processing', 'paid', 'failed', 'expired'],

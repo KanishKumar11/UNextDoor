@@ -33,12 +33,12 @@ class SubscriptionController {
       // Get user's currency preference (saved preference takes priority over location detection)
       let currency = getUserCurrency(req); // Default based on location
       console.log(`💰 Location-based currency for request:`, currency.code);
-      
+
       // If user is authenticated, check their saved currency preference
       if (req.user) {
         const user = await User.findById(req.user.id);
         console.log(`💰 User preferences:`, user?.preferences);
-        
+
         if (user && user.preferences && user.preferences.currency) {
           // Use saved preference
           const savedCurrencyCode = user.preferences.currency;
@@ -54,7 +54,7 @@ class SubscriptionController {
       } else {
         console.log(`💰 Anonymous user, using location-based:`, currency.code);
       }
-      
+
       const plans = [
         {
           id: 'free',
@@ -67,13 +67,13 @@ class SubscriptionController {
           intervalCount: 1,
           features: {
             lessons: { value: 5, unit: 'per month', label: '5 lessons/month' },
-            community: { 
-              value: 'basic', 
-              label: 'Basic community access (read-only)' 
+            community: {
+              value: 'basic',
+              label: 'Basic community access (read-only)'
             },
-            support: { 
-              value: 'email', 
-              label: 'Email support (no guaranteed response time)' 
+            support: {
+              value: 'email',
+              label: 'Email support (no guaranteed response time)'
             },
             bonusContent: { value: false, label: 'No bonus content' },
             certification: { value: false, label: 'No certificates' },
@@ -88,17 +88,21 @@ class SubscriptionController {
           price: PLAN_PRICES.basic_monthly[currency.code] ?? PLAN_PRICES.basic_monthly.INR,
           currency: currency.code,
           currencySymbol: currency.symbol,
+          paymentAmountINR: currency.code === 'USD' ?
+            Math.round((PLAN_PRICES.basic_monthly.USD * 83.33) * 100) / 100 :
+            PLAN_PRICES.basic_monthly.INR,
+          paymentCurrency: 'INR',
           interval: 'month',
           intervalCount: 1,
           features: {
             lessons: { value: 10, unit: 'per month', label: '10 new lessons/month' },
-            community: { 
-              value: 'limited', 
-              label: 'Limited forum access (read-only threads; one post per week)' 
+            community: {
+              value: 'limited',
+              label: 'Limited forum access (read-only threads; one post per week)'
             },
-            support: { 
-              value: '48h', 
-              label: 'Email support with 48-hour response time' 
+            support: {
+              value: '48h',
+              label: 'Email support with 48-hour response time'
             },
             bonusContent: { value: false, label: 'No access to Bonus Content' },
             certification: { value: false, label: 'Certification Not included' },
@@ -113,29 +117,33 @@ class SubscriptionController {
           price: PLAN_PRICES.standard_quarterly[currency.code] ?? PLAN_PRICES.standard_quarterly.INR,
           currency: currency.code,
           currencySymbol: currency.symbol,
+          paymentAmountINR: currency.code === 'USD' ?
+            Math.round((PLAN_PRICES.standard_quarterly.USD * 83.33) * 100) / 100 :
+            PLAN_PRICES.standard_quarterly.INR,
+          paymentCurrency: 'INR',
           interval: 'month',
           intervalCount: 3,
           features: {
-            lessons: { 
-              value: 30, 
-              unit: 'per quarter', 
-              label: '30 new lessons/quarter (10/month equivalent)' 
+            lessons: {
+              value: 30,
+              unit: 'per quarter',
+              label: '30 new lessons/quarter (10/month equivalent)'
             },
-            community: { 
-              value: 'full', 
-              label: 'Full forum access (posting and commenting) + moderated study groups' 
+            community: {
+              value: 'full',
+              label: 'Full forum access (posting and commenting) + moderated study groups'
             },
-            support: { 
-              value: '24h', 
-              label: 'Priority email support with 24-hour response time' 
+            support: {
+              value: '24h',
+              label: 'Priority email support with 24-hour response time'
             },
-            bonusContent: { 
-              value: 'deep_dive', 
-              label: 'Access to 1 "Deep Dive" bonus lesson per month' 
+            bonusContent: {
+              value: 'deep_dive',
+              label: 'Access to 1 "Deep Dive" bonus lesson per month'
             },
-            certification: { 
-              value: 'module', 
-              label: 'Certificate of Completion for each module (x3 per quarter)' 
+            certification: {
+              value: 'module',
+              label: 'Certificate of Completion for each module (x3 per quarter)'
             },
             additionalPerks: [
               'Early access to upcoming lessons',
@@ -151,29 +159,33 @@ class SubscriptionController {
           price: PLAN_PRICES.pro_yearly[currency.code] ?? PLAN_PRICES.pro_yearly.INR,
           currency: currency.code,
           currencySymbol: currency.symbol,
+          paymentAmountINR: currency.code === 'USD' ?
+            Math.round((PLAN_PRICES.pro_yearly.USD * 83.33) * 100) / 100 :
+            PLAN_PRICES.pro_yearly.INR,
+          paymentCurrency: 'INR',
           interval: 'month',
           intervalCount: 12,
           features: {
-            lessons: { 
-              value: 120, 
-              unit: 'per year', 
-              label: '120 lessons/year (10/month)' 
+            lessons: {
+              value: 120,
+              unit: 'per year',
+              label: '120 lessons/year (10/month)'
             },
-            community: { 
-              value: 'premium', 
-              label: 'Full forum access + invite to exclusive Pro Slack/Discord channels' 
+            community: {
+              value: 'premium',
+              label: 'Full forum access + invite to exclusive Pro Slack/Discord channels'
             },
-            support: { 
-              value: 'live_chat', 
-              label: 'Live chat + email support with same-day response' 
+            support: {
+              value: 'live_chat',
+              label: 'Live chat + email support with same-day response'
             },
-            bonusContent: { 
-              value: 'premium', 
-              label: '"Deep Dive" lesson each month + Monthly guest expert webinar + Resource library' 
+            bonusContent: {
+              value: 'premium',
+              label: '"Deep Dive" lesson each month + Monthly guest expert webinar + Resource library'
             },
-            certification: { 
-              value: 'advanced', 
-              label: 'Module certificates + End-of-year "Advanced Pro" certification' 
+            certification: {
+              value: 'advanced',
+              label: 'Module certificates + End-of-year "Advanced Pro" certification'
             },
             additionalPerks: [
               'Early-bird access to new features and lessons',
@@ -186,7 +198,7 @@ class SubscriptionController {
 
       res.json({
         success: true,
-        data: { 
+        data: {
           plans,
           userCurrency: currency
         }
@@ -206,10 +218,10 @@ class SubscriptionController {
   async getCurrentSubscription(req, res) {
     try {
       const userId = req.user.id;
-      
-      const subscription = await Subscription.findOne({ 
-        userId, 
-        status: { $in: ['active', 'trialing'] } 
+
+      const subscription = await Subscription.findOne({
+        userId,
+        status: { $in: ['active', 'trialing'] }
       }).sort({ createdAt: -1 });
 
       if (!subscription) {
@@ -230,7 +242,7 @@ class SubscriptionController {
 
       res.json({
         success: true,
-        data: { 
+        data: {
           subscription,
           hasActiveSubscription: !isExpired && subscription.status === 'active'
         }
@@ -285,7 +297,7 @@ class SubscriptionController {
 
       // Get plan details with user's currency
       const planDetails = await this.getPlanDetails(planId, req);
-      
+
       // Get user details
       const user = await User.findById(userId);
       if (!user) {
@@ -313,7 +325,7 @@ class SubscriptionController {
             message: 'Downgrades are not allowed mid-cycle. Please wait until your current subscription expires.'
           });
         }
-        
+
         prorationCredit = upgrade.prorationCredit;
         orderAmount = Math.max(0, planDetails.price - prorationCredit);
       }
@@ -321,7 +333,7 @@ class SubscriptionController {
       // Create Razorpay order - amount must be in paise (multiply by 100)
       const amountInPaise = Math.round(orderAmount * 100);
       console.log(`💰 Creating order for amount: ${planDetails.currencySymbol}${orderAmount} (${amountInPaise} paise)`);
-      
+
       const razorpayOrder = await this.razorpay.createOrder(
         amountInPaise,
         planDetails.currency || 'INR',
@@ -356,8 +368,11 @@ class SubscriptionController {
         planId,
         orderId,
         razorpayOrderId: razorpayOrder.data.id,
-        amount: orderAmount,
+        amount: orderAmount, // Payment amount (may be in INR for Razorpay)
         originalAmount: planDetails.price,
+        displayAmount: planDetails.price, // Display amount in user's currency
+        displayCurrency: planDetails.currency, // User's selected currency
+        paymentAmountINR: orderAmount, // Actual payment amount
         currency: planDetails.currency || 'INR',
         status: 'created',
         planDetails,
@@ -436,32 +451,83 @@ class SubscriptionController {
       const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
       const userId = req.user.id;
 
-      // Verify payment signature using Razorpay SDK
-      const verificationResult = await this.razorpay.verifyPayment(
-        razorpay_payment_id,
-        razorpay_order_id,
-        razorpay_signature
-      );
-
-      if (!verificationResult.success) {
-        return res.status(400).json({
+      // Verify payment signature using Razorpay SDK with enhanced error handling
+      let verificationResult;
+      try {
+        verificationResult = await this.razorpay.verifyPayment(
+          razorpay_payment_id,
+          razorpay_order_id,
+          razorpay_signature
+        );
+      } catch (verificationError) {
+        console.error('❌ Payment verification error:', verificationError);
+        return res.status(500).json({
           success: false,
-          message: 'Invalid payment signature',
-          error: verificationResult.error
+          message: 'Payment verification failed due to system error',
+          error: verificationError.message,
+          code: 'VERIFICATION_SYSTEM_ERROR'
         });
       }
 
-      // Find payment order
-      const paymentOrder = await PaymentOrder.findOne({
-        razorpayOrderId: razorpay_order_id,
-        userId,
-        status: { $in: ['created', 'processing'] }
-      });
+      if (!verificationResult.success) {
+        console.error('❌ Invalid payment signature:', {
+          paymentId: razorpay_payment_id,
+          orderId: razorpay_order_id,
+          error: verificationResult.error
+        });
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid payment signature',
+          error: verificationResult.error,
+          code: 'INVALID_SIGNATURE'
+        });
+      }
+
+      // Find payment order with enhanced error handling
+      let paymentOrder;
+      try {
+        paymentOrder = await PaymentOrder.findOne({
+          razorpayOrderId: razorpay_order_id,
+          userId,
+          status: { $in: ['created', 'processing'] }
+        });
+      } catch (dbError) {
+        console.error('❌ Database error finding payment order:', dbError);
+        return res.status(500).json({
+          success: false,
+          message: 'Database error during payment verification',
+          code: 'DATABASE_ERROR'
+        });
+      }
 
       if (!paymentOrder) {
+        // Try to find any payment order for this Razorpay order ID (for debugging)
+        const anyPaymentOrder = await PaymentOrder.findOne({
+          razorpayOrderId: razorpay_order_id
+        });
+
+        if (anyPaymentOrder) {
+          console.error('❌ Payment order found but not for this user or already processed:', {
+            orderId: razorpay_order_id,
+            orderUserId: anyPaymentOrder.userId,
+            requestUserId: userId,
+            orderStatus: anyPaymentOrder.status
+          });
+          return res.status(400).json({
+            success: false,
+            message: 'Payment order already processed or belongs to different user',
+            code: 'ORDER_ALREADY_PROCESSED'
+          });
+        }
+
+        console.error('❌ Payment order not found:', {
+          orderId: razorpay_order_id,
+          userId: userId
+        });
         return res.status(404).json({
           success: false,
-          message: 'Payment order not found or already processed'
+          message: 'Payment order not found',
+          code: 'ORDER_NOT_FOUND'
         });
       }
 
@@ -472,7 +538,7 @@ class SubscriptionController {
       // Check for existing subscription if this is an upgrade
       const existingSubscriptionId = paymentOrder.metadata.get('existingSubscriptionId');
       let existingSubscription = null;
-      
+
       if (existingSubscriptionId) {
         existingSubscription = await Subscription.findById(existingSubscriptionId);
         if (existingSubscription && existingSubscription.status === 'active') {
@@ -585,7 +651,7 @@ class SubscriptionController {
 
     } catch (error) {
       console.error('Verify payment error:', error);
-      
+
       // Try to update payment order status to failed if possible
       if (req.body?.razorpay_order_id) {
         try {
@@ -597,7 +663,7 @@ class SubscriptionController {
           console.error('Failed to update payment order status:', updateError);
         }
       }
-      
+
       res.status(500).json({
         success: false,
         message: 'Failed to verify payment and activate subscription'
@@ -807,7 +873,7 @@ class SubscriptionController {
       // Check payment status with Razorpay
       try {
         const razorpayOrder = await this.razorpay.getOrder(orderId);
-        
+
         // If order is paid but our transaction is not updated
         if (razorpayOrder.status === 'paid' && transaction.status === 'pending') {
           // Find the payment details
@@ -865,6 +931,8 @@ class SubscriptionController {
    */
   async recoverPendingPayments(req, res) {
     try {
+      console.log('🔄 Starting payment recovery process...');
+
       // Find all pending transactions older than 5 minutes
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
       const pendingTransactions = await PaymentTransaction.find({
@@ -872,25 +940,51 @@ class SubscriptionController {
         createdAt: { $lt: fiveMinutesAgo }
       }).limit(50); // Process in batches
 
+      console.log(`📊 Found ${pendingTransactions.length} pending transactions to check`);
+
       const results = {
         checked: 0,
         recovered: 0,
         failed: 0,
+        skipped: 0,
         errors: []
       };
 
       for (const transaction of pendingTransactions) {
         try {
           results.checked++;
+          console.log(`🔍 Checking transaction ${transaction.gatewayOrderId}...`);
+
+          // Skip if no gateway order ID
+          if (!transaction.gatewayOrderId) {
+            console.log(`⚠️ Skipping transaction without gateway order ID: ${transaction._id}`);
+            results.skipped++;
+            continue;
+          }
 
           // Check with Razorpay
-          const razorpayOrder = await this.razorpay.getOrder(transaction.gatewayOrderId);
-          
+          let razorpayOrder;
+          try {
+            razorpayOrder = await this.razorpay.getOrder(transaction.gatewayOrderId);
+          } catch (razorpayError) {
+            console.error(`❌ Failed to fetch Razorpay order ${transaction.gatewayOrderId}:`, razorpayError.message);
+            results.errors.push({
+              transactionId: transaction._id,
+              orderId: transaction.gatewayOrderId,
+              error: razorpayError.message
+            });
+            continue;
+          }
+
           if (razorpayOrder.status === 'paid') {
+            console.log(`✅ Order ${transaction.gatewayOrderId} is paid, checking payments...`);
+
             const payments = await this.razorpay.getOrderPayments(transaction.gatewayOrderId);
             const successfulPayment = payments.find(p => p.status === 'captured');
 
             if (successfulPayment) {
+              console.log(`💰 Found successful payment ${successfulPayment.id}, activating subscription...`);
+
               // Update transaction
               transaction.gatewayPaymentId = successfulPayment.id;
               transaction.status = 'completed';
@@ -899,11 +993,14 @@ class SubscriptionController {
 
               // Activate subscription
               await this.processSubscriptionActivation(transaction);
-              
+
               results.recovered++;
-              console.log(`Recovered payment: ${transaction.gatewayOrderId}`);
+              console.log(`✅ Recovered payment: ${transaction.gatewayOrderId}`);
+            } else {
+              console.log(`⚠️ No captured payment found for order ${transaction.gatewayOrderId}`);
             }
           } else if (razorpayOrder.status === 'failed') {
+            console.log(`❌ Order ${transaction.gatewayOrderId} failed, marking transaction as failed`);
             transaction.status = 'failed';
             transaction.failureReason = 'Payment failed (auto-recovery check)';
             await transaction.save();
@@ -1150,6 +1247,9 @@ class SubscriptionController {
         userAgent: req.headers['user-agent']?.substring(0, 100)
       });
 
+      // Import currency utilities for standardized handling
+      const { getPlanPriceWithPaymentAmount, getPaymentAmountINR } = await import('../utils/currencyUtils.js');
+
       // Validate plan
       const validPlans = ['basic_monthly', 'standard_quarterly', 'pro_yearly'];
       if (!validPlans.includes(planId)) {
@@ -1233,7 +1333,7 @@ class SubscriptionController {
 
       // Step 1: Create or get Razorpay customer
       let razorpayCustomerId = user.razorpayCustomerId;
-      
+
       if (!razorpayCustomerId) {
         const customerResult = await this.razorpay.createCustomer({
           name: user.name || customerInfo?.name || 'User',
@@ -1253,7 +1353,7 @@ class SubscriptionController {
         }
 
         razorpayCustomerId = customerResult.data.id;
-        
+
         // Save customer ID to user
         await User.findByIdAndUpdate(userId, {
           razorpayCustomerId: razorpayCustomerId
@@ -1394,9 +1494,14 @@ class SubscriptionController {
       }
 
       // Step 5: Create payment order for the first payment (with proration if upgrade)
-      const finalAmount = Math.max(0, planDetails.price - prorationCredit);
+      // Use the INR payment amount for Razorpay (what user will actually be charged)
+      const paymentAmountINR = planDetails.paymentAmountINR || planDetails.price;
+      const finalAmount = Math.max(0, paymentAmountINR - prorationCredit);
+
       console.log('💳 Creating payment order for subscription:', {
-        originalPrice: planDetails.price,
+        displayPrice: planDetails.price,
+        displayCurrency: planDetails.currency,
+        paymentAmountINR: paymentAmountINR,
         prorationCredit: prorationCredit,
         finalAmount: finalAmount,
         isUpgrade: !!existingSubscription
@@ -1417,7 +1522,9 @@ class SubscriptionController {
             razorpaySubscriptionId: razorpaySubscription.id,
             subscriptionType: existingSubscription ? 'recurring_upgrade' : 'recurring_first_payment',
             prorationCredit: prorationCredit.toString(),
-            originalAmount: planDetails.price.toString(),
+            displayAmount: planDetails.price.toString(),
+            displayCurrency: planDetails.currency,
+            paymentAmountINR: paymentAmountINR.toString(),
             existingSubscriptionId: existingSubscription?._id?.toString() || ''
           }
         }
@@ -1438,9 +1545,12 @@ class SubscriptionController {
         planId,
         orderId,
         razorpayOrderId: razorpayOrder.data.id,
-        amount: finalAmount, // Use final amount after proration
+        amount: finalAmount, // Use final amount after proration (in INR for Razorpay)
         originalAmount: planDetails.price,
-        currency: 'INR',
+        displayAmount: planDetails.price, // Display amount in user's currency
+        displayCurrency: planDetails.currency, // User's selected currency
+        paymentAmountINR: finalAmount, // Actual payment amount in INR
+        currency: 'INR', // Payment currency (always INR for Razorpay)
         status: 'created',
         planDetails,
         userDetails: {
@@ -1479,10 +1589,13 @@ class SubscriptionController {
           paymentUrl: paymentUrl, // Use proper payment page URL
           nextBillingDate: nextBillingDate,
           autoRenewal: true,
-          amount: finalAmount, // Show final amount after proration
+          amount: finalAmount, // Show final amount after proration (in INR for Razorpay)
           originalAmount: planDetails.price,
+          displayAmount: planDetails.price, // Display amount in user's currency
+          displayCurrency: planDetails.currency, // User's selected currency
+          paymentAmountINR: finalAmount, // Actual payment amount in INR
           prorationCredit: prorationCredit,
-          currency: 'INR',
+          currency: 'INR', // Payment currency (always INR for Razorpay)
           isUpgrade: !!existingSubscription,
           previousSubscription: existingSubscription ? {
             planId: existingSubscription.planId,
@@ -1571,22 +1684,31 @@ class SubscriptionController {
   async getPlanDetailsWithCurrency(planId, currency) {
     console.log('💰 Getting plan details for currency:', { planId, currency });
 
-    // Get price in the specified currency
+    // Import currency utilities for standardized handling
+    const { getPlanPriceWithPaymentAmount, PLAN_PRICES } = await import('../utils/currencyUtils.js');
+
+    // Get price in the specified currency with payment amount info
     const prices = PLAN_PRICES[planId];
     if (!prices) {
       throw new Error(`Plan ${planId} not found in PLAN_PRICES`);
     }
 
-    const price = prices[currency.code] || prices.INR; // Fallback to INR
-    console.log(`💰 Price for ${planId} in ${currency.code}: ${currency.symbol}${price}`);
+    const displayPrice = prices[currency.code] || prices.INR; // Fallback to INR
+    const paymentAmountINR = currency.code === 'USD' ?
+      Math.round((displayPrice * 83.33) * 100) / 100 : // Convert USD to INR for payment
+      displayPrice;
+
+    console.log(`💰 Price for ${planId}: Display ${currency.symbol}${displayPrice} ${currency.code}, Payment ₹${paymentAmountINR} INR`);
 
     const plans = {
       basic_monthly: {
         id: 'basic_monthly',
         name: 'Basic',
-        price: price,
+        price: displayPrice,
         currency: currency.code,
         currencySymbol: currency.symbol,
+        paymentAmountINR: paymentAmountINR,
+        paymentCurrency: 'INR',
         interval: 'month',
         intervalCount: 1,
         features: {
@@ -1600,9 +1722,11 @@ class SubscriptionController {
       standard_quarterly: {
         id: 'standard_quarterly',
         name: 'Standard',
-        price: price,
+        price: displayPrice,
         currency: currency.code,
         currencySymbol: currency.symbol,
+        paymentAmountINR: paymentAmountINR,
+        paymentCurrency: 'INR',
         interval: 'month',
         intervalCount: 3,
         features: {
@@ -1616,9 +1740,11 @@ class SubscriptionController {
       pro_yearly: {
         id: 'pro_yearly',
         name: 'Pro',
-        price: price,
+        price: displayPrice,
         currency: currency.code,
         currencySymbol: currency.symbol,
+        paymentAmountINR: paymentAmountINR,
+        paymentCurrency: 'INR',
         interval: 'month',
         intervalCount: 12,
         features: {
@@ -1669,11 +1795,11 @@ class SubscriptionController {
     const now = new Date();
     const remainingMs = currentSubscription.currentPeriodEnd.getTime() - now.getTime();
     const remainingDays = Math.max(0, Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
-    
+
     // Calculate daily rate based on subscription period
     const totalDaysInPeriod = currentSubscription.intervalCount * 30; // Approximate
     const dailyRate = currentSubscription.amount / totalDaysInPeriod;
-    
+
     const prorationCredit = Math.round(remainingDays * dailyRate * 100) / 100;
 
     return {
@@ -1767,8 +1893,11 @@ class SubscriptionController {
         data: {
           orderId: paymentOrder.orderId,
           razorpayOrderId: paymentOrder.razorpayOrderId,
-          amount: paymentOrder.amount,
-          currency: paymentOrder.currency,
+          amount: paymentOrder.amount, // Payment amount in INR (for Razorpay)
+          currency: paymentOrder.currency, // Payment currency (INR)
+          displayAmount: paymentOrder.displayAmount || paymentOrder.amount, // Display amount in user's currency
+          displayCurrency: paymentOrder.displayCurrency || paymentOrder.currency, // Display currency
+          paymentAmountINR: paymentOrder.paymentAmountINR || paymentOrder.amount, // Actual payment amount in INR
           planDetails: paymentOrder.planDetails,
           userDetails: paymentOrder.userDetails,
           razorpayKeyId: razorpayKeyId
@@ -1800,6 +1929,49 @@ class SubscriptionController {
             <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
               <h1>Invalid Payment Link</h1>
               <p>This payment link is invalid or has expired. Please try again from the app.</p>
+              <script>
+                // Send error message to React Native WebView if available
+                if (window.ReactNativeWebView) {
+                  window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'PAYMENT_FAILED',
+                    data: {
+                      error: 'Invalid payment link',
+                      code: 'INVALID_TOKEN',
+                      details: 'Payment link is missing or has expired'
+                    }
+                  }));
+                }
+              </script>
+            </body>
+          </html>
+        `);
+      }
+
+      // Validate token (basic check - you might want to add JWT validation here)
+      try {
+        // Decode token to check if it's valid JWT format (jwt is already imported at top of file)
+        jwt.verify(token, process.env.JWT_SECRET);
+        console.log('✅ Token validation successful');
+      } catch (tokenError) {
+        console.error('❌ Invalid token:', tokenError.message);
+        return res.status(401).send(`
+          <html>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+              <h1>Expired Payment Link</h1>
+              <p>This payment link has expired. Please try again from the app.</p>
+              <script>
+                // Send error message to React Native WebView if available
+                if (window.ReactNativeWebView) {
+                  window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'PAYMENT_FAILED',
+                    data: {
+                      error: 'Payment link expired',
+                      code: 'TOKEN_EXPIRED',
+                      details: 'Please return to the app and try again'
+                    }
+                  }));
+                }
+              </script>
             </body>
           </html>
         `);
@@ -1850,7 +2022,7 @@ class SubscriptionController {
 
       // Check if this is an upgrade (higher tier or same tier with longer duration)
       const isUpgrade = newPlanLevel > currentPlanLevel ||
-                       (newPlanLevel === currentPlanLevel && newPlanDetails.price > existingSubscription.amount);
+        (newPlanLevel === currentPlanLevel && newPlanDetails.price > existingSubscription.amount);
 
       if (!isUpgrade) {
         return {
@@ -2016,10 +2188,10 @@ export const getTransactionHistory = async (req, res) => {
     const transactions = await PaymentTransaction.find({
       userId
     })
-    .sort({ createdAt: -1 })
-    .limit(parseInt(limit))
-    .skip(offset)
-    .lean();
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip(offset)
+      .lean();
 
     const total = await PaymentTransaction.countDocuments({
       userId
@@ -2125,7 +2297,7 @@ export const updateAutoRenewal = async (req, res) => {
     }
 
     const subscription = await Subscription.findOne({ userId });
-    
+
     if (!subscription) {
       return res.status(404).json({
         success: false,

@@ -17,7 +17,7 @@ export const intermediateModules = [
     requiredXp: 0,
     order: 1,
     icon: "chatbubbles-outline",
-    color: "#3498db", // Blue color
+    color: "#36798A", // Ocean Blue
     lessons: [
       {
         id: "intermediate-making-plans",
@@ -456,7 +456,7 @@ export const intermediateModules = [
     requiredXp: 300,
     order: 2,
     icon: "briefcase-outline",
-    color: "#e74c3c", // Red color
+    color: "#FF6B6B", // Warm Coral
     lessons: [
       {
         id: "intermediate-health",
@@ -677,7 +677,7 @@ export const intermediateModules = [
     requiredXp: 300,
     order: 3,
     icon: "airplane-outline",
-    color: "#e74c3c", // Red color
+    color: "#FFD700", // Golden Amber
     lessons: [
       {
         id: "intermediate-travel-planning",

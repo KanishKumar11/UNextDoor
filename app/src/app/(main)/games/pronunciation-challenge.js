@@ -186,6 +186,7 @@ const PronunciationChallengeGameScreen = () => {
   return (
     <View style={styles.container}>
       <PronunciationChallengeGame
+        key={`pronunciation-challenge-${lessonId}-${Date.now()}`} // Force remount on each navigation
         lessonId={lessonId}
         phrases={phrases}
         onComplete={handleGameComplete}

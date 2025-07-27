@@ -14,12 +14,12 @@ class TutorService {
   async getConversation(id) {
     try {
       const token = await getAuthToken();
-      
+
       if (!token) {
         console.warn('No auth token, skipping get conversation');
         return null;
       }
-      
+
       const response = await fetch(
         `${API_BASE_URL}/api/v1/tutor/conversation/${id}`,
         {
@@ -30,7 +30,7 @@ class TutorService {
           },
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         return data;
@@ -43,7 +43,7 @@ class TutorService {
       throw error;
     }
   }
-  
+
   /**
    * Create a new conversation
    * @param {string} scenarioId - Scenario ID
@@ -52,12 +52,12 @@ class TutorService {
   async createConversation(scenarioId) {
     try {
       const token = await getAuthToken();
-      
+
       if (!token) {
         console.warn('No auth token, skipping create conversation');
         throw new Error('Authentication required');
       }
-      
+
       const response = await fetch(
         `${API_BASE_URL}/api/v1/tutor/conversation`,
         {
@@ -71,7 +71,7 @@ class TutorService {
           }),
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         return data;
@@ -84,7 +84,7 @@ class TutorService {
       throw error;
     }
   }
-  
+
   /**
    * Get all scenarios
    * @returns {Promise<Array>} - List of scenarios
@@ -92,12 +92,12 @@ class TutorService {
   async getScenarios() {
     try {
       const token = await getAuthToken();
-      
+
       if (!token) {
         console.warn('No auth token, using sample scenarios');
         return this.getSampleScenarios();
       }
-      
+
       const response = await fetch(
         `${API_BASE_URL}/api/v1/tutor/scenarios`,
         {
@@ -108,7 +108,7 @@ class TutorService {
           },
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         return data.scenarios;
@@ -121,7 +121,7 @@ class TutorService {
       return this.getSampleScenarios();
     }
   }
-  
+
   /**
    * Get sample scenarios for development
    * @returns {Array} - Sample scenarios

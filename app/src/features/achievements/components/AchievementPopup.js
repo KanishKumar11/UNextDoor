@@ -18,6 +18,7 @@ import {
   Spacer,
 } from "../../../shared/components";
 import { useTheme } from "../../../shared/context/ThemeContext";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
 
 const { width, height } = Dimensions.get("window");
 
@@ -35,7 +36,7 @@ const getTierColor = (tier) => {
     case "gold":
       return "#FFD700";
     default:
-      return "#6FC935"; // Default green
+      return BRAND_COLORS.EXPLORER_TEAL; // Default brand color
   }
 };
 

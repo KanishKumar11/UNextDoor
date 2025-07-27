@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import { View, Share, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../auth/hooks/useAuth";
-import AchievementNotification from "../components/AchievementNotification";
+// import AchievementNotification from "../components/AchievementNotification"; // Removed to avoid duplicate displays
 import AchievementPopup from "../components/AchievementPopup";
 import * as achievementService from "../services/achievementService";
 
@@ -17,7 +17,7 @@ const AchievementContext = createContext();
 export const AchievementProvider = ({ children }) => {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-  const [notifications, setNotifications] = useState([]);
+  // const [notifications, setNotifications] = useState([]); // Removed to avoid duplicate displays
   const [checkingInterval, setCheckingInterval] = useState(null);
 
   // 🎉 NEW: Achievement Popup State
@@ -77,8 +77,7 @@ export const AchievementProvider = ({ children }) => {
           }
         });
 
-        // Add to notifications queue (for notification center)
-        setNotifications((prev) => [...prev, ...unviewedAchievements]);
+        // Skip adding to notifications queue to avoid duplicate displays
 
         // Mark as viewed
         const achievementIds = unviewedAchievements.map((a) => a.id);
@@ -114,8 +113,7 @@ export const AchievementProvider = ({ children }) => {
           }
         });
 
-        // Add to notifications queue (for notification center)
-        setNotifications((prev) => [...prev, ...newAchievements]);
+        // Skip adding to notifications queue to avoid duplicate displays
       }
 
       return newAchievements;
@@ -187,16 +185,7 @@ export const AchievementProvider = ({ children }) => {
     }
   };
 
-  // Remove notification from queue
-  const removeNotification = () => {
-    setNotifications((prev) => prev.slice(1));
-  };
-
-  // Handle notification press
-  const handleNotificationPress = (achievement) => {
-    // Navigate to achievement detail
-    router.push(`/achievements/${achievement.id}`);
-  };
+  // Notification functions removed to avoid duplicate displays
 
   return (
     <AchievementContext.Provider
@@ -206,7 +195,6 @@ export const AchievementProvider = ({ children }) => {
         closeAchievementPopup,
         shareAchievement,
         currentPopupAchievement,
-        notifications,
       }}
     >
       {children}
@@ -220,14 +208,7 @@ export const AchievementProvider = ({ children }) => {
         showShareButton={true}
       />
 
-      {/* Render the first notification in the queue */}
-      {notifications.length > 0 && (
-        <AchievementNotification
-          achievement={notifications[0]}
-          onPress={handleNotificationPress}
-          onDismiss={removeNotification}
-        />
-      )}
+      {/* Top notification removed to avoid duplicate achievement displays */}
     </AchievementContext.Provider>
   );
 };

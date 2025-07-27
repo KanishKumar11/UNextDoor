@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,6 +13,25 @@ import { useTheme } from "../../../shared/context/ThemeContext";
 import { curriculumService } from "../services/curriculumService";
 import { Text, ModernButton } from "../../../shared/components";
 import ScreenPadding from "../../../shared/components/ScreenPadding";
+import { BRAND_COLORS } from "../../../shared/constants/colors";
+
+// Helper function for cross-platform font families
+const getFontFamily = (weight = 'regular') => {
+  if (Platform.OS === 'web') {
+    return 'Montserrat, sans-serif';
+  }
+
+  const fontMap = {
+    light: 'Montserrat-Light',
+    regular: 'Montserrat-Regular',
+    medium: 'Montserrat-Medium',
+    semibold: 'Montserrat-SemiBold',
+    bold: 'Montserrat-Bold',
+    extrabold: 'Montserrat-ExtraBold',
+  };
+
+  return fontMap[weight] || fontMap.regular;
+};
 
 /**
  * ModuleView component
@@ -104,11 +124,11 @@ const ModuleView = ({ moduleId, onLessonSelect, isPreviewMode = false }) => {
           <View style={styles.lessonIconContainer}>
             {isCompleted ? (
               <View style={styles.completedIcon}>
-                <Ionicons name="checkmark" size={16} color="#fff" />
+                <Ionicons name="checkmark" size={16} color={BRAND_COLORS.WHISPER_WHITE} />
               </View>
             ) : isLocked ? (
               <View style={styles.lockedIcon}>
-                <Ionicons name="lock-closed" size={16} color="#999" />
+                <Ionicons name="lock-closed" size={16} color={BRAND_COLORS.SHADOW_GREY} />
               </View>
             ) : (
               <View style={styles.lessonNumber}>
@@ -144,7 +164,7 @@ const ModuleView = ({ moduleId, onLessonSelect, isPreviewMode = false }) => {
                 <Ionicons
                   name="time-outline"
                   size={14}
-                  color={isLocked ? "#999" : "#666"}
+                  color={isLocked ? BRAND_COLORS.SHADOW_GREY : BRAND_COLORS.SHADOW_GREY}
                 />
                 <Text style={[styles.metaText, isLocked && styles.lockedText]}>
                   {lesson.estimatedDuration || 15} min
@@ -154,7 +174,7 @@ const ModuleView = ({ moduleId, onLessonSelect, isPreviewMode = false }) => {
                 <Ionicons
                   name="star-outline"
                   size={14}
-                  color={isLocked ? "#999" : "#6FC935"}
+                  color={isLocked ? BRAND_COLORS.SHADOW_GREY : BRAND_COLORS.EXPLORER_TEAL}
                 />
                 <Text style={[styles.metaText, isLocked && styles.lockedText]}>
                   {lesson.xpReward || 50} XP
@@ -173,7 +193,7 @@ const ModuleView = ({ moduleId, onLessonSelect, isPreviewMode = false }) => {
               <Ionicons
                 name="chevron-forward"
                 size={20}
-                color={isLocked ? "#ccc" : "#6FC935"}
+                color={isLocked ? BRAND_COLORS.SHADOW_GREY + "60" : BRAND_COLORS.EXPLORER_TEAL}
               />
             )}
           </View>
@@ -186,7 +206,7 @@ const ModuleView = ({ moduleId, onLessonSelect, isPreviewMode = false }) => {
     return (
       <ScreenPadding>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
           <Text style={styles.loadingText}>Loading module...</Text>
         </View>
       </ScreenPadding>
@@ -228,7 +248,7 @@ const ModuleView = ({ moduleId, onLessonSelect, isPreviewMode = false }) => {
             <View style={styles.previewBanner}>
               <View style={styles.previewContent}>
                 <View style={styles.previewIcon}>
-                  <Ionicons name="eye-outline" size={20} color="#856404" />
+                  <Ionicons name="eye-outline" size={20} color={BRAND_COLORS.EXPLORER_TEAL} />
                 </View>
                 <View style={styles.previewText}>
                   <Text weight="bold" style={styles.previewTitle}>
@@ -249,13 +269,13 @@ const ModuleView = ({ moduleId, onLessonSelect, isPreviewMode = false }) => {
               <View
                 style={[
                   styles.moduleIcon,
-                  { backgroundColor: module.color || "#6FC935" },
+                  { backgroundColor: module.color || BRAND_COLORS.EXPLORER_TEAL },
                 ]}
               >
                 <Ionicons
                   name={module.icon || "book-outline"}
                   size={28}
-                  color="#fff"
+                  color={BRAND_COLORS.WHISPER_WHITE}
                 />
               </View>
 
@@ -323,45 +343,59 @@ const ModuleView = ({ moduleId, onLessonSelect, isPreviewMode = false }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   content: {
-    padding: 20,
+    paddingHorizontal: 16, // theme.spacing.md equivalent
+    paddingVertical: 8,    // theme.spacing.sm equivalent
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
-    fontFamily: "Montserrat-Regular",
+    color: BRAND_COLORS.SHADOW_GREY,
+    fontFamily: getFontFamily('medium'),
+    textAlign: 'center',
   },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
   },
   errorText: {
     fontSize: 16,
+    color: BRAND_COLORS.SHADOW_GREY,
     textAlign: "center",
-    marginBottom: 20,
-    fontFamily: "Montserrat-Regular",
+    marginBottom: 24,
+    fontFamily: getFontFamily('regular'),
+    lineHeight: 24,
   },
   retryButton: {
     minWidth: 120,
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
   },
   // Preview Banner Styles
   previewBanner: {
-    backgroundColor: "#FFF3CD",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "08",
     borderWidth: 1,
-    borderColor: "#FFEAA7",
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + "20",
     borderRadius: 16,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 16,
+    marginHorizontal: 16,
+    elevation: 0,
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
   },
   previewContent: {
     flexDirection: "row",
@@ -371,7 +405,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(133, 100, 4, 0.1)",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "15",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -381,27 +415,30 @@ const styles = StyleSheet.create({
   },
   previewTitle: {
     fontSize: 16,
-    fontFamily: "Montserrat-Bold",
-    color: "#856404",
+    fontFamily: getFontFamily('bold'),
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginBottom: 4,
   },
   previewDescription: {
     fontSize: 14,
-    fontFamily: "Montserrat-Regular",
-    color: "#856404",
+    fontFamily: getFontFamily('regular'),
+    color: BRAND_COLORS.SHADOW_GREY,
     lineHeight: 20,
   },
   // Module Card Styles
   moduleCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+    borderRadius: 16,
     padding: 20,
-    marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 6,
+    marginBottom: 16,
+    marginHorizontal: 16,
+    borderWidth: 1,
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + "20",
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 0,
   },
   moduleHeader: {
     flexDirection: "row",
@@ -415,25 +452,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
-    shadowColor: "#000",
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 0,
   },
   moduleInfo: {
     flex: 1,
   },
   moduleTitle: {
     fontSize: 20,
-    fontFamily: "Montserrat-Bold",
-    color: "#0A2240",
+    fontFamily: getFontFamily('bold'),
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginBottom: 6,
   },
   moduleDescription: {
     fontSize: 14,
-    fontFamily: "Montserrat-Regular",
-    color: "#666",
+    fontFamily: getFontFamily('regular'),
+    color: BRAND_COLORS.SHADOW_GREY,
     lineHeight: 20,
   },
   moduleStats: {
@@ -442,31 +479,32 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
+    borderTopColor: BRAND_COLORS.EXPLORER_TEAL + "20",
   },
   statItem: {
     alignItems: "center",
   },
   statValue: {
     fontSize: 18,
-    fontFamily: "Montserrat-Bold",
-    color: "#6FC935",
+    fontFamily: getFontFamily('bold'),
+    color: BRAND_COLORS.EXPLORER_TEAL,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    fontFamily: "Montserrat-Medium",
-    color: "#999",
+    fontFamily: getFontFamily('medium'),
+    color: BRAND_COLORS.SHADOW_GREY,
     textTransform: "uppercase",
   },
   statDivider: {
     width: 1,
     height: 30,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "20",
   },
   // Lessons Section Styles
   lessonsSection: {
     marginBottom: 24,
+    marginHorizontal: 16,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -476,11 +514,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: "Montserrat-Bold",
-    color: "#0A2240",
+    fontFamily: getFontFamily('bold'),
+    color: BRAND_COLORS.OCEAN_BLUE,
   },
   lessonCount: {
-    backgroundColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -489,33 +527,34 @@ const styles = StyleSheet.create({
   },
   lessonCountText: {
     fontSize: 12,
-    fontFamily: "Montserrat-Bold",
-    color: "#fff",
+    fontFamily: getFontFamily('bold'),
+    color: BRAND_COLORS.WHISPER_WHITE,
   },
   lessonsList: {
     gap: 12,
   },
   // Lesson Card Styles
   lessonCard: {
-    backgroundColor: "#fff",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
     borderRadius: 16,
     padding: 16,
-    shadowColor: "#000",
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 0,
     borderWidth: 1,
-    borderColor: "#f0f0f0",
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + "20",
   },
   completedLessonCard: {
-    backgroundColor: "rgba(111, 201, 53, 0.05)",
-    borderColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "08",
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + "40",
     borderWidth: 1,
   },
   lockedLessonCard: {
     opacity: 0.6,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+    borderColor: BRAND_COLORS.SHADOW_GREY + "20",
   },
   lessonContent: {
     flexDirection: "row",
@@ -528,7 +567,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -536,7 +575,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: BRAND_COLORS.SHADOW_GREY + "30",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -544,14 +583,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     justifyContent: "center",
     alignItems: "center",
   },
   lessonNumberText: {
     fontSize: 14,
-    fontFamily: "Montserrat-Bold",
-    color: "#fff",
+    fontFamily: getFontFamily('bold'),
+    color: BRAND_COLORS.WHISPER_WHITE,
   },
   lessonDetails: {
     flex: 1,
@@ -559,22 +598,22 @@ const styles = StyleSheet.create({
   },
   lessonTitle: {
     fontSize: 16,
-    fontFamily: "Montserrat-SemiBold",
-    color: "#0A2240",
+    fontFamily: getFontFamily('semibold'),
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginBottom: 4,
   },
   lessonDescription: {
     fontSize: 14,
-    fontFamily: "Montserrat-Regular",
-    color: "#666",
+    fontFamily: getFontFamily('regular'),
+    color: BRAND_COLORS.SHADOW_GREY,
     lineHeight: 18,
     marginBottom: 8,
   },
   completedText: {
-    color: "#6FC935",
+    color: BRAND_COLORS.EXPLORER_TEAL,
   },
   lockedText: {
-    color: "#999",
+    color: BRAND_COLORS.SHADOW_GREY,
   },
   lessonMeta: {
     flexDirection: "row",
@@ -588,22 +627,22 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
-    fontFamily: "Montserrat-Medium",
-    color: "#666",
+    fontFamily: getFontFamily('medium'),
+    color: BRAND_COLORS.SHADOW_GREY,
   },
   lessonAction: {
     alignItems: "center",
   },
   completedBadge: {
-    backgroundColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   completedBadgeText: {
     fontSize: 12,
-    fontFamily: "Montserrat-Bold",
-    color: "#fff",
+    fontFamily: getFontFamily('bold'),
+    color: BRAND_COLORS.WHISPER_WHITE,
   },
 });
 

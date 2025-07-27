@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import SafeAreaWrapper from '../../../shared/components/SafeAreaWrapper';
-import { 
-  Container, 
-  Heading, 
-  Text, 
-  ModernButton, 
+import {
+  Container,
+  Heading,
+  Text,
+  ModernButton,
   ModernCard,
   Row,
   Column,
@@ -14,7 +14,8 @@ import {
 } from '../../../shared/components';
 import PersistentConversationView from '../components/PersistentConversationView';
 import { tutorService } from '../services/tutorService';
-import modernTheme from '../../../shared/styles/modernTheme';
+import { BRAND_COLORS } from '../../../shared/constants/colors';
+import { useTheme } from '../../../shared/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
 /**
@@ -27,24 +28,25 @@ import { Ionicons } from '@expo/vector-icons';
  */
 const ConversationScreen = ({ conversationId, params = {} }) => {
   const router = useRouter();
+  const theme = useTheme();
   const [conversation, setConversation] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // If no conversationId is provided, check if it's in params
   const id = conversationId || params?.id;
-  
+
   // Get scenario from params if available
   const scenarioId = params?.scenarioId;
   const scenarioTitle = params?.title || 'Conversation';
-  
+
   // Load conversation data
   useEffect(() => {
     const loadConversation = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         if (id) {
           // Load existing conversation
           const data = await tutorService.getConversation(id);
@@ -57,7 +59,7 @@ const ConversationScreen = ({ conversationId, params = {} }) => {
           // No ID or scenario provided
           setError('No conversation ID or scenario provided');
         }
-        
+
         setIsLoading(false);
       } catch (err) {
         console.error('Error loading conversation:', err);
@@ -65,28 +67,28 @@ const ConversationScreen = ({ conversationId, params = {} }) => {
         setIsLoading(false);
       }
     };
-    
+
     loadConversation();
   }, [id, scenarioId]);
-  
+
   // Handle errors in the conversation component
   const handleError = (error) => {
     console.error('Conversation error:', error);
     setError(`Error: ${error.message || 'Unknown error'}`);
   };
-  
+
   // Handle back button press
   const handleBack = () => {
     router.back();
   };
-  
+
   // Render loading state
   if (isLoading) {
     return (
       <SafeAreaWrapper>
         <Container withPadding>
           <Column align="center" justify="center" style={{ flex: 1 }}>
-            <ActivityIndicator size="large" color={modernTheme.colors.primary[500]} />
+            <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
             <Spacer size="md" />
             <Text>Loading conversation...</Text>
           </Column>
@@ -94,7 +96,7 @@ const ConversationScreen = ({ conversationId, params = {} }) => {
       </SafeAreaWrapper>
     );
   }
-  
+
   // Render error state
   if (error) {
     return (
@@ -104,7 +106,7 @@ const ConversationScreen = ({ conversationId, params = {} }) => {
             <Ionicons
               name="alert-circle-outline"
               size={48}
-              color={modernTheme.colors.error[500]}
+              color={BRAND_COLORS.WARM_CORAL}
             />
             <Spacer size="md" />
             <Text>{error}</Text>
@@ -119,7 +121,7 @@ const ConversationScreen = ({ conversationId, params = {} }) => {
       </SafeAreaWrapper>
     );
   }
-  
+
   // If we have a conversation or scenario, render the RealtimeConversation component
   return (
     <SafeAreaWrapper>
@@ -133,7 +135,7 @@ const ConversationScreen = ({ conversationId, params = {} }) => {
           />
           <Heading level="h2">{conversation?.title || scenarioTitle}</Heading>
         </View>
-        
+
         <View style={styles.conversationContainer}>
           <PersistentConversationView
             scenarioId={scenarioId}
@@ -154,12 +156,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+    borderBottomWidth: 2,
+    borderBottomColor: BRAND_COLORS.EXPLORER_TEAL + '20',
   },
   backButton: {
     marginRight: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: BRAND_COLORS.SHADOW_GREY + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   conversationContainer: {
     flex: 1,
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
 });
 

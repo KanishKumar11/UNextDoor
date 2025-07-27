@@ -1,32 +1,33 @@
 import { StyleSheet } from 'react-native';
+import { BRAND_COLORS, BORDER_COLORS } from '../../../../shared/constants/colors';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#666",
+    color: BRAND_COLORS.SHADOW_GREY,
     fontFamily: "Montserrat-Regular",
   },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
     padding: 20,
   },
   errorText: {
     fontSize: 16,
-    color: "#e74c3c",
+    color: BRAND_COLORS.WARM_CORAL,
     textAlign: "center",
     fontFamily: "Montserrat-Regular",
   },
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontFamily: "Montserrat-Bold",
-    color: "#0A2240",
+    color: BRAND_COLORS.OCEAN_BLUE,
     textAlign: "center",
   },
   progressContainer: {
@@ -53,24 +54,24 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 8,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: BRAND_COLORS.SKY_AQUA + "30",
     borderRadius: 4,
     marginBottom: 8,
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     borderRadius: 4,
   },
   progressText: {
     fontSize: 14,
-    color: "#666",
+    color: BRAND_COLORS.SHADOW_GREY,
     textAlign: "center",
     fontFamily: "Montserrat-Medium",
   },
   sectionContent: {
     flex: 1,
-    elevation:0,
+    elevation: 0,
     minHeight: 400,
   },
   navigationContainer: {
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
     minWidth: 200,
   },
   nextButton: {
-    backgroundColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
   },
   fullScreenButtonContainer: {
     width: "100%",
@@ -93,34 +94,34 @@ const styles = StyleSheet.create({
   fullScreenButton: {
     width: "100%",
     paddingVertical: 12,
-    backgroundColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     borderRadius: 12,
   },
   completeButton: {
-    backgroundColor: "#0A2240",
+    backgroundColor: BRAND_COLORS.OCEAN_BLUE,
   },
   disabledButton: {
-    backgroundColor: "#ccc",
+    backgroundColor: BRAND_COLORS.SHADOW_GREY + "80",
     opacity: 0.7,
   },
   completedButton: {
-    backgroundColor: "#28a745",
+    backgroundColor: BRAND_COLORS.OCEAN_BLUE,
   },
   requirementIndicator: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 12,
-    backgroundColor: "#fff3cd",
+    backgroundColor: BRAND_COLORS.RUCKSACK_BROWN + "20",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#ffeaa7",
+    borderColor: BRAND_COLORS.RUCKSACK_BROWN + "40",
   },
   requirementText: {
     fontSize: 14,
-    color: "#856404",
+    color: BRAND_COLORS.RUCKSACK_BROWN,
     marginLeft: 8,
     fontFamily: "Montserrat-Medium",
   },
@@ -129,12 +130,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 12,
-    backgroundColor: "#f8d7da",
+    backgroundColor: BRAND_COLORS.WARM_CORAL + "20",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#f5c6cb",
+    borderColor: BRAND_COLORS.WARM_CORAL + "40",
   },
   debugInfo: {
     marginTop: 16,
@@ -163,23 +164,23 @@ const styles = StyleSheet.create({
     fontFamily: "Montserrat-Medium",
     textAlign: "center",
   },
-  
+
   // Modern section styles
   modernSectionContainer: {
     marginBottom: 24,
   },
   modernCard: {
-    backgroundColor: "#fff",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND, // Using constant - #FAFAFA
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
-    shadowColor: "#000",
+    borderColor: BORDER_COLORS.LIGHT, // Using constant
+    shadowColor: BRAND_COLORS.OCEAN_BLUE, // Using constant
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 0,
   },
   cardHeader: {
     flexDirection: "row",
@@ -189,16 +190,16 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontFamily: "Montserrat-Bold",
-    color: "#0A2240",
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginLeft: 12,
   },
   modernIntroductionText: {
     fontSize: 16,
     fontFamily: "Montserrat-Regular",
     lineHeight: 24,
-    color: "#333",
+    color: BRAND_COLORS.SHADOW_GREY,
   },
-  
+
   // Objectives styles
   objectivesList: {
     marginTop: 8,
@@ -212,13 +213,13 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
   objectiveNumberText: {
-    color: "#fff",
+    color: BRAND_COLORS.WHISPER_WHITE,
     fontSize: 14,
     fontFamily: "Montserrat-Bold",
   },
@@ -229,50 +230,50 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 22,
   },
-  
+
   // Vocabulary styles - Updated for single row
   vocabularyGrid: {
     flexDirection: "column",
     gap: 12,
   },
   modernVocabularyItem: {
-    backgroundColor: "#ffffff",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     width: "100%",
     borderWidth: 1,
-    borderColor: "#e8e8e8",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 0.5,
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + "20",
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 0,
   },
-  
+
   // Compact vocabulary item for alphabet lessons
   compactVocabularyItem: {
-    backgroundColor: "#ffffff",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND, // Using constant - #FAFAFA
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     width: "100%",
     borderWidth: 1,
-    borderColor: "#e8e8e8",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 0.5,
+    borderColor: BORDER_COLORS.LIGHT, // Using constant
+    shadowColor: BRAND_COLORS.OCEAN_BLUE, // Using constant
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 0,
   },
-  
+
   vocabularyItemHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
-  
+
   // Compact header for alphabet lessons
   compactVocabularyItemHeader: {
     flexDirection: "row",
@@ -282,15 +283,15 @@ const styles = StyleSheet.create({
   },
   modernKoreanText: {
     fontSize: 22,
-    color: "#0A2240",
+    color: BRAND_COLORS.OCEAN_BLUE,
     fontFamily: "Montserrat-Bold",
     flex: 1,
   },
-  
+
   // Compact Korean text for alphabet lessons
   compactKoreanText: {
     fontSize: 28,
-    color: "#0A2240",
+    color: BRAND_COLORS.OCEAN_BLUE,
     fontFamily: "Montserrat-Bold",
     flex: 1,
     textAlign: "center",
@@ -299,17 +300,17 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#6FC935",
+    shadowColor: BRAND_COLORS.EXPLORER_TEAL,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 1,
   },
   audioButtonPlaying: {
-    backgroundColor: "#5aa82d", // Slightly darker green when playing
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "CC", // Slightly darker when playing
     opacity: 0.8,
   },
   modernRomanizationText: {
@@ -319,7 +320,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontStyle: "italic",
   },
-  
+
   // Compact romanization text for alphabet lessons
   compactRomanizationText: {
     fontSize: 14,
@@ -329,18 +330,18 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     textAlign: "center",
   },
-  
+
   modernEnglishText: {
     fontSize: 16,
-    color: "#333",
+    color: BRAND_COLORS.OCEAN_BLUE,
     fontFamily: "Montserrat-SemiBold",
     marginBottom: 8,
   },
-  
+
   // Compact English text for alphabet lessons
   compactEnglishText: {
     fontSize: 14,
-    color: "#333",
+    color: BRAND_COLORS.OCEAN_BLUE,
     fontFamily: "Montserrat-SemiBold",
     marginBottom: 6,
     textAlign: "center",
@@ -348,24 +349,24 @@ const styles = StyleSheet.create({
   modernExampleText: {
     fontSize: 14,
     fontStyle: "italic",
-    color: "#888",
+    color: BRAND_COLORS.SHADOW_GREY,
     fontFamily: "Montserrat-Regular",
     lineHeight: 20,
   },
-  
+
   // Practice styles
   modernPracticeIntro: {
     fontSize: 16,
     fontFamily: "Montserrat-Regular",
     lineHeight: 24,
-    color: "#333",
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginBottom: 24,
     textAlign: "center",
   },
   primaryPracticeCard: {
-    borderColor: "#6FC935",
+    borderColor: BRAND_COLORS.EXPLORER_TEAL,
     borderWidth: 2,
-    backgroundColor: "#f8fff8",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "10",
   },
   practiceCardHeader: {
     flexDirection: "row",
@@ -419,7 +420,7 @@ const styles = StyleSheet.create({
   featureText: {
     fontSize: 14,
     fontFamily: "Montserrat-Regular",
-    color: "#333",
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginLeft: 8,
   },
   practiceCardActions: {
@@ -428,7 +429,7 @@ const styles = StyleSheet.create({
   practiceRequiredBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ff6b35",
+    backgroundColor: BRAND_COLORS.WARM_CORAL,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -436,18 +437,18 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   practiceRequiredText: {
-    color: "#fff",
+    color: BRAND_COLORS.WHISPER_WHITE,
     fontSize: 12,
     fontFamily: "Montserrat-SemiBold",
     marginLeft: 6,
   },
   modernPracticeButton: {
-    backgroundColor: "#6FC935",
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     paddingVertical: 14,
     borderRadius: 12,
   },
   practiceButtonCompleted: {
-    backgroundColor: "#28a745",
+    backgroundColor: BRAND_COLORS.RUCKSACK_BROWN,
   },
   modernCompletedIndicator: {
     flexDirection: "row",
@@ -456,12 +457,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   modernCompletedText: {
-    color: "#6FC935",
+    color: "#5BC4B3", // Explorer Teal
     fontSize: 14,
     fontFamily: "Montserrat-SemiBold",
     marginLeft: 8,
   },
-  
+
   // Loading overlay
   loadingOverlay: {
     flex: 1,
@@ -470,7 +471,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingContent: {
-    backgroundColor: "white",
+    backgroundColor: "#FAFAFA", // Whisper White
     padding: 24,
     borderRadius: 16,
     alignItems: "center",
@@ -482,7 +483,7 @@ const styles = StyleSheet.create({
     color: "#333",
     fontFamily: "Montserrat-Medium",
   },
-  
+
   // Success feedback
   successFeedbackOverlay: {
     flex: 1,
@@ -509,7 +510,7 @@ const styles = StyleSheet.create({
     fontFamily: "Montserrat-Regular",
     marginTop: 4,
   },
-  
+
   // Conversation practice styles
   conversationPracticeContainer: {
     flex: 1,
@@ -643,10 +644,10 @@ const styles = StyleSheet.create({
   quickTipsText: {
     fontSize: 12,
     fontFamily: "Montserrat-Medium",
-    color: "#28a745",
+    color: BRAND_COLORS.EXPLORER_TEAL,
     textAlign: "center",
   },
-  
+
   // Grammar and other missing styles
   noContentContainer: {
     alignItems: "center",
@@ -655,21 +656,21 @@ const styles = StyleSheet.create({
   noContentTitle: {
     fontSize: 18,
     fontFamily: "Montserrat-Bold",
-    color: "#0A2240",
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginTop: 16,
     marginBottom: 8,
   },
   noContentText: {
     fontSize: 16,
     fontFamily: "Montserrat-Regular",
-    color: "#666",
+    color: BRAND_COLORS.SHADOW_GREY,
     textAlign: "center",
     lineHeight: 24,
   },
   modernGrammarExplanation: {
     fontSize: 16,
     fontFamily: "Montserrat-Regular",
-    color: "#333",
+    color: BRAND_COLORS.OCEAN_BLUE,
     lineHeight: 24,
     marginBottom: 16,
   },
@@ -677,10 +678,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   modernGrammarExample: {
-    backgroundColor: "#F9F9F9",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + "15",
   },
   modernExampleKorean: {
     fontSize: 18,
@@ -707,7 +710,7 @@ const styles = StyleSheet.create({
     fontFamily: "Montserrat-Regular",
     lineHeight: 20,
   },
-  
+
   // Congratulations modal styles
   congratulationsOverlay: {
     flex: 1,
@@ -784,7 +787,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     minWidth: 200,
   },
-  
+
   // Interactive Games Section Styles - Minimalist
   gamesDescription: {
     fontSize: 14,
@@ -800,14 +803,18 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   modernGameCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     width: "48%",
     minHeight: 120,
     borderWidth: 1,
-    borderColor: "#e8e8e8",
+    borderColor: BRAND_COLORS.EXPLORER_TEAL + "20",
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 0,
     alignItems: "center",
     justifyContent: "center",
@@ -834,7 +841,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 16,
   },
-  
+
   // Additional Practice Section Styles - Minimalist  
   additionalPracticeGrid: {
     flexDirection: "row",
