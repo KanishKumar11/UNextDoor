@@ -58,6 +58,7 @@ export default function StandaloneConversationScreen() {
         <PersistentConversationView
           scenarioId={scenarioId}
           level={proficiencyLevel}
+          user={null} // TODO: Pass user information when available
           onSessionEnd={handleSessionEnd}
           style={styles.conversationComponent}
         />

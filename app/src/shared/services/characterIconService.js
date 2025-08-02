@@ -15,14 +15,14 @@ const characterIcons = {
 const characterProfiles = {
   character1: {
     id: 'character1',
-    name: 'Miles (Friendly)',
+    name: 'Miles',
     personality: 'friendly',
     mood: 'cheerful',
     bestFor: ['beginner', 'casual', 'encouragement'],
     description: 'A warm and encouraging tutor perfect for beginners',
   },
   character2: {
-    id: 'character2', 
+    id: 'character2',
     name: 'Miles (Professional)',
     personality: 'professional',
     mood: 'focused',
@@ -71,7 +71,7 @@ class CharacterIconService {
     const availableCharacters = Object.keys(characterIcons).filter(
       id => !excludeIds.includes(id)
     );
-    
+
     if (availableCharacters.length === 0) {
       // If all characters are excluded, return the first one
       const firstCharacterId = Object.keys(characterIcons)[0];
@@ -84,7 +84,7 @@ class CharacterIconService {
 
     const randomIndex = Math.floor(Math.random() * availableCharacters.length);
     const selectedId = availableCharacters[randomIndex];
-    
+
     return {
       icon: characterIcons[selectedId],
       profile: characterProfiles[selectedId],
@@ -116,7 +116,7 @@ class CharacterIconService {
     });
 
     let selectedCharacter;
-    
+
     if (suitableCharacters.length > 0) {
       // Select from suitable characters
       const randomIndex = Math.floor(Math.random() * suitableCharacters.length);
@@ -159,7 +159,7 @@ class CharacterIconService {
     };
 
     const preferredCharacterId = scenarioMapping[scenarioType.toLowerCase()];
-    
+
     if (preferredCharacterId && characterIcons[preferredCharacterId]) {
       const selectedCharacter = {
         icon: characterIcons[preferredCharacterId],
@@ -185,7 +185,7 @@ class CharacterIconService {
    */
   getCharacterForTimeOfDay() {
     const hour = new Date().getHours();
-    
+
     if (hour >= 6 && hour < 12) {
       // Morning - Energetic character
       return {

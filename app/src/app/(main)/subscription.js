@@ -430,8 +430,9 @@ export default function SubscriptionScreen() {
         throw new Error('Target plan not found');
       }
 
-      // Get current currency
-      const currency = await CurrencyService.getCurrency();
+      // Use current currency state (which reflects the latest selection)
+      const currency = currentCurrency || await CurrencyService.getCurrency();
+      console.log('💰 Using currency for upgrade preview:', currency);
 
       // Call backend to get upgrade preview with proration calculation
       const response = await SubscriptionService.getUpgradePreview(planId, {
@@ -645,6 +646,10 @@ export default function SubscriptionScreen() {
       loading: false,
     });
   };
+
+  // Note: Currency change handling is now done via dual-value proration credit approach
+  // The UpgradePreviewDialog component automatically selects the correct proration credit value
+  // based on the current currency without needing API calls
 
   const handlePaymentSuccess = async (paymentData) => {
     try {
@@ -998,6 +1003,10 @@ export default function SubscriptionScreen() {
     initializeCurrency();
     fetchSubscriptionData();
   }, []);
+
+  // Note: Currency change detection is now handled via dual-value proration credit approach.
+  // The UpgradePreviewDialog component automatically selects the correct proration credit value
+  // based on the current currency without needing API calls.
 
   // Refetch plans whenever the screen comes into focus
   // This ensures plans are updated after navigation or currency changes
@@ -1778,6 +1787,7 @@ export default function SubscriptionScreen() {
           currency={upgradePreviewDialog.currency}
           onConfirm={handleUpgradePreviewConfirm}
           onCancel={handleUpgradePreviewCancel}
+
           loading={upgradePreviewDialog.loading}
         />
       </Container>

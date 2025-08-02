@@ -237,24 +237,39 @@ export default function LessonDetailScreen() {
     }
   }, [lesson, activeSection, sectionOrder]);
 
-  // Enhanced cleanup effect to stop AI conversation when component unmounts or user navigates away
+  // Enhanced cleanup effect to gracefully handle AI conversation when component unmounts
   useEffect(() => {
     return () => {
       // Cleanup function runs when component unmounts
       if (showRealtimeConversation) {
-        console.log("🛑 Component unmounting - stopping AI conversation");
+        console.log("🛑 Component unmounting - checking AI conversation state");
         setShowRealtimeConversation(false);
 
-        // Also try to stop the WebRTC service directly
+        // Only stop if AI is not currently speaking to prevent audio cutoff
         try {
           if (webRTCConversationService && webRTCConversationService.isSessionActive) {
-            console.log("🛑 Force stopping WebRTC session on unmount");
-            webRTCConversationService.stopSession().catch(err => {
-              console.error("Error in force stop:", err);
-            });
+            const serviceState = webRTCConversationService.getState();
+
+            if (serviceState.isAISpeaking) {
+              console.log("🛑 AI is speaking - allowing response to complete before cleanup");
+              // Let the AI finish speaking, then cleanup will happen naturally
+              setTimeout(() => {
+                if (webRTCConversationService.isSessionActive) {
+                  console.log("🛑 Graceful cleanup after AI response completion");
+                  webRTCConversationService.stopSession().catch(err => {
+                    console.error("Error in graceful cleanup:", err);
+                  });
+                }
+              }, 3000); // 3 second grace period
+            } else {
+              console.log("🛑 AI not speaking - safe to stop session immediately");
+              webRTCConversationService.stopSession().catch(err => {
+                console.error("Error in immediate stop:", err);
+              });
+            }
           }
         } catch (error) {
-          console.error("Error stopping WebRTC service on unmount:", error);
+          console.error("Error checking WebRTC service state on unmount:", error);
         }
       }
     };
@@ -1141,74 +1156,45 @@ export default function LessonDetailScreen() {
     }
   }
 
-  // Show realtime conversation practice - REDESIGNED LAYOUT
+  // Show realtime conversation practice - STANDARD LAYOUT
   if (showRealtimeConversation && lesson) {
     return (
-      <SafeAreaWrapper includeBottom={true} includeTabBar={true}>
-        <View style={styles.conversationPracticeContainer}>
-          {/* Modern Header with Gradient */}
-          <View style={styles.conversationPracticeHeader}>
-            <LinearGradient
-              colors={[BRAND_COLORS.EXPLORER_TEAL, BRAND_COLORS.OCEAN_BLUE, BRAND_COLORS.RUCKSACK_BROWN]}
-              style={styles.conversationHeaderGradient}
-            >
-              <View style={styles.conversationHeaderContent}>
-                <TouchableOpacity
-                  style={styles.modernCloseButton}
-                  onPress={() => {
-                    console.log("🛑 User manually closed conversation");
-                    setShowRealtimeConversation(false);
-                    setActiveSection("practice");
-
-                    // If user had started a session, mark practice as completed
-                    if (practiceSessionStart) {
-                      setHasCompletedAIPractice(true);
-
-                      // Also check minimum time
-                      const elapsed = (Date.now() - practiceSessionStart) / 1000;
-                      if (elapsed >= MIN_CONVERSATION_TIME || elapsed >= 10) {
-                        setHasMetMinimumTime(true);
-                        console.log("✅ Minimum time requirement met on manual close");
-                      }
-
-                      console.log(
-                        "AI practice marked as completed on manual close"
-                      );
-                    }
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="close" size={24} color="white" />
-                </TouchableOpacity>
-
-                <View style={styles.conversationHeaderInfo}>
-                  <Text style={styles.conversationPracticeTitle}>
-                    AI Practice Session
-                  </Text>
-                  <Text style={styles.conversationPracticeSubtitle}>
-                    {lesson.name}
-                  </Text>
-                </View>
-
-                <View style={styles.conversationHeaderStats}>
-                  <View style={styles.statItem}>
-                    <Ionicons name="time" size={16} color="rgba(255,255,255,0.8)" />
-                    <Text style={styles.statText}>
-                      {practiceSessionStart
-                        ? Math.floor((Date.now() - practiceSessionStart) / 1000)
-                        : 0}s
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </LinearGradient>
+      <SafeAreaView style={[styles.container, {
+        paddingBottom: 40
+      }]}>
+        <ScrollView
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Standard Header - same as regular lessons */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>{lesson?.name || "Lesson"}</Text>
           </View>
 
-          {/* Main Conversation Area */}
-          <View style={styles.conversationMainArea}>
+          {/* Progress Indicator */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `100%` }, // Show full progress for conversation practice
+                ]}
+              />
+            </View>
+            <Text style={styles.progressText}>
+              AI Conversation Practice
+            </Text>
+          </View>
+
+          {/* Main Conversation Area - using standard section content styling */}
+          <View style={styles.sectionContent}>
             <PersistentConversationView
               scenarioId={`lesson-${id}`}
               level={user?.preferences?.languageLevel || PROFICIENCY_LEVELS.BEGINNER}
+              user={user} // Pass user information for personalized conversations
+              lessonDetails={lesson?.content?.introduction || `Practice vocabulary and conversation from ${lesson?.name || 'this lesson'}`} // ✅ NEW: Pass lesson content
+              lessonName={lesson?.name} // ✅ NEW: Pass lesson name
               onSessionEnd={() => {
                 setShowRealtimeConversation(false);
                 // If user had started a session, mark practice as completed
@@ -1229,51 +1215,60 @@ export default function LessonDetailScreen() {
             />
           </View>
 
-          {/* Bottom Action Panel */}
-          <View style={styles.conversationBottomPanel}>
-            <View style={styles.bottomPanelContent}>
-              {/* Practice Status */}
-              <View style={styles.practiceStatusContainer}>
-                <View style={styles.practiceStatusItem}>
-                  <View style={[
-                    styles.statusDot,
-                    { backgroundColor: hasMetMinimumTime ? BRAND_COLORS.EXPLORER_TEAL : BRAND_COLORS.RUCKSACK_BROWN }
-                  ]} />
-                  <Text style={styles.statusText}>
-                    {hasMetMinimumTime
-                      ? "Time requirement met"
-                      : `Need ${MIN_CONVERSATION_TIME - (practiceSessionStart ? Math.floor((Date.now() - practiceSessionStart) / 1000) : 0)}s more`
-                    }
-                  </Text>
-                </View>
-              </View>
-
-              {/* Action Button */}
-              <View style={styles.actionButtonContainer}>
-                <ModernButton
-                  text={
-                    isCompletingPractice ? "Completing..." : "Complete Practice"
-                  }
-                  onPress={handleRealtimeConversationComplete}
+          {/* Navigation - using standard lesson navigation styling */}
+          <View style={styles.navigationContainer}>
+            {/* Session Status */}
+            <View style={styles.sessionStatusContainer}>
+              <View style={styles.sessionStatusIndicator}>
+                <View
                   style={[
-                    styles.modernCompletePracticeButton,
-                    !hasMetMinimumTime && styles.disabledActionButton,
+                    styles.statusDot,
+                    {
+                      backgroundColor: hasMetMinimumTime
+                        ? "#6FC935"
+                        : "#FFA500",
+                    },
                   ]}
-                  disabled={!hasMetMinimumTime || isCompletingPractice}
-                  loading={isCompletingPractice}
                 />
-
-                {/* Quick Tips */}
-                <View style={styles.quickTipsContainer}>
-                  <Text style={styles.quickTipsText}>
-                    💡 Speak clearly and wait for Miles to respond
-                  </Text>
-                </View>
+                <Text style={styles.sessionStatusText}>
+                  {hasMetMinimumTime
+                    ? "✅ Minimum time completed"
+                    : `⏱️ ${Math.max(
+                      0,
+                      MIN_CONVERSATION_TIME -
+                      (practiceSessionStart
+                        ? Math.floor(
+                          (Date.now() - practiceSessionStart) / 1000
+                        )
+                        : 0)
+                    )}s remaining`}
+                </Text>
               </View>
             </View>
+
+            {/* Action Button */}
+            <ModernButton
+              text={
+                isCompletingPractice ? "Completing..." : "Complete Practice"
+              }
+              onPress={handleRealtimeConversationComplete}
+              style={[
+                styles.navigationButton,
+                !hasMetMinimumTime && styles.disabledActionButton,
+              ]}
+              disabled={!hasMetMinimumTime || isCompletingPractice}
+              loading={isCompletingPractice}
+            />
+
+            {/* Quick Tips */}
+            <View style={styles.quickTipsContainer}>
+              <Text style={styles.quickTipsText}>
+                💡 Speak clearly and wait for Miles to respond
+              </Text>
+            </View>
           </View>
-        </View>
-      </SafeAreaWrapper>
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 

@@ -112,6 +112,7 @@ const config = {
   api: {
     prefix: process.env.API_PREFIX || "/api",
     version: process.env.API_VERSION || "v1",
+    bodyLimit: process.env.API_BODY_LIMIT || "10mb", // ✅ CRITICAL FIX: Configurable body size limit
   },
 
   // CORS configuration
@@ -137,7 +138,7 @@ const config = {
     apiKey: process.env.OPENAI_API_KEY,
     model: process.env.OPENAI_MODEL || "gpt-4o",
     temperature: parseFloat(process.env.OPENAI_TEMPERATURE || "0.7"),
-    maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || "500", 10),
+    maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || "300", 10), // REDUCED from 1500 to 300 for shorter, more interactive responses
   },
 
   // Vapi configuration

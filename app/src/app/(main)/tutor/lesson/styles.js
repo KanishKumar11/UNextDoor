@@ -511,102 +511,28 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Conversation practice styles
-  conversationPracticeContainer: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-  },
-  conversationPracticeHeader: {
-    zIndex: 1,
-    elevation: 5,
-  },
-  conversationHeaderGradient: {
-    paddingTop: 40,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  conversationHeaderContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  modernCloseButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-  },
-  conversationHeaderInfo: {
-    flex: 1,
-    alignItems: "center",
-    marginHorizontal: 20,
-  },
-  conversationPracticeTitle: {
-    fontSize: 20,
-    fontFamily: "Montserrat-Bold",
-    color: "white",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  conversationPracticeSubtitle: {
-    fontSize: 14,
-    fontFamily: "Montserrat-Medium",
-    color: "rgba(255, 255, 255, 0.9)",
-    textAlign: "center",
-  },
-  conversationHeaderStats: {
-    alignItems: "center",
-  },
-  statItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  statText: {
-    fontSize: 12,
-    fontFamily: "Montserrat-SemiBold",
-    color: "white",
-    marginLeft: 4,
-  },
-  conversationMainArea: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-  },
+  // Conversation practice styles - simplified for standard layout
   modernConversationView: {
     flex: 1,
     margin: 0,
     padding: 0,
   },
-  conversationBottomPanel: {
-    backgroundColor: "white",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.05)",
-    paddingTop: 20,
-    paddingBottom: 40,
-    paddingHorizontal: 20,
+  sessionStatusContainer: {
+    marginBottom: 16,
   },
-  bottomPanelContent: {
-    alignItems: "center",
-  },
-  practiceStatusContainer: {
-    marginBottom: 20,
-  },
-  practiceStatusItem: {
+  sessionStatusIndicator: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
-    paddingHorizontal: 16,
+    justifyContent: "center",
+    backgroundColor: "white",
     paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e9ecef",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   statusDot: {
     width: 8,
@@ -614,20 +540,10 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginRight: 8,
   },
-  statusText: {
+  sessionStatusText: {
     fontSize: 14,
     fontFamily: "Montserrat-Medium",
     color: "#495057",
-  },
-  actionButtonContainer: {
-    width: "100%",
-    alignItems: "center",
-  },
-  modernCompletePracticeButton: {
-    backgroundColor: "#6FC935",
-    width: "100%",
-    paddingVertical: 16,
-    marginBottom: 12,
   },
   disabledActionButton: {
     backgroundColor: "#adb5bd",
@@ -640,6 +556,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     width: "100%",
     alignItems: "center",
+    marginTop: 12,
   },
   quickTipsText: {
     fontSize: 12,

@@ -67,13 +67,13 @@ const BillingPage = () => {
         const { subscription, latestTransaction, autoRenewal } = billingResponse.data;
 
         if (subscription) {
+          // Use displayPrice if available (new subscriptions), otherwise convert planPrice from paise
+          const displayAmount = subscription.displayPrice || (subscription.planPrice ? (subscription.planPrice / 100) : 0);
+
           setBillingDetails({
             nextBillingDate: subscription.nextBillingDate ? new Date(subscription.nextBillingDate) : null,
-            amount: subscription.planPrice ? (subscription.planPrice) : 0, // Convert from paise to rupees
+            amount: displayAmount,
             currency: subscription.currency || 'INR',
-            paymentMethod: latestTransaction?.razorpayPaymentId
-              ? `Payment ID ending in ${latestTransaction.razorpayPaymentId.slice(-4)}`
-              : 'Razorpay Payment',
             autoRenewal: autoRenewal !== false,
             planName: subscription.planName || `${subscription.planType} ${subscription.planDuration}`,
             status: subscription.status,
@@ -123,14 +123,7 @@ const BillingPage = () => {
     );
   };
 
-  // Handle payment method update
-  const handleUpdatePaymentMethod = () => {
-    Alert.alert(
-      "Update Payment Method",
-      "Payment method updates are handled through your subscription provider.",
-      [{ text: "OK" }]
-    );
-  };
+
 
   // Helper function to determine plan action (upgrade/downgrade)
   const getPlanAction = (targetPlanId, currentPlanId) => {
@@ -516,47 +509,14 @@ const BillingPage = () => {
                         fontSize: 20,
                       }}
                     >
-                      {billingDetails.currency === 'INR' ? '₹' : '$'}{billingDetails.amount}
+                      {new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: billingDetails.currency || 'INR',
+                      }).format(billingDetails.amount)}
                     </Text>
                   </View>
 
-                  {/* Payment Method */}
-                  <TouchableOpacity
-                    // onPress={handleUpdatePaymentMethod}
-                    style={{
-                      backgroundColor: BRAND_COLORS.EXPLORER_TEAL + "10",
-                      borderRadius: 12,
-                      padding: theme.spacing.md,
-                    }}
-                  >
-                    <Row justify="space-between" align="center">
-                      <Column style={{ flex: 1 }}>
-                        <Text
-                          style={{
-                            color: BRAND_COLORS.SHADOW_GREY,
-                            fontSize: 12,
-                            marginBottom: 4,
-                          }}
-                        >
-                          Payment method
-                        </Text>
-                        <Text
-                          weight="medium"
-                          style={{
-                            color: BRAND_COLORS.OCEAN_BLUE,
-                            fontSize: 14,
-                          }}
-                        >
-                          {billingDetails.paymentMethod}
-                        </Text>
-                      </Column>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={20}
-                        color={BRAND_COLORS.SHADOW_GREY}
-                      />
-                    </Row>
-                  </TouchableOpacity>
+
                 </Column>
               </ModernCard>
             </View>

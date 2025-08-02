@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
 import { useWebRTCConversation } from '../hooks/useWebRTCConversation';
 import { setAudioModeAsync } from '../../../shared/utils/audioUtils';
 import { BRAND_COLORS } from '../../../shared/constants/colors';
@@ -50,11 +51,21 @@ const getFontFamily = (weight = 'regular') => {
 const PersistentConversationView = ({
   scenarioId,
   level = "beginner",
+  user = null, // User object for personalized conversations
+  lessonDetails = null, // ✅ NEW: Lesson-specific content details
+  lessonName = null, // ✅ NEW: Lesson name for better context
   onSessionEnd,
   style
 }) => {
-  // Theme
+  // Theme and navigation
   const theme = useTheme();
+  const navigation = useNavigation();
+
+  // Get user data from Redux store
+  const reduxUser = useSelector((state) => state.auth.user);
+
+  // Use Redux user data if no user prop is provided, or merge them
+  const effectiveUser = user || reduxUser;
 
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -69,11 +80,15 @@ const PersistentConversationView = ({
   // Character state
   const [currentCharacter, setCurrentCharacter] = useState(null);
 
-  // Streaming state
+  // Streaming state (AI transcription only)
   const [displayedTranscript, setDisplayedTranscript] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const streamingIntervalRef = useRef(null);
   const transcriptIndexRef = useRef(0);
+
+  // Session lifecycle management
+  const isCleaningUpRef = useRef(false);
+  const cleanupPromiseRef = useRef(null);
 
   const {
     // State
@@ -89,99 +104,143 @@ const PersistentConversationView = ({
     allowAutoRestart,
     conversationHistory,
     currentAITranscript,
+    isWaitingForTranscription, // ✅ NEW: Get transcription loading state
 
     // Actions
     startSession,
     stopSession,
     changeScenario,
     stopSessionByUser,
-    resetSessionControlFlags,
     clearAllData, // Add this method from the hook for complete data clearing
+    getServiceState, // ✅ CRITICAL FIX: Add getServiceState to access real-time service state
 
     // Computed state
     isConnecting,
     isDisconnected,
   } = useWebRTCConversation();
 
-  // Complete cleanup function
-  const performCompleteCleanup = useCallback(async () => {
-    console.log("🧹 Performing complete cleanup of conversation data");
-
-    try {
-      // Clear streaming intervals
-      if (streamingIntervalRef.current) {
-        clearInterval(streamingIntervalRef.current);
-        streamingIntervalRef.current = null;
+  // Unified navigation cleanup function
+  const performNavigationCleanup = useCallback(async () => {
+    // Prevent multiple simultaneous cleanup operations
+    if (isCleaningUpRef.current) {
+      console.log("🧹 Cleanup already in progress, waiting...");
+      if (cleanupPromiseRef.current) {
+        await cleanupPromiseRef.current;
       }
-
-      // Reset local state
-      setDisplayedTranscript('');
-      setIsStreaming(false);
-      transcriptIndexRef.current = 0;
-
-      // DON'T reset animations to initial values - let them stay for next session
-      // Only reset animations if component is unmounting
-
-      // Clear WebRTC data and stop session
-      if (clearAllData) {
-        await clearAllData();
-      } else {
-        await stopSession();
-      }
-
-      console.log("✅ Complete cleanup finished");
-    } catch (error) {
-      console.error("❌ Error during complete cleanup:", error);
+      return;
     }
-  }, [clearAllData, stopSession]);
 
-  // Cleanup for component unmount only
-  const performUnmountCleanup = useCallback(async () => {
-    console.log("🧹 Performing unmount cleanup");
+    isCleaningUpRef.current = true;
+    console.log("🧹 Performing navigation cleanup of conversation data");
 
-    try {
-      // Clear streaming intervals
-      if (streamingIntervalRef.current) {
-        clearInterval(streamingIntervalRef.current);
-        streamingIntervalRef.current = null;
+    const cleanupPromise = (async () => {
+      try {
+        // Check if AI is currently speaking before aggressive cleanup
+        const currentlyAISpeaking = isAISpeaking;
+
+        if (currentlyAISpeaking) {
+          console.log("🎯 AI is speaking during cleanup - using graceful cleanup");
+
+          // Don't clear streaming intervals if AI is speaking
+          console.log("🎯 Preserving streaming during AI speech");
+
+          // Don't stop animations immediately if AI is speaking
+          console.log("🎯 Preserving animations during AI speech");
+
+          // Reset local state but preserve audio-related state
+          setDisplayedTranscript('');
+          // Don't set isStreaming to false if AI is speaking
+          transcriptIndexRef.current = 0;
+
+          // Graceful WebRTC cleanup that respects ongoing audio
+          if (clearAllData) {
+            console.log("🎯 Deferring clearAllData until AI finishes speaking");
+            setTimeout(async () => {
+              await clearAllData();
+            }, 3000); // 3 second delay
+          } else {
+            console.log("🎯 Deferring stopSession until AI finishes speaking");
+            setTimeout(async () => {
+              await stopSession();
+            }, 3000); // 3 second delay
+          }
+        } else {
+          console.log("🎯 AI not speaking - safe for immediate cleanup");
+
+          // Clear streaming intervals immediately
+          if (streamingIntervalRef.current) {
+            clearInterval(streamingIntervalRef.current);
+            streamingIntervalRef.current = null;
+          }
+
+          // Stop animations immediately to prevent UI glitches
+          if (pulseAnim) {
+            pulseAnim.stopAnimation();
+            pulseAnim.setValue(1);
+          }
+          if (glowAnim) {
+            glowAnim.stopAnimation();
+            glowAnim.setValue(0);
+          }
+          if (waveAnim) {
+            waveAnim.stopAnimation();
+            waveAnim.setValue(0);
+          }
+
+          // Reset local state
+          setDisplayedTranscript('');
+          setIsStreaming(false);
+          transcriptIndexRef.current = 0;
+
+          // ✅ CRITICAL FIX: Use stopSessionByUser for navigation cleanup to prevent auto-restart
+          if (clearAllData) {
+            await clearAllData();
+          } else {
+            // Use stopSessionByUser to ensure user intent is respected
+            await stopSessionByUser();
+          }
+        }
+
+        console.log("✅ Navigation cleanup finished");
+      } catch (error) {
+        console.error("❌ Error during navigation cleanup:", error);
+      } finally {
+        isCleaningUpRef.current = false;
+        cleanupPromiseRef.current = null;
       }
+    })();
 
-      // Reset local state
-      setDisplayedTranscript('');
-      setIsStreaming(false);
-      transcriptIndexRef.current = 0;
+    cleanupPromiseRef.current = cleanupPromise;
+    await cleanupPromise;
+  }, [clearAllData, stopSession, pulseAnim, glowAnim, waveAnim]);
 
-      // Reset animations to initial values for unmount
-      pulseAnim.setValue(1);
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-      glowAnim.setValue(0);
-      waveAnim.setValue(0);
-      cursorAnim.setValue(1);
-      statusPulseAnim.setValue(1);
+  // Navigation event listener for guaranteed cleanup
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      console.log("🎯 Navigation beforeRemove event triggered");
 
-      // Clear WebRTC data and stop session
-      if (clearAllData) {
-        await clearAllData();
-      } else {
-        await stopSession();
+      // Only prevent navigation if we need to cleanup
+      if (isSessionActive || isConnected) {
+        // Prevent default behavior of leaving the screen
+        e.preventDefault();
+
+        console.log("🎯 Preventing navigation to perform cleanup first");
+
+        // Perform cleanup and then navigate
+        performNavigationCleanup().then(() => {
+          console.log("🎯 Cleanup complete, allowing navigation");
+          // Re-dispatch the action to continue navigation
+          navigation.dispatch(e.data.action);
+        }).catch((error) => {
+          console.error("🎯 Error during navigation cleanup:", error);
+          // Allow navigation even if cleanup fails to prevent stuck state
+          navigation.dispatch(e.data.action);
+        });
       }
+    });
 
-      console.log("✅ Unmount cleanup finished");
-    } catch (error) {
-      console.error("❌ Error during unmount cleanup:", error);
-    }
-  }, [
-    clearAllData,
-    stopSession,
-    pulseAnim,
-    fadeAnim,
-    slideAnim,
-    glowAnim,
-    waveAnim,
-    cursorAnim,
-    statusPulseAnim
-  ]);
+    return unsubscribe;
+  }, [navigation, isSessionActive, isConnected, performNavigationCleanup]);
 
   // Entrance animations and character selection
   useEffect(() => {
@@ -363,6 +422,8 @@ const PersistentConversationView = ({
     };
   }, [currentAITranscript]);
 
+
+
   // Cursor blinking animation
   useEffect(() => {
     if (isStreaming) {
@@ -434,55 +495,110 @@ const PersistentConversationView = ({
   //   }
   // }, [conversationHistory.length, displayedTranscript]);
 
-  // Session management
+  // ✅ CRITICAL FIX: Enhanced session management with robust debouncing
+  const sessionStartRef = useRef(false);
+  const lastScenarioRef = useRef(null);
+  const sessionManagementTimeoutRef = useRef(null);
+
   useEffect(() => {
     if (!isInitialized || !scenarioId) return;
 
-    if (userEndedSession || !allowAutoRestart) {
-      console.log("🎯 User ended session or auto-restart disabled, not auto-restarting");
-      return;
+    // ✅ CRITICAL FIX: Debounce session management to prevent state sync triggers
+    if (sessionManagementTimeoutRef.current) {
+      clearTimeout(sessionManagementTimeoutRef.current);
     }
 
-    const handleScenarioChange = async () => {
-      try {
-        if (isSessionActive && currentScenario === scenarioId) {
-          console.log("🎯 Already running scenario:", scenarioId);
-          return;
+    sessionManagementTimeoutRef.current = setTimeout(() => {
+      // ✅ CRITICAL FIX: Enhanced user intent checking to prevent auto-reconnection
+      if (userEndedSession || !allowAutoRestart) {
+        console.log("🎯 User ended session or auto-restart disabled, not auto-restarting");
+        console.log(`🎯 Session control flags: userEndedSession=${userEndedSession}, allowAutoRestart=${allowAutoRestart}`);
+        return;
+      }
+
+      // ✅ CRITICAL FIX: Prevent multiple session starts with ref-based debouncing
+      if (sessionStartRef.current) {
+        console.log("🎯 Session start already in progress, skipping");
+        return;
+      }
+
+      // ✅ CRITICAL FIX: Only trigger if scenario actually changed
+      if (lastScenarioRef.current === scenarioId) {
+        console.log("🎯 Scenario unchanged, no action needed");
+        return;
+      }
+
+      lastScenarioRef.current = scenarioId;
+      console.log("🎯 Scenario changed, processing session management");
+
+      // ✅ CRITICAL FIX: Additional check - don't auto-start if user recently ended a session
+      // This prevents immediate reconnection after navigation cleanup
+      if (isSessionActive && currentScenario === scenarioId) {
+        console.log("🎯 Session already active for current scenario, no action needed");
+        return;
+      }
+
+      const handleScenarioChange = async () => {
+        try {
+          sessionStartRef.current = true;
+
+          // ✅ CRITICAL FIX: Real-time check of user intent flags from service
+          const currentServiceState = getServiceState();
+          if (currentServiceState.userEndedSession || !currentServiceState.allowAutoRestart || currentServiceState.sessionManagementDisabled) {
+            console.log("🎯 Real-time check: User ended session, auto-restart disabled, or session management disabled");
+            console.log(`🎯 Service flags: userEndedSession=${currentServiceState.userEndedSession}, allowAutoRestart=${currentServiceState.allowAutoRestart}, sessionManagementDisabled=${currentServiceState.sessionManagementDisabled}`);
+            return;
+          }
+
+          if (currentServiceState.isSessionActive && currentServiceState.currentScenario === scenarioId) {
+            console.log("🎯 Already running scenario:", scenarioId);
+            return;
+          }
+
+          if (currentServiceState.isSessionActive && currentServiceState.currentScenario !== scenarioId) {
+            console.log("🎯 Changing scenario from", currentServiceState.currentScenario, "to", scenarioId);
+            await changeScenario(scenarioId, level);
+          } else {
+            console.log("🎯 Starting new session for scenario:", scenarioId);
+
+            // Reset UI state for new session
+            setDisplayedTranscript('');
+            setIsStreaming(false);
+            transcriptIndexRef.current = 0;
+
+            // ✅ CRITICAL FIX: Mark as user-initiated session (user navigated to conversation screen)
+            await startSession(scenarioId, level, effectiveUser, true, lessonDetails);
+          }
+        } catch (error) {
+          console.error("🎯 Error handling scenario change:", error);
+          Alert.alert("Connection Error", "Failed to start conversation. Please try again.");
+        } finally {
+          // Reset the ref after a delay to allow for proper session establishment
+          setTimeout(() => {
+            sessionStartRef.current = false;
+          }, 3000);
         }
+      };
 
-        if (isSessionActive && currentScenario !== scenarioId) {
-          console.log("🎯 Changing scenario from", currentScenario, "to", scenarioId);
-          await changeScenario(scenarioId, level);
-        } else {
-          console.log("🎯 Starting new session for scenario:", scenarioId);
+      handleScenarioChange();
+    }, 1000); // ✅ CRITICAL FIX: 1-second debounce to prevent state sync triggers
 
-          // Reset UI state for new session
-          setDisplayedTranscript('');
-          setIsStreaming(false);
-          transcriptIndexRef.current = 0;
-
-          await startSession(scenarioId, level);
-        }
-      } catch (error) {
-        console.error("🎯 Error handling scenario change:", error);
-        Alert.alert("Connection Error", "Failed to start conversation. Please try again.");
+    return () => {
+      if (sessionManagementTimeoutRef.current) {
+        clearTimeout(sessionManagementTimeoutRef.current);
       }
     };
-
-    handleScenarioChange();
-  }, [isInitialized, scenarioId, level, isSessionActive, currentScenario, userEndedSession, allowAutoRestart, startSession, changeScenario]);
+  }, [isInitialized, scenarioId, level]); // ✅ CRITICAL FIX: Removed state variables that cause re-runs on state sync
 
   const handleEndSession = useCallback(async () => {
     try {
       console.log("🎯 Ending conversation session from component");
 
-      // Perform complete cleanup but don't reset animations
-      await performCompleteCleanup();
+      // ✅ CRITICAL FIX: Use stopSessionByUser to properly prevent auto-restart
+      await stopSessionByUser();
 
-      // Reset session control flags to allow restart
-      if (resetSessionControlFlags) {
-        resetSessionControlFlags();
-      }
+      // ✅ CRITICAL FIX: Removed resetSessionControlFlags() - this was causing auto-reconnection
+      // The user explicitly ended the session, so we should respect that intent
 
       if (onSessionEnd) {
         onSessionEnd();
@@ -490,31 +606,19 @@ const PersistentConversationView = ({
     } catch (error) {
       console.error("🎯 Error ending session:", error);
     }
-  }, [performCompleteCleanup, resetSessionControlFlags, onSessionEnd]);
+  }, [stopSessionByUser, onSessionEnd]);
 
   useEffect(() => {
     return () => {
-      console.log("🛑 PersistentConversationView unmounting - performing unmount cleanup");
-      performUnmountCleanup().catch(error => {
+      console.log("🛑 PersistentConversationView unmounting - performing navigation cleanup");
+      performNavigationCleanup().catch(error => {
         console.error("🛑 Error during unmount cleanup:", error);
       });
     };
-  }, [performUnmountCleanup]);
+  }, [performNavigationCleanup]);
 
-  // Additional cleanup for scenario/route changes
-  useEffect(() => {
-    // This effect runs when the component mounts or when key props change
-    // If there's an active session from a previous conversation, clean it up
-    return () => {
-      console.log("🔄 Route/scenario changed - ensuring clean state");
-      if (isConnected || isSessionActive) {
-        console.log("🧹 Cleaning up previous session due to route change");
-        clearAllData().catch(error => {
-          console.error("🛑 Error during route change cleanup:", error);
-        });
-      }
-    };
-  }, [scenarioId, level]); // Re-run when scenario changes
+  // ✅ CRITICAL FIX: Removed redundant route change effect that was causing multiple session starts
+  // Navigation cleanup is already handled by the beforeRemove listener and useFocusEffect
 
   // Sync audio output route when device changes
   useEffect(() => {
@@ -522,14 +626,24 @@ const PersistentConversationView = ({
     setAudioModeAsync({});
   }, [audioOutputDevice]);
 
-  // Handle app state changes (background/foreground)
+  // Handle app state changes (background/foreground) with audio protection
   useEffect(() => {
     const handleAppStateChange = (nextAppState) => {
       console.log("🎯 App state changed to:", nextAppState);
 
       if (nextAppState === 'background' || nextAppState === 'inactive') {
-        console.log("🎯 App going to background - ending session");
-        handleEndSession();
+        // Check if AI is currently speaking before ending session
+        if (isAISpeaking) {
+          console.log("🎯 App going to background but AI is speaking - allowing response to complete");
+          // Don't end session immediately, let AI finish speaking
+          // The session will naturally timeout or user can resume when app becomes active
+        } else {
+          console.log("🎯 App going to background - AI not speaking, safe to end session");
+          handleEndSession();
+        }
+      } else if (nextAppState === 'active') {
+        console.log("🎯 App became active - checking session state");
+        // App became active again, no action needed as session management handles this
       }
     };
 
@@ -538,7 +652,7 @@ const PersistentConversationView = ({
     return () => {
       subscription?.remove();
     };
-  }, [handleEndSession]);
+  }, [handleEndSession, isAISpeaking]);
 
   // Handle navigation focus/blur events with immediate cleanup
   useFocusEffect(
@@ -548,32 +662,14 @@ const PersistentConversationView = ({
       // Component is focused - session management is handled by other useEffect
 
       return () => {
-        console.log("🎯 PersistentConversationView blurred - performing IMMEDIATE cleanup");
+        console.log("🎯 PersistentConversationView blurred - performing navigation cleanup");
 
-        // Immediate synchronous cleanup for critical resources
-        try {
-          // Clear streaming intervals immediately
-          if (streamingIntervalRef.current) {
-            clearInterval(streamingIntervalRef.current);
-            streamingIntervalRef.current = null;
-          }
-
-          // Stop animations immediately
-          if (pulseAnim) {
-            pulseAnim.stopAnimation();
-            pulseAnim.setValue(1);
-          }
-
-          // Force immediate WebRTC cleanup using clearAllData
-          clearAllData().catch(error => {
-            console.error("🛑 Error during blur cleanup:", error);
-          });
-
-        } catch (error) {
-          console.error("🛑 Error during immediate cleanup:", error);
-        }
+        // Use unified navigation cleanup for consistency
+        performNavigationCleanup().catch(error => {
+          console.error("🛑 Error during blur cleanup:", error);
+        });
       };
-    }, [performCompleteCleanup, pulseAnim])
+    }, [performNavigationCleanup])
   );
 
   const getConnectionStatus = () => {
@@ -634,7 +730,7 @@ const PersistentConversationView = ({
             </Text>
             <TouchableOpacity
               style={styles.retryButton}
-              onPress={() => startSession(scenarioId, level)}
+              onPress={() => startSession(scenarioId, level, effectiveUser)}
               activeOpacity={0.8}
             >
               <Ionicons name="refresh" size={20} color="white" style={styles.retryIcon} />
@@ -771,9 +867,59 @@ const PersistentConversationView = ({
               </View>
             </View>
 
+
+
             {/* Streaming Text Display - Main Focus */}
             <View style={styles.streamingTextArea}>
-              {displayedTranscript ? (
+              {isConnecting && !displayedTranscript && conversationHistory.length === 0 ? (
+                // ✅ NEW: Loading indicator when conversation is starting
+                <Animated.View
+                  style={[
+                    styles.streamingCard,
+                    {
+                      opacity: fadeAnim,
+                      transform: [{ translateY: slideAnim }]
+                    }
+                  ]}
+                >
+                  <View style={styles.speakingIndicatorBar}>
+                    <View style={styles.speakingDots}>
+                      {renderWaveforms()}
+                    </View>
+                    <Text style={styles.speakingLabel}>Starting conversation...</Text>
+                  </View>
+                  <Text style={styles.streamingText}>
+                    Connecting to your Korean conversation partner...
+                    <Animated.Text style={[styles.typingCursor, { opacity: cursorAnim }]}>
+                      |
+                    </Animated.Text>
+                  </Text>
+                </Animated.View>
+              ) : isWaitingForTranscription && !displayedTranscript ? (
+                // ✅ NEW: Loading indicator when waiting for transcription
+                <Animated.View
+                  style={[
+                    styles.streamingCard,
+                    {
+                      opacity: fadeAnim,
+                      transform: [{ translateY: slideAnim }]
+                    }
+                  ]}
+                >
+                  <View style={styles.speakingIndicatorBar}>
+                    <View style={styles.speakingDots}>
+                      {renderWaveforms()}
+                    </View>
+                    <Text style={styles.speakingLabel}>Processing response...</Text>
+                  </View>
+                  <Text style={styles.streamingText}>
+                    Preparing your conversation partner's response...
+                    <Animated.Text style={[styles.typingCursor, { opacity: cursorAnim }]}>
+                      |
+                    </Animated.Text>
+                  </Text>
+                </Animated.View>
+              ) : displayedTranscript ? (
                 // Active streaming response
                 <Animated.View
                   style={[
@@ -1067,6 +1213,8 @@ const styles = StyleSheet.create({
     color: BRAND_COLORS.SHADOW_GREY,
     fontFamily: getFontFamily('medium'),
   },
+
+
 
   streamingTextArea: {
     width: '100%',

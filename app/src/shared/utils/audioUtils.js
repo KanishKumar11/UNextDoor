@@ -98,11 +98,11 @@ export const setAudioMode = async (options = {}) => {
 export const createSound = async (source, initialStatus = {}, onPlaybackStatusUpdate = null) => {
   try {
     console.log("🔊 Creating sound from source:", source);
-    
+
     if (!ExpoAVAudio || !ExpoAVAudio.Sound) {
       throw new Error("expo-av Sound is not available");
     }
-    
+
     const sound = new ExpoAVAudio.Sound();
     await sound.loadAsync(source, initialStatus);
 

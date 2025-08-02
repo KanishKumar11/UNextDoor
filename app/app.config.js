@@ -5,7 +5,7 @@ import { BRAND_COLORS } from "./src/shared/constants/colors";
 const config = {
   name: "UNextDoor",
   slug: "UNextDoor",
-  version: "1.0.2", // bumped version for production
+  version: "1.0.3", // bumped version for production
   orientation: "portrait",
   icon: "./src/assets/app-logo-square.png",
   userInterfaceStyle: "light",
@@ -43,7 +43,7 @@ const config = {
       },
     },
   },
-  runtimeVersion: "1.0.2", // keep in sync with version
+  runtimeVersion: "1.0.3", // keep in sync with version
   android: {
     adaptiveIcon: {
       foregroundImage: "./src/assets/app-logo-square.png",

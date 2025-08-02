@@ -16,9 +16,6 @@ jest.mock('react-native/Libraries/Utilities/Appearance', () => ({
   addChangeListener: jest.fn(() => ({ remove: jest.fn() })),
 }));
 
-// Mock the Animated module
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
-
 // Mock the Ionicons module
 jest.mock('@expo/vector-icons', () => ({
   Ionicons: 'Ionicons',
@@ -65,9 +62,6 @@ jest.mock('react-native/Libraries/Utilities/Dimensions', () => ({
 NativeModules.PlatformConstants = {
   forceTouchAvailable: false,
 };
-
-// Silence the warning: Animated: `useNativeDriver` is not supported
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
 
 // Mock timers
 jest.useFakeTimers();

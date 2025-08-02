@@ -27,21 +27,21 @@ export const saveTranscriptToConversation = async (conversationId, userId, trans
       _id: conversationId,
       userId,
     });
-    
+
     if (!conversation) {
       throw new Error('Conversation not found');
     }
-    
+
     // Add user message to conversation
     conversation.messages.push({
       role: 'user',
       content: transcript,
       timestamp: new Date(),
     });
-    
+
     conversation.lastMessageAt = new Date();
     await conversation.save();
-    
+
     return conversation;
   } catch (error) {
     console.error('Error saving transcript to conversation:', error);
@@ -59,21 +59,21 @@ export const saveAIResponseToConversation = async (conversationId, response) => 
   try {
     // Find conversation
     const conversation = await Conversation.findById(conversationId);
-    
+
     if (!conversation) {
       throw new Error('Conversation not found');
     }
-    
+
     // Add AI message to conversation
     conversation.messages.push({
       role: 'assistant',
       content: response,
       timestamp: new Date(),
     });
-    
+
     conversation.lastMessageAt = new Date();
     await conversation.save();
-    
+
     return conversation;
   } catch (error) {
     console.error('Error saving AI response to conversation:', error);
@@ -90,12 +90,12 @@ export const saveAIResponseToConversation = async (conversationId, response) => 
 export const createConversation = async (userId, data) => {
   try {
     const { title, level, scenarioId } = data;
-    
+
     // Validate required fields
     if (!level || !title || !scenarioId) {
       throw new Error('Level, title, and scenarioId are required');
     }
-    
+
     // Create conversation
     const conversation = new Conversation({
       userId,
@@ -106,9 +106,9 @@ export const createConversation = async (userId, data) => {
       startedAt: new Date(),
       lastMessageAt: new Date(),
     });
-    
+
     await conversation.save();
-    
+
     return conversation;
   } catch (error) {
     console.error('Error creating conversation:', error);
@@ -128,11 +128,11 @@ export const getConversationById = async (conversationId, userId) => {
       _id: conversationId,
       userId,
     });
-    
+
     if (!conversation) {
       throw new Error('Conversation not found');
     }
-    
+
     return conversation;
   } catch (error) {
     console.error('Error getting conversation:', error);
@@ -150,17 +150,17 @@ export const generateAIResponse = async (conversationId, userMessage) => {
   try {
     // Get conversation
     const conversation = await Conversation.findById(conversationId);
-    
+
     if (!conversation) {
       throw new Error('Conversation not found');
     }
-    
+
     // Get conversation history for context
     const messageHistory = conversation.messages.map(msg => ({
       role: msg.role,
       content: msg.content,
     }));
-    
+
     // Add system message if not present
     if (!messageHistory.some(msg => msg.role === 'system')) {
       messageHistory.unshift({
@@ -168,21 +168,21 @@ export const generateAIResponse = async (conversationId, userMessage) => {
         content: 'You are a helpful Korean language tutor. Respond in Korean and English to help the student learn.',
       });
     }
-    
+
     // Add user message
     messageHistory.push({
       role: 'user',
       content: userMessage,
     });
-    
+
     // Generate AI response using OpenAI
     const completion = await openai.chat.completions.create({
       model: config.openai.model,
       messages: messageHistory,
       temperature: config.openai.temperature,
-      max_tokens: config.openai.maxTokens,
+      max_tokens: config.openai.maxTokens, // Now uses the REDUCED limit from config (300)
     });
-    
+
     return completion.choices[0].message.content;
   } catch (error) {
     console.error('Error generating AI response:', error);
@@ -200,14 +200,14 @@ export const updateUserProgressFromConversation = async (userId, conversationId)
   try {
     // Get conversation
     const conversation = await Conversation.findById(conversationId);
-    
+
     if (!conversation) {
       throw new Error('Conversation not found');
     }
-    
+
     // Get or create user progress
     let userProgress = await UserProgress.findOne({ userId });
-    
+
     if (!userProgress) {
       userProgress = new UserProgress({
         userId,
@@ -226,18 +226,18 @@ export const updateUserProgressFromConversation = async (userId, conversationId)
         lastPracticeAt: new Date(),
       });
     }
-    
+
     // Update last practice time
     userProgress.lastPracticeAt = new Date();
-    
+
     // Add scenario to completed scenarios if not already present
-    if (conversation.scenarioId && 
-        !userProgress.completedScenarios.includes(conversation.scenarioId)) {
+    if (conversation.scenarioId &&
+      !userProgress.completedScenarios.includes(conversation.scenarioId)) {
       userProgress.completedScenarios.push(conversation.scenarioId);
     }
-    
+
     await userProgress.save();
-    
+
     return userProgress;
   } catch (error) {
     console.error('Error updating user progress:', error);

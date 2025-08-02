@@ -55,16 +55,22 @@ export const rateLimiter = (resource, limit = 1000) => {
 
         console.log(`Rate limit exceeded for ${key}: ${entry.count}/${limit} requests. Reset in ${retryAfter}s`);
 
-        res.set("Retry-After", retryAfter.toString());
-        return res.status(429).json({
-          error: "Rate limit exceeded",
-          message: `Too many requests for ${resource}. Try again in ${retryAfter} seconds.`,
-          retryAfter,
-          limit,
-          current: entry.count,
-          resource,
-          resetTime: entry.resetTime,
-        });
+        // For realtime token requests, be more lenient to avoid interrupting ongoing conversations
+        if (resource === 'realtime_token' && entry.count < limit * 1.2) {
+          console.log(`Allowing realtime token request despite rate limit to prevent audio cutoff`);
+          // Allow the request but log the warning
+        } else {
+          res.set("Retry-After", retryAfter.toString());
+          return res.status(429).json({
+            error: "Rate limit exceeded",
+            message: `Too many requests for ${resource}. Try again in ${retryAfter} seconds.`,
+            retryAfter,
+            limit,
+            current: entry.count,
+            resource,
+            resetTime: entry.resetTime,
+          });
+        }
       }
 
       // Increment count and update store

@@ -54,16 +54,26 @@ const initializeApp = () => {
   // Add request monitoring middleware
   app.use(requestMonitoringMiddleware);
 
-  // Standard body parsers
+  // ✅ CRITICAL FIX: Increased body parser limits to handle large payloads
   app.use(
     express.json({
+      limit: '10mb', // Increased from default 100kb to 10mb
       verify: (req, res, buf) => {
         // Store the raw body for debugging
         req.rawBody = buf.toString();
       },
     })
   );
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.urlencoded({
+    extended: true,
+    limit: '10mb' // Increased from default 100kb to 10mb
+  }));
+
+  // ✅ CRITICAL FIX: Add raw body parser with increased limits for WebRTC and other large payloads
+  app.use(express.raw({
+    limit: '10mb',
+    type: ['application/octet-stream', 'application/x-protobuf']
+  }));
 
   // Debug middleware to log request body
   app.use((req, res, next) => {
@@ -132,15 +142,30 @@ const initializeApp = () => {
     sendError(res, 404, "Route not found");
   });
 
-  // Global error handler
-  app.use((err, _req, res, _next) => {
+  // ✅ CRITICAL FIX: Enhanced error handler with specific handling for payload size errors
+  app.use((err, req, res, _next) => {
     console.error("Server error:", err);
 
-    const statusCode = err.statusCode || 500;
-    const message = err.message || "Internal server error";
+    let statusCode = err.statusCode || 500;
+    let message = err.message || "Internal server error";
+
+    // Handle payload too large errors specifically
+    if (err.type === 'entity.too.large' || err.message?.includes('entity.too.large')) {
+      statusCode = 413;
+      message = "Request payload too large. Please reduce the size of your request.";
+      console.warn(`⚠️ Payload too large for ${req.path}: ${err.expected} bytes (limit: ${err.limit} bytes)`);
+    }
+
+    // Handle JSON parsing errors
+    if (err.type === 'entity.parse.failed') {
+      statusCode = 400;
+      message = "Invalid JSON in request body";
+    }
 
     sendError(res, statusCode, message, {
       stack: config.nodeEnv === "development" ? err.stack : undefined,
+      limit: err.limit,
+      received: err.length
     });
   });
 

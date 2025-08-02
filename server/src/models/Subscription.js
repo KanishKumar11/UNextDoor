@@ -12,7 +12,7 @@ const subscriptionSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    
+
     // Plan identification
     planId: {
       type: String,
@@ -29,21 +29,30 @@ const subscriptionSchema = new mongoose.Schema(
     },
     planPrice: {
       type: Number,
-      required: true, // Price in smallest currency unit (paise for INR)
+      required: true, // Price in smallest currency unit (paise for INR, cents for USD)
+    },
+    currency: {
+      type: String,
+      enum: ["INR", "USD"],
+      default: "INR", // Display currency for the user
+    },
+    displayPrice: {
+      type: Number,
+      required: false, // Display price in the user's currency (149 INR, 1.99 USD)
     },
     planDuration: {
       type: String,
       enum: ["monthly", "quarterly", "yearly"],
       required: true,
     },
-    
+
     // Subscription status tracking
     status: {
       type: String,
       enum: ["active", "inactive", "cancelled", "expired", "pending"],
       default: "pending",
     },
-    
+
     // Date tracking
     startDate: {
       type: Date,
@@ -65,7 +74,7 @@ const subscriptionSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
-    
+
     // Gateway integration fields
     gatewayCustomerId: {
       type: String,
@@ -75,7 +84,7 @@ const subscriptionSchema = new mongoose.Schema(
       type: String,
       sparse: true,
     },
-    
+
     // Payment details
     paymentMethod: {
       type: String,
@@ -100,7 +109,7 @@ const subscriptionSchema = new mongoose.Schema(
       required: true,
       default: 1,
     },
-    
+
     // Razorpay integration fields
     razorpaySubscriptionId: {
       type: String,
@@ -115,7 +124,7 @@ const subscriptionSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    
+
     // Payment tracking
     lastPaymentId: {
       type: String,
@@ -123,13 +132,13 @@ const subscriptionSchema = new mongoose.Schema(
     lastPaymentDate: {
       type: Date,
     },
-    
+
     // Auto-renewal setting
     autoRenewal: {
       type: Boolean,
       default: true,
     },
-    
+
     // Feature access control
     features: {
       lessonsPerPeriod: {
@@ -163,7 +172,7 @@ const subscriptionSchema = new mongoose.Schema(
         max: 100,
       },
     },
-    
+
     // Usage tracking
     lessonsConsumed: {
       type: Number,
@@ -173,7 +182,7 @@ const subscriptionSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    
+
     // Upgrade/downgrade tracking
     previousPlan: {
       type: String,
@@ -183,7 +192,7 @@ const subscriptionSchema = new mongoose.Schema(
       type: Number,
       default: 0, // Credits from prorated upgrades
     },
-    
+
     // Cancellation tracking
     cancelledAt: {
       type: Date,
@@ -243,7 +252,7 @@ const subscriptionSchema = new mongoose.Schema(
         default: null,
       },
     },
-    
+
     // Metadata for extensibility
     metadata: {
       type: Map,
@@ -281,20 +290,20 @@ subscriptionSchema.methods.daysUntilExpiry = function () {
 
 subscriptionSchema.methods.canAccessLesson = function () {
   if (!this.isActive()) return false;
-  
+
   // Pro plan has unlimited access
   if (this.planType === "pro") return true;
-  
+
   // Check if user has consumed their lesson quota
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  
+
   // Reset counter if new billing period
   if (this.lastResetDate < monthStart) {
     this.lessonsConsumed = 0;
     this.lastResetDate = now;
   }
-  
+
   return this.lessonsConsumed < this.features.lessonsPerPeriod;
 };
 
@@ -311,7 +320,7 @@ subscriptionSchema.methods.calculateProrationCredit = function (newPlanPrice) {
   const totalDuration = this.endDate - this.startDate;
   const remainingDuration = this.endDate - now;
   const remainingPercentage = remainingDuration / totalDuration;
-  
+
   return Math.round(this.planPrice * remainingPercentage);
 };
 
@@ -362,7 +371,7 @@ subscriptionSchema.statics.getPlanConfig = function (planType) {
       },
     },
   };
-  
+
   return plans[planType];
 };
 

@@ -755,81 +755,7 @@ class SubscriptionController {
     }
   }
 
-  /**
-   * Get upgrade preview (calculates proration)
-   * Handles both active subscriptions (upgrades) and free users (new purchases)
-   */
-  async getUpgradePreview(req, res) {
-    try {
-      const { planId } = req.params;
-      const userId = req.user.id;
 
-      const currentSubscription = await Subscription.findOne({
-        userId,
-        status: 'active'
-      });
-
-      const newPlanDetails = await this.getPlanDetails(planId);
-
-      // If no active subscription, treat as new purchase (free user upgrading)
-      if (!currentSubscription) {
-        return res.json({
-          success: true,
-          data: {
-            currentPlan: {
-              planId: 'free',
-              name: 'Free Plan',
-              amount: 0,
-              currentPeriodEnd: null
-            },
-            newPlan: newPlanDetails,
-            purchase: {
-              amountToPay: newPlanDetails.price,
-              savings: 0,
-              immediateAccess: true,
-              isNewPurchase: true
-            }
-          }
-        });
-      }
-
-      // Handle actual upgrade from existing paid subscription
-      const upgrade = this.calculateUpgrade(currentSubscription, newPlanDetails);
-
-      if (!upgrade.isUpgrade) {
-        return res.status(400).json({
-          success: false,
-          message: 'Downgrades are not allowed mid-cycle'
-        });
-      }
-
-      res.json({
-        success: true,
-        data: {
-          currentPlan: {
-            planId: currentSubscription.planId,
-            amount: currentSubscription.amount,
-            currentPeriodEnd: currentSubscription.currentPeriodEnd
-          },
-          newPlan: newPlanDetails,
-          upgrade: {
-            prorationCredit: upgrade.prorationCredit,
-            amountToPay: Math.max(0, newPlanDetails.price - upgrade.prorationCredit),
-            savings: upgrade.prorationCredit,
-            immediateAccess: true,
-            isNewPurchase: false
-          }
-        }
-      });
-
-    } catch (error) {
-      console.error('Get upgrade preview error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to calculate upgrade preview'
-      });
-    }
-  }
 
   /**
    * Verify payment status manually (for recovery)
@@ -1122,7 +1048,9 @@ class SubscriptionController {
       planId: transaction.planId,
       planType: planType,
       planName: planDetails.name ? `${planDetails.name} ${planDuration === 'monthly' ? 'Monthly' : planDuration === 'quarterly' ? 'Quarterly' : planDuration === 'yearly' ? 'Yearly' : 'Monthly'}` : (planConfig?.name || 'Basic Plan'),
-      planPrice: planDetails.price || planConfig?.price || 14900,
+      planPrice: planConfig?.price || Math.round((planDetails.paymentAmountINR || 149) * 100), // Store in paise
+      currency: planDetails.currency || 'INR',
+      displayPrice: planDetails.price || (planConfig?.price ? planConfig.price / 100 : 149),
       planDuration: planDetails.duration || planConfig?.duration || 'monthly',
       status: 'active',
       startDate: now,
@@ -1134,8 +1062,7 @@ class SubscriptionController {
       razorpayPlanId: transaction.planId,
       razorpayCustomerId: transaction.userId.toString(),
       paymentMethod: 'razorpay',
-      amount: planDetails.price || planConfig?.price || 14900,
-      currency: 'INR',
+      amount: planConfig?.price || Math.round((planDetails.paymentAmountINR || 149) * 100), // Store in paise, consistent with planPrice
       interval: planDetails.interval || (planConfig?.duration === 'monthly' ? 'month' : 'year'),
       intervalCount: planDetails.intervalCount || 1,
       features: {
@@ -1327,8 +1254,12 @@ class SubscriptionController {
 
         // This is an upgrade - calculate proration
         isUpgrade = true;
-        prorationCredit = upgrade.prorationCredit;
-        console.log('💰 Calculated proration credit for upgrade:', prorationCredit);
+        prorationCredit = upgrade.prorationCreditDisplay; // Use display value, not dual-value object
+        console.log('💰 Calculated proration credit for upgrade:', {
+          dualValue: upgrade.prorationCredit,
+          displayValue: upgrade.prorationCreditDisplay,
+          selectedForPayment: prorationCredit
+        });
       }
 
       // Step 1: Create or get Razorpay customer
@@ -1447,7 +1378,9 @@ class SubscriptionController {
         planType: type,
         planDuration: duration,
         planName: planDetails.name,
-        planPrice: planDetails.price,
+        planPrice: Math.round(planDetails.paymentAmountINR * 100), // Store in paise (INR smallest unit)
+        currency: planDetails.currency, // Store the display currency (USD/INR)
+        displayPrice: planDetails.price, // Store the display price for frontend
         status: 'pending', // Initial state before first payment
         startDate: now,
         endDate: new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()), // 1 year from now
@@ -1496,19 +1429,53 @@ class SubscriptionController {
       // Step 5: Create payment order for the first payment (with proration if upgrade)
       // Use the INR payment amount for Razorpay (what user will actually be charged)
       const paymentAmountINR = planDetails.paymentAmountINR || planDetails.price;
-      const finalAmount = Math.max(0, paymentAmountINR - prorationCredit);
+
+      // Validate proration credit is a number
+      const validProrationCredit = (typeof prorationCredit === 'number' && !isNaN(prorationCredit)) ? prorationCredit : 0;
+      const finalAmount = Math.max(0, paymentAmountINR - validProrationCredit);
+
+      // Validate final amount is a valid number
+      if (isNaN(finalAmount) || typeof finalAmount !== 'number') {
+        console.error('❌ Invalid final amount calculation:', {
+          paymentAmountINR,
+          prorationCredit,
+          validProrationCredit,
+          finalAmount,
+          paymentAmountINRType: typeof paymentAmountINR,
+          prorationCreditType: typeof prorationCredit
+        });
+        throw new Error('Invalid final amount calculation for payment order');
+      }
 
       console.log('💳 Creating payment order for subscription:', {
         displayPrice: planDetails.price,
         displayCurrency: planDetails.currency,
         paymentAmountINR: paymentAmountINR,
         prorationCredit: prorationCredit,
+        validProrationCredit: validProrationCredit,
         finalAmount: finalAmount,
+        finalAmountType: typeof finalAmount,
         isUpgrade: !!existingSubscription
       });
 
       const amountInPaise = Math.round(finalAmount * 100);
       const orderId = `sub_${Date.now().toString().slice(-10)}`;
+
+      // Validate amount in paise is valid for Razorpay
+      if (isNaN(amountInPaise) || amountInPaise <= 0) {
+        console.error('❌ Invalid amount for Razorpay order:', {
+          finalAmount,
+          amountInPaise,
+          calculation: `${finalAmount} * 100 = ${amountInPaise}`
+        });
+        throw new Error('Invalid payment amount for Razorpay order creation');
+      }
+
+      console.log('💳 Creating Razorpay order:', {
+        amountInPaise,
+        amountInRupees: finalAmount,
+        orderId
+      });
 
       const razorpayOrder = await this.razorpay.createOrder(
         amountInPaise,
@@ -1622,13 +1589,26 @@ class SubscriptionController {
   async getPlanDetails(planId, req = null) {
     // Get user's currency if request is available
     const currency = req ? getUserCurrency(req) : { code: 'INR', symbol: '₹' };
-    const price = req ? getPlanPrice(planId, req) : this.getDefaultPrice(planId);
+
+    // Helper function to get price for specific plan
+    const getPriceForPlan = (specificPlanId) => {
+      if (req) {
+        try {
+          const priceInfo = getPlanPrice(specificPlanId, req);
+          return priceInfo ? priceInfo.amount : this.getDefaultPrice(specificPlanId);
+        } catch (error) {
+          console.warn(`Failed to get price for ${specificPlanId}:`, error.message);
+          return this.getDefaultPrice(specificPlanId);
+        }
+      }
+      return this.getDefaultPrice(specificPlanId);
+    };
 
     const plans = {
       basic_monthly: {
         id: 'basic_monthly',
         name: 'Basic',
-        price: price,
+        price: getPriceForPlan('basic_monthly'),
         currency: currency.code,
         currencySymbol: currency.symbol,
         interval: 'month',
@@ -1644,7 +1624,7 @@ class SubscriptionController {
       standard_quarterly: {
         id: 'standard_quarterly',
         name: 'Standard',
-        price: price,
+        price: getPriceForPlan('standard_quarterly'),
         currency: currency.code,
         currencySymbol: currency.symbol,
         interval: 'month',
@@ -1660,7 +1640,7 @@ class SubscriptionController {
       pro_yearly: {
         id: 'pro_yearly',
         name: 'Pro',
-        price: price,
+        price: getPriceForPlan('pro_yearly'),
         currency: currency.code,
         currencySymbol: currency.symbol,
         interval: 'month',
@@ -1687,27 +1667,34 @@ class SubscriptionController {
     // Import currency utilities for standardized handling
     const { getPlanPriceWithPaymentAmount, PLAN_PRICES } = await import('../utils/currencyUtils.js');
 
-    // Get price in the specified currency with payment amount info
-    const prices = PLAN_PRICES[planId];
-    if (!prices) {
-      throw new Error(`Plan ${planId} not found in PLAN_PRICES`);
-    }
+    // Helper function to get price for specific plan
+    const getPriceForPlan = (specificPlanId) => {
+      const prices = PLAN_PRICES[specificPlanId];
+      if (!prices) {
+        console.warn(`Plan ${specificPlanId} not found in PLAN_PRICES`);
+        return 149; // Default fallback
+      }
+      return prices[currency.code] || prices.INR; // Fallback to INR
+    };
 
-    const displayPrice = prices[currency.code] || prices.INR; // Fallback to INR
-    const paymentAmountINR = currency.code === 'USD' ?
-      Math.round((displayPrice * 83.33) * 100) / 100 : // Convert USD to INR for payment
-      displayPrice;
+    // Helper function to get payment amount in INR
+    const getPaymentAmountForPlan = (specificPlanId) => {
+      const displayPrice = getPriceForPlan(specificPlanId);
+      return currency.code === 'USD' ?
+        Math.round((displayPrice * 83.33) * 100) / 100 : // Convert USD to INR for payment
+        displayPrice;
+    };
 
-    console.log(`💰 Price for ${planId}: Display ${currency.symbol}${displayPrice} ${currency.code}, Payment ₹${paymentAmountINR} INR`);
+    console.log(`💰 Getting prices for currency: ${currency.code} (${currency.symbol})`);
 
     const plans = {
       basic_monthly: {
         id: 'basic_monthly',
         name: 'Basic',
-        price: displayPrice,
+        price: getPriceForPlan('basic_monthly'),
         currency: currency.code,
         currencySymbol: currency.symbol,
-        paymentAmountINR: paymentAmountINR,
+        paymentAmountINR: getPaymentAmountForPlan('basic_monthly'),
         paymentCurrency: 'INR',
         interval: 'month',
         intervalCount: 1,
@@ -1722,10 +1709,10 @@ class SubscriptionController {
       standard_quarterly: {
         id: 'standard_quarterly',
         name: 'Standard',
-        price: displayPrice,
+        price: getPriceForPlan('standard_quarterly'),
         currency: currency.code,
         currencySymbol: currency.symbol,
-        paymentAmountINR: paymentAmountINR,
+        paymentAmountINR: getPaymentAmountForPlan('standard_quarterly'),
         paymentCurrency: 'INR',
         interval: 'month',
         intervalCount: 3,
@@ -1740,10 +1727,10 @@ class SubscriptionController {
       pro_yearly: {
         id: 'pro_yearly',
         name: 'Pro',
-        price: displayPrice,
+        price: getPriceForPlan('pro_yearly'),
         currency: currency.code,
         currencySymbol: currency.symbol,
-        paymentAmountINR: paymentAmountINR,
+        paymentAmountINR: getPaymentAmountForPlan('pro_yearly'),
         paymentCurrency: 'INR',
         interval: 'month',
         intervalCount: 12,
@@ -1775,39 +1762,7 @@ class SubscriptionController {
     return defaultPrices[planId] || 149;
   }
 
-  calculateUpgrade(currentSubscription, newPlan) {
-    const planHierarchy = {
-      basic_monthly: 1,
-      standard_quarterly: 2,
-      pro_yearly: 3
-    };
 
-    const currentPlanLevel = planHierarchy[currentSubscription.planId];
-    const newPlanLevel = planHierarchy[newPlan.id];
-
-    const isUpgrade = newPlanLevel > currentPlanLevel;
-
-    if (!isUpgrade) {
-      return { isUpgrade: false, prorationCredit: 0 };
-    }
-
-    // Calculate remaining days and daily rate
-    const now = new Date();
-    const remainingMs = currentSubscription.currentPeriodEnd.getTime() - now.getTime();
-    const remainingDays = Math.max(0, Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
-
-    // Calculate daily rate based on subscription period
-    const totalDaysInPeriod = currentSubscription.intervalCount * 30; // Approximate
-    const dailyRate = currentSubscription.amount / totalDaysInPeriod;
-
-    const prorationCredit = Math.round(remainingDays * dailyRate * 100) / 100;
-
-    return {
-      isUpgrade: true,
-      prorationCredit,
-      remainingDays
-    };
-  }
 
   /**
    * Get payment details for web payment page
@@ -1994,14 +1949,221 @@ class SubscriptionController {
     }
   }
 
+  // Helper method to attempt data correction for problematic subscriptions
+  attemptDataCorrection(subscription, detectedCurrency, calculatedDisplayPrice) {
+    console.log('🔧 Attempting data correction for subscription:', {
+      amount: subscription.amount,
+      detectedCurrency,
+      calculatedDisplayPrice
+    });
+
+    // Case 1: INR subscription with suspiciously low price - likely a USD subscription
+    if (detectedCurrency === 'INR' && calculatedDisplayPrice < 50) {
+      // Check if this looks like a USD amount
+      if (subscription.amount >= 1 && subscription.amount <= 20) {
+        // Amount like 1.99, 4.99 - likely USD stored as dollars
+        return {
+          corrected: true,
+          currency: 'USD',
+          displayPrice: subscription.amount,
+          reason: 'Corrected INR subscription with low price to USD (amount stored as dollars)'
+        };
+      } else if (subscription.amount >= 99 && subscription.amount <= 2000) {
+        // Amount like 199, 499 - likely USD stored as cents
+        return {
+          corrected: true,
+          currency: 'USD',
+          displayPrice: Math.round((subscription.amount / 100) * 100) / 100,
+          reason: 'Corrected INR subscription with low price to USD (amount stored as cents)'
+        };
+      }
+    }
+
+    // Case 2: USD subscription with suspiciously low price
+    if (detectedCurrency === 'USD' && calculatedDisplayPrice < 0.99) {
+      // Check if this might be stored in a different format
+      if (subscription.amount >= 99 && subscription.amount <= 2000) {
+        // Might be stored as cents
+        return {
+          corrected: true,
+          currency: 'USD',
+          displayPrice: Math.round((subscription.amount / 100) * 100) / 100,
+          reason: 'Corrected USD subscription (amount stored as cents)'
+        };
+      } else if (subscription.amount >= 5000) {
+        // Might actually be an INR subscription
+        return {
+          corrected: true,
+          currency: 'INR',
+          displayPrice: subscription.amount / 100,
+          reason: 'Corrected USD subscription to INR (amount stored as paise)'
+        };
+      }
+    }
+
+    // Case 3: Check if we can infer from plan ID
+    if (subscription.planId) {
+      const planId = subscription.planId.toLowerCase();
+
+      // If plan ID suggests a typical price range
+      if (planId.includes('basic') && subscription.amount >= 10000) {
+        // Basic plan with high amount - likely INR stored as paise
+        return {
+          corrected: true,
+          currency: 'INR',
+          displayPrice: subscription.amount / 100,
+          reason: 'Corrected based on plan ID (basic plan, amount as paise)'
+        };
+      }
+    }
+
+    return {
+      corrected: false,
+      reason: 'No correction pattern matched'
+    };
+  }
+
   // Helper method to calculate upgrade and proration
   calculateUpgrade(existingSubscription, newPlanDetails) {
     try {
+      // Convert existing subscription amount from paise to display currency
+      // existingSubscription.amount is stored in paise, need to convert to display currency
+      let existingDisplayPrice = existingSubscription.displayPrice;
+      let existingCurrency = existingSubscription.currency;
+
+      // Detect currency if not set (for older subscriptions)
+      if (!existingCurrency) {
+        // Improved currency detection logic
+        // Check if amount looks like it's stored in dollars vs paise
+
+        if (existingSubscription.amount < 100) {
+          // Very small amounts (< 100) are likely stored as dollars (e.g., 1.99, 4.99)
+          existingCurrency = 'USD';
+          console.log('🔍 Detected USD subscription - amount stored as dollars:', existingSubscription.amount);
+        } else if (existingSubscription.amount < 1000) {
+          // Small amounts (100-999) could be USD stored as cents (e.g., 199 cents = $1.99)
+          existingCurrency = 'USD';
+          console.log('🔍 Detected USD subscription - amount stored as cents:', existingSubscription.amount);
+        } else if (existingSubscription.amount > 10000) {
+          // Large amounts (> 10000) are likely INR stored as paise (e.g., 14900 paise = ₹149)
+          existingCurrency = 'INR';
+          console.log('🔍 Detected INR subscription - amount stored as paise:', existingSubscription.amount);
+        } else {
+          // Medium amounts (1000-10000) - need more sophisticated detection
+          // Check if displayPrice is available to help determine currency
+          if (existingSubscription.displayPrice) {
+            if (existingSubscription.displayPrice < 20) {
+              existingCurrency = 'USD';
+              console.log('🔍 Detected USD subscription based on displayPrice:', existingSubscription.displayPrice);
+            } else {
+              existingCurrency = 'INR';
+              console.log('🔍 Detected INR subscription based on displayPrice:', existingSubscription.displayPrice);
+            }
+          } else {
+            // Default to INR for ambiguous cases
+            existingCurrency = 'INR';
+            console.log('🔍 Defaulting to INR subscription for ambiguous amount:', existingSubscription.amount);
+          }
+        }
+      }
+
+      // If displayPrice is not available, calculate it from amount
+      if (!existingDisplayPrice) {
+        if (existingCurrency === 'USD') {
+          // For USD subscriptions, determine how the amount is stored
+          if (existingSubscription.amount < 100) {
+            // Amount stored as dollars (e.g., 1.99)
+            existingDisplayPrice = existingSubscription.amount;
+            console.log('🔍 USD amount stored as dollars:', existingSubscription.amount);
+          } else if (existingSubscription.amount < 1000) {
+            // Amount stored as cents (e.g., 199 cents = $1.99)
+            existingDisplayPrice = Math.round((existingSubscription.amount / 100) * 100) / 100;
+            console.log('🔍 USD amount stored as cents:', existingSubscription.amount, '→ $' + existingDisplayPrice);
+          } else {
+            // Amount stored as INR paise equivalent, convert back to USD
+            // Assuming 1 USD = 83.33 INR, so 1 USD = 8333 paise
+            existingDisplayPrice = Math.round((existingSubscription.amount / 8333) * 100) / 100;
+            console.log('🔍 USD amount stored as INR paise equivalent:', existingSubscription.amount, '→ $' + existingDisplayPrice);
+          }
+        } else {
+          // For INR subscriptions, convert paise to rupees
+          if (existingSubscription.amount < 1000) {
+            // Unusual case: amount might be stored as rupees already
+            existingDisplayPrice = existingSubscription.amount;
+            console.log('🔍 INR amount possibly stored as rupees:', existingSubscription.amount);
+          } else {
+            // Normal case: amount stored as paise
+            existingDisplayPrice = existingSubscription.amount / 100;
+            console.log('🔍 INR amount stored as paise:', existingSubscription.amount, '→ ₹' + existingDisplayPrice);
+          }
+        }
+      }
+
+      const newCurrency = newPlanDetails.currency || 'INR';
+
+      // Validate the calculated values
+      const validationErrors = [];
+
+      if (existingDisplayPrice < 0.01) {
+        validationErrors.push(`Existing display price too small: ${existingDisplayPrice}`);
+      }
+
+      if (existingCurrency === 'INR' && existingDisplayPrice < 50) {
+        validationErrors.push(`INR subscription display price suspiciously low: ₹${existingDisplayPrice}`);
+      }
+
+      if (existingCurrency === 'USD' && existingDisplayPrice < 0.99) {
+        validationErrors.push(`USD subscription display price suspiciously low: $${existingDisplayPrice}`);
+      }
+
+      if (validationErrors.length > 0) {
+        console.error('❌ Subscription data validation errors:', validationErrors);
+        console.error('❌ Raw subscription data:', {
+          amount: existingSubscription.amount,
+          displayPrice: existingSubscription.displayPrice,
+          currency: existingSubscription.currency,
+          planId: existingSubscription.planId
+        });
+
+        // Instead of throwing errors, attempt to correct the data
+        const correctedData = this.attemptDataCorrection(existingSubscription, existingCurrency, existingDisplayPrice);
+        if (correctedData.corrected) {
+          console.log('🔧 Applied data correction:', correctedData);
+          existingCurrency = correctedData.currency;
+          existingDisplayPrice = correctedData.displayPrice;
+
+          // Re-validate after correction
+          const stillInvalid = (existingCurrency === 'INR' && existingDisplayPrice < 50) ||
+            (existingCurrency === 'USD' && existingDisplayPrice < 0.99);
+
+          if (stillInvalid) {
+            console.error('💥 Data correction failed, cannot proceed with upgrade calculation');
+            throw new Error(`Cannot calculate upgrade: subscription data correction failed`);
+          }
+        } else {
+          console.error('💥 Cannot correct subscription data, throwing error');
+          throw new Error(`Cannot calculate upgrade with invalid subscription data: ${validationErrors.join(', ')}`);
+        }
+      }
+
+      console.log('🔍 Currency detection and conversion setup:', {
+        existingSubscriptionAmount: existingSubscription.amount,
+        existingSubscriptionDisplayPrice: existingSubscription.displayPrice,
+        calculatedExistingDisplayPrice: existingDisplayPrice,
+        existingCurrency,
+        newCurrency,
+        conversionNeeded: existingCurrency !== newCurrency,
+        validationErrors: validationErrors.length > 0 ? validationErrors : 'None'
+      });
+
       console.log('🔍 Calculating upgrade from existing subscription:', {
         currentPlan: existingSubscription.planId,
-        currentPrice: existingSubscription.amount,
+        currentPriceInPaise: existingSubscription.amount,
+        currentDisplayPrice: existingDisplayPrice,
+        currentCurrency: existingCurrency,
         newPlan: newPlanDetails.id,
-        newPrice: newPlanDetails.price
+        newPrice: newPlanDetails.price,
+        newCurrency: newCurrency
       });
 
       // Define plan hierarchy (higher number = higher tier)
@@ -2020,9 +2182,10 @@ class SubscriptionController {
       const currentPlanLevel = planHierarchy[existingSubscription.planId] || 0;
       const newPlanLevel = planHierarchy[newPlanDetails.id] || 0;
 
-      // Check if this is an upgrade (higher tier or same tier with longer duration)
+      // Check if this is an upgrade (higher tier or same tier with higher price)
+      // Compare using display prices in the same currency
       const isUpgrade = newPlanLevel > currentPlanLevel ||
-        (newPlanLevel === currentPlanLevel && newPlanDetails.price > existingSubscription.amount);
+        (newPlanLevel === currentPlanLevel && newPlanDetails.price > existingDisplayPrice);
 
       if (!isUpgrade) {
         return {
@@ -2037,28 +2200,86 @@ class SubscriptionController {
       const currentPeriodEnd = new Date(existingSubscription.currentPeriodEnd);
       const remainingDays = Math.max(0, Math.ceil((currentPeriodEnd - now) / (1000 * 60 * 60 * 24)));
 
-      // Calculate daily rate of current subscription
+      // Calculate daily rate of current subscription using display price
       const currentPeriodStart = new Date(existingSubscription.currentPeriodStart || existingSubscription.createdAt);
       const totalDays = Math.ceil((currentPeriodEnd - currentPeriodStart) / (1000 * 60 * 60 * 24));
-      const dailyRate = existingSubscription.amount / totalDays;
+      const dailyRateInDisplayCurrency = existingDisplayPrice / totalDays;
 
-      // Calculate proration credit (unused portion of current subscription)
-      const prorationCredit = Math.round(dailyRate * remainingDays * 100) / 100; // Round to 2 decimal places
+      // Calculate proration credit in the existing subscription's display currency
+      let prorationCreditInExistingCurrency = Math.round(dailyRateInDisplayCurrency * remainingDays * 100) / 100;
 
-      console.log('💰 Proration calculation:', {
+      // Convert proration credit to the new plan's currency if different
+      let prorationCredit = prorationCreditInExistingCurrency;
+      let conversionRate = 1;
+      let conversionApplied = false;
+
+      if (existingCurrency !== newCurrency) {
+        conversionApplied = true;
+
+        if (existingCurrency === 'INR' && newCurrency === 'USD') {
+          // Convert INR to USD (1 USD = 83.33 INR)
+          conversionRate = 1 / 83.33;
+          prorationCredit = Math.round((prorationCreditInExistingCurrency * conversionRate) * 100) / 100;
+          console.log(`💱 Converting INR to USD: ₹${prorationCreditInExistingCurrency} → $${prorationCredit} (rate: ${conversionRate})`);
+
+        } else if (existingCurrency === 'USD' && newCurrency === 'INR') {
+          // Convert USD to INR (1 USD = 83.33 INR)
+          conversionRate = 83.33;
+          prorationCredit = Math.round((prorationCreditInExistingCurrency * conversionRate) * 100) / 100;
+          console.log(`💱 Converting USD to INR: $${prorationCreditInExistingCurrency} → ₹${prorationCredit} (rate: ${conversionRate})`);
+
+        } else {
+          console.warn(`⚠️ Unsupported currency conversion: ${existingCurrency} → ${newCurrency}`);
+        }
+      } else {
+        console.log(`💰 No currency conversion needed: ${existingCurrency} → ${newCurrency}`);
+      }
+
+      console.log('💰 Proration calculation summary:', {
         remainingDays,
         totalDays,
-        dailyRate,
-        prorationCredit,
-        currentAmount: existingSubscription.amount,
+        existingDisplayPrice,
+        existingCurrency,
+        newCurrency,
+        dailyRateInDisplayCurrency,
+        prorationCreditInExistingCurrency,
+        conversionRate,
+        prorationCreditFinal: prorationCredit,
+        currencyConversionApplied: existingCurrency !== newCurrency,
+        currentAmountInPaise: existingSubscription.amount,
         newAmount: newPlanDetails.price
+      });
+
+      // Calculate proration credit in both currencies for dual-value approach
+      const prorationCreditINR = existingCurrency === 'INR' ?
+        prorationCreditInExistingCurrency :
+        Math.round((prorationCreditInExistingCurrency * 83.33) * 100) / 100;
+
+      const prorationCreditUSD = existingCurrency === 'USD' ?
+        prorationCreditInExistingCurrency :
+        Math.round((prorationCreditInExistingCurrency / 83.33) * 100) / 100;
+
+      console.log('💰 Dual-value proration credits calculated:', {
+        existingCurrency,
+        prorationCreditInExistingCurrency,
+        prorationCreditINR,
+        prorationCreditUSD,
+        selectedCurrency: newCurrency,
+        selectedValue: newCurrency === 'USD' ? prorationCreditUSD : prorationCreditINR
       });
 
       return {
         isUpgrade: true,
-        prorationCredit: prorationCredit,
+        prorationCredit: {
+          INR: prorationCreditINR,
+          USD: prorationCreditUSD
+        },
+        prorationCreditDisplay: newCurrency === 'USD' ? prorationCreditUSD : prorationCreditINR,
         remainingDays: remainingDays,
-        dailyRate: dailyRate,
+        dailyRate: dailyRateInDisplayCurrency,
+        existingCurrency: existingCurrency,
+        newCurrency: newCurrency,
+        currencyConverted: existingCurrency !== newCurrency,
         reason: `Upgrade from ${existingSubscription.planId} to ${newPlanDetails.id}`
       };
 
@@ -2096,8 +2317,28 @@ class SubscriptionController {
         });
       }
 
-      // Get plan details
-      const planDetails = await this.getPlanDetails(planId, req);
+      // Get plan details with the specific currency from request body
+      // Create a currency object from the request body parameter
+      const requestedCurrency = {
+        code: currency,
+        symbol: currency === 'USD' ? '$' : '₹'
+      };
+
+      console.log('🔍 Using requested currency for plan details:', requestedCurrency);
+
+      // Use getPlanDetailsWithCurrency to get correct pricing for the requested currency
+      const planDetails = await this.getPlanDetailsWithCurrency(planId, requestedCurrency);
+      console.log('🔍 Plan details retrieved with requested currency:', {
+        planId,
+        requestedCurrency: currency,
+        planDetails: planDetails ? {
+          id: planDetails.id,
+          name: planDetails.name,
+          price: planDetails.price,
+          currency: planDetails.currency
+        } : null
+      });
+
       if (!planDetails) {
         return res.status(400).json({
           success: false,
@@ -2124,7 +2365,7 @@ class SubscriptionController {
         });
       }
 
-      // Prepare response data
+      // Prepare response data with dual-value proration credit
       const previewData = {
         currentPlan: {
           id: existingSubscription.planId,
@@ -2138,14 +2379,26 @@ class SubscriptionController {
           amount: planDetails.price
         },
         originalPrice: planDetails.price,
-        prorationCredit: upgrade.prorationCredit,
-        finalPrice: Math.max(0, planDetails.price - upgrade.prorationCredit),
+        prorationCredit: upgrade.prorationCredit, // Dual-value object: {INR: 166, USD: 1.99}
+        prorationCreditDisplay: upgrade.prorationCreditDisplay, // Current selected currency value
+        finalPrice: Math.max(0, planDetails.price - upgrade.prorationCreditDisplay),
         remainingDays: upgrade.remainingDays,
         dailyRate: upgrade.dailyRate,
         currency: currency,
-        savings: upgrade.prorationCredit,
+        savings: upgrade.prorationCreditDisplay,
         upgradeReason: upgrade.reason
       };
+
+      console.log('🔍 Upgrade preview response data (dual-value):', {
+        requestedCurrency: currency,
+        planId,
+        originalPrice: previewData.originalPrice,
+        prorationCreditDualValue: previewData.prorationCredit,
+        prorationCreditDisplay: previewData.prorationCreditDisplay,
+        finalPrice: previewData.finalPrice,
+        planDetailsPrice: planDetails.price,
+        planDetailsCurrency: planDetails.currency
+      });
 
       console.log('💰 Upgrade preview calculated:', previewData);
 

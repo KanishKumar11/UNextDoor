@@ -206,6 +206,7 @@ const RealtimeConversationScreen = () => {
             <PersistentConversationView
               scenarioId={selectedScenario.id}
               level={selectedScenario.level}
+              user={null} // TODO: Pass user information when available
               onSessionEnd={() => {
                 console.log("Session ended - returning to scenario selection");
                 setSelectedScenario(null);

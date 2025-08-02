@@ -22,10 +22,17 @@ export const useWebRTCConversation = () => {
   const [userEndedSession, setUserEndedSession] = useState(false);
   const [allowAutoRestart, setAllowAutoRestart] = useState(true);
 
-  // Transcription state
+  // Transcription state (user transcript removed - only show AI responses)
   const [conversationHistory, setConversationHistory] = useState([]);
-  const [currentUserTranscript, setCurrentUserTranscript] = useState("");
   const [currentAITranscript, setCurrentAITranscript] = useState("");
+  const [isWaitingForTranscription, setIsWaitingForTranscription] = useState(false); // ✅ NEW: Track transcription loading
+
+  // Session lifecycle state
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [canStartNewSession, setCanStartNewSession] = useState(true);
+  const [isStartingSession, setIsStartingSession] = useState(false);
+  const [isStoppingSession, setIsStoppingSession] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   // Track if service is initialized
   const [isInitialized, setIsInitialized] = useState(false);
@@ -36,7 +43,11 @@ export const useWebRTCConversation = () => {
    */
   const initialize = useCallback(async () => {
     if (initializationRef.current) {
-      console.log("🎯 Service already initialized");
+      console.log("🎯 Service already initialized - syncing state");
+      // ✅ FIXED: Always sync state even if service is already initialized
+      setIsInitialized(true);
+      const state = webRTCConversationService.getState();
+      updateStateFromService(state);
       return true;
     }
 
@@ -59,7 +70,7 @@ export const useWebRTCConversation = () => {
       setError(error);
       return false;
     }
-  }, []);
+  }, [updateStateFromService]);
 
   /**
    * Update local state from service state
@@ -76,19 +87,28 @@ export const useWebRTCConversation = () => {
     setUserEndedSession(serviceState.userEndedSession);
     setAllowAutoRestart(serviceState.allowAutoRestart);
     setConversationHistory(serviceState.conversationHistory || []);
-    setCurrentUserTranscript(serviceState.currentUserTranscript || "");
     setCurrentAITranscript(serviceState.currentAITranscript || "");
+
+    // Session lifecycle state
+    setIsCleaningUp(serviceState.isCleaningUp || false);
+    setIsStartingSession(serviceState.isStartingSession || false);
+    setIsStoppingSession(serviceState.isStoppingSession || false);
+    setIsConnecting(serviceState.isConnecting || false);
+
+    // Calculate canStartNewSession since it's no longer in service state to avoid circular calls
+    const canStart = webRTCConversationService.canStartNewSession();
+    setCanStartNewSession(canStart);
   }, []);
 
   /**
    * Start a conversation session
    */
-  const startSession = useCallback(async (scenarioId, level = "beginner") => {
+  const startSession = useCallback(async (scenarioId, level = "beginner", user = null, isUserInitiated = true) => {
     try {
       setError(null);
-      console.log(`🎯 Starting session from hook: ${scenarioId}, level: ${level}`);
+      console.log(`🎯 Starting ${isUserInitiated ? 'user-initiated' : 'auto'} session from hook: ${scenarioId}, level: ${level}, user: ${user?.displayName || 'anonymous'}`);
 
-      const success = await webRTCConversationService.startSession(scenarioId, level);
+      const success = await webRTCConversationService.startSession(scenarioId, level, user, isUserInitiated);
 
       if (success) {
         setCurrentScenario(scenarioId);
@@ -98,9 +118,32 @@ export const useWebRTCConversation = () => {
       return success;
     } catch (error) {
       console.error("🎯 Error starting session:", error);
-      setError(error);
+
+      // ✅ CRITICAL FIX: Handle circuit breaker errors specifically
+      if (error.message.includes('Circuit breaker OPEN')) {
+        setError(new Error('Too many connection failures. Please wait a moment before trying again.'));
+      } else {
+        setError(error);
+      }
+
       return false;
     }
+  }, []);
+
+  /**
+   * ✅ CRITICAL FIX: Explicitly start user-initiated session (bypasses all blocking)
+   */
+  const startUserSession = useCallback(async (scenarioId, level = "beginner", user = null) => {
+    console.log(`🎯 User explicitly starting new conversation: ${scenarioId}`);
+    return startSession(scenarioId, level, user, true); // Always user-initiated
+  }, [startSession]);
+
+  /**
+   * ✅ CRITICAL FIX: Reset service to clean state (for debugging and recovery)
+   */
+  const resetServiceState = useCallback(() => {
+    console.log("🎯 Hook: Resetting service to clean state");
+    webRTCConversationService.resetToCleanState();
   }, []);
 
   /**
@@ -130,12 +173,12 @@ export const useWebRTCConversation = () => {
   /**
    * Change scenario without restarting the service
    */
-  const changeScenario = useCallback(async (scenarioId, level = "beginner") => {
+  const changeScenario = useCallback(async (scenarioId, level = "beginner", user = null) => {
     try {
       setError(null);
-      console.log(`🎯 Changing scenario from hook: ${scenarioId}, level: ${level}`);
+      console.log(`🎯 Changing scenario from hook: ${scenarioId}, level: ${level}, user: ${user?.displayName || 'anonymous'}`);
 
-      await webRTCConversationService.changeScenario(scenarioId, level);
+      await webRTCConversationService.changeScenario(scenarioId, level, user);
 
       setCurrentScenario(scenarioId);
       setCurrentLevel(level);
@@ -161,18 +204,38 @@ export const useWebRTCConversation = () => {
   useEffect(() => {
     const service = webRTCConversationService;
 
-    // State change handler
-    const handleStateChanged = (newState) => {
-      console.log("🎯 Service state changed:", newState);
-      const fullState = service.getState();
+    // State change handler - now receives full state from service
+    const handleStateChanged = (fullState) => {
+      console.log("🎯 Service state changed - updating UI with full state");
+      console.log("🎯 Key state values:", {
+        isSessionActive: fullState.isSessionActive,
+        isConnected: fullState.isConnected,
+        conversationHistoryLength: fullState.conversationHistory?.length || 0,
+        isCleaningUp: fullState.isCleaningUp
+      });
       updateStateFromService(fullState);
     };
 
-    // Connection state handler
+    // Connection state handler - only update connection state, let service handle isConnected
     const handleConnectionStateChanged = (state) => {
-      console.log("🎯 Connection state changed:", state);
+      console.log("🎯 ICE connection state changed:", state);
       setConnectionState(state);
-      setIsConnected(state === 'connected');
+      // Don't override isConnected here - let the service state update handle it
+      // This prevents conflicts between ICE state and service state
+    };
+
+    // WebRTC connection progression handlers
+    const handleConnecting = () => {
+      console.log("🎯 WebRTC connecting - updating UI state");
+      setIsConnecting(true);
+      setConnectionState('connecting');
+    };
+
+    const handleConnected = () => {
+      console.log("🎯 WebRTC connected - updating UI state");
+      setIsConnecting(false);
+      setConnectionState('connected');
+      // Let the service state update handle isConnected flag
     };
 
     // Audio device change handler
@@ -185,18 +248,16 @@ export const useWebRTCConversation = () => {
     // Session event handlers
     const handleSessionStarted = ({ scenarioId, level }) => {
       console.log("🎯 Session started:", scenarioId, level);
-      setIsSessionActive(true);
-      setCurrentScenario(scenarioId);
-      setCurrentLevel(level);
+      // Don't update individual state here - service updateState will handle it
+      // This prevents conflicts and ensures consistency
+      setError(null); // Clear any previous errors
     };
 
     const handleSessionStopped = () => {
       console.log("🎯 Session stopped");
-      setIsSessionActive(false);
-      setIsConnected(false);
-      setIsAISpeaking(false);
-      setCurrentScenario(null);
-      setConnectionState('new');
+      // Don't update individual state here - service updateState will handle it
+      // This prevents conflicts and ensures consistency during cleanup
+      setConnectionState('new'); // Reset connection state for next session
     };
 
     const handleScenarioChanged = ({ scenarioId, level }) => {
@@ -217,27 +278,41 @@ export const useWebRTCConversation = () => {
     const handleAISpeechStarted = () => {
       console.log("🎯 AI speech started");
       setIsAISpeaking(true);
+      setIsWaitingForTranscription(true); // ✅ NEW: Start waiting for transcription
     };
 
     const handleAISpeechEnded = () => {
-      console.log("🎯 AI speech ended");
+      console.log("🎯 AI speech ended - updating hook state");
+      // Only update local hook state, don't interfere with service logic
       setIsAISpeaking(false);
+      // Keep waiting for transcription until we receive it
     };
 
-    // Transcript event handlers
-    const handleUserTranscriptComplete = (transcript) => {
-      console.log("🎯 User transcript complete:", transcript);
-      setConversationHistory(prev => [...prev, transcript]);
-    };
+    // Transcript event handlers - service now handles state updates, these are for additional UI logic
+    // User transcript handlers removed - only show AI responses to users
 
     const handleAITranscriptDelta = ({ delta, transcript }) => {
+      // Update current AI transcript for real-time display
       setCurrentAITranscript(transcript);
     };
 
     const handleAITranscriptComplete = (transcript) => {
-      console.log("🎯 AI transcript complete:", transcript);
-      setConversationHistory(prev => [...prev, transcript]);
-      setCurrentAITranscript("");
+      console.log("🎯 AI transcript complete:", transcript.text);
+      setIsWaitingForTranscription(false); // ✅ NEW: Stop waiting for transcription
+      // Don't update conversationHistory here - service updateState will handle it
+      // Don't clear currentAITranscript here - service updateState will handle it
+      // This prevents duplicate updates and ensures consistency
+    };
+
+    // Handle rate limits and audio buffer events
+    const handleRateLimitsUpdated = (rateLimits) => {
+      console.log("🎯 Rate limits updated:", rateLimits);
+      // Could be used for UI warnings about rate limiting
+    };
+
+    const handleOutputAudioBufferStopped = () => {
+      console.log("🎯 Output audio buffer stopped");
+      // Could be used for UI state updates
     };
 
     // Error handler
@@ -250,53 +325,111 @@ export const useWebRTCConversation = () => {
     const handleInitialized = () => {
       console.log("🎯 Service initialized");
       setIsInitialized(true);
-      const state = service.getState();
+      const state = webRTCConversationService.getState();
       updateStateFromService(state);
     };
 
     // Add event listeners
-    service.on('stateChanged', handleStateChanged);
-    service.on('connectionStateChanged', handleConnectionStateChanged);
-    service.on('audioDeviceChanged', handleAudioDeviceChanged);
-    service.on('sessionStarted', handleSessionStarted);
-    service.on('sessionStopped', handleSessionStopped);
-    service.on('scenarioChanged', handleScenarioChanged);
-    service.on('userSpeechStarted', handleUserSpeechStarted);
-    service.on('userSpeechStopped', handleUserSpeechStopped);
-    service.on('aiSpeechStarted', handleAISpeechStarted);
-    service.on('aiSpeechEnded', handleAISpeechEnded);
-    service.on('userTranscriptComplete', handleUserTranscriptComplete);
-    service.on('aiTranscriptDelta', handleAITranscriptDelta);
-    service.on('aiTranscriptComplete', handleAITranscriptComplete);
-    service.on('error', handleError);
-    service.on('initialized', handleInitialized);
+    webRTCConversationService.on('stateChanged', handleStateChanged);
+    webRTCConversationService.on('connectionStateChanged', handleConnectionStateChanged);
+    webRTCConversationService.on('connecting', handleConnecting); // ✅ NEW: Handle connecting state
+    webRTCConversationService.on('connected', handleConnected);   // ✅ NEW: Handle connected state
+    webRTCConversationService.on('audioDeviceChanged', handleAudioDeviceChanged);
+    webRTCConversationService.on('sessionStarted', handleSessionStarted);
+    webRTCConversationService.on('sessionStopped', handleSessionStopped);
+    webRTCConversationService.on('scenarioChanged', handleScenarioChanged);
+    webRTCConversationService.on('userSpeechStarted', handleUserSpeechStarted);
+    webRTCConversationService.on('userSpeechStopped', handleUserSpeechStopped);
+    webRTCConversationService.on('aiSpeechStarted', handleAISpeechStarted);
+    webRTCConversationService.on('aiSpeechEnded', handleAISpeechEnded);
+    // User transcript event listeners removed - only show AI responses
+    webRTCConversationService.on('aiTranscriptDelta', handleAITranscriptDelta);
+    webRTCConversationService.on('aiTranscriptComplete', handleAITranscriptComplete);
+    webRTCConversationService.on('rateLimitsUpdated', handleRateLimitsUpdated);
+    webRTCConversationService.on('outputAudioBufferStopped', handleOutputAudioBufferStopped);
+    webRTCConversationService.on('error', handleError);
+    webRTCConversationService.on('initialized', handleInitialized);
 
     // Cleanup function
     return () => {
-      service.off('stateChanged', handleStateChanged);
-      service.off('connectionStateChanged', handleConnectionStateChanged);
-      service.off('audioDeviceChanged', handleAudioDeviceChanged);
-      service.off('sessionStarted', handleSessionStarted);
-      service.off('sessionStopped', handleSessionStopped);
-      service.off('scenarioChanged', handleScenarioChanged);
-      service.off('userSpeechStarted', handleUserSpeechStarted);
-      service.off('userSpeechStopped', handleUserSpeechStopped);
-      service.off('aiSpeechStarted', handleAISpeechStarted);
-      service.off('aiSpeechEnded', handleAISpeechEnded);
-      service.off('userTranscriptComplete', handleUserTranscriptComplete);
-      service.off('aiTranscriptDelta', handleAITranscriptDelta);
-      service.off('aiTranscriptComplete', handleAITranscriptComplete);
-      service.off('error', handleError);
-      service.off('initialized', handleInitialized);
+      webRTCConversationService.off('stateChanged', handleStateChanged);
+      webRTCConversationService.off('connectionStateChanged', handleConnectionStateChanged);
+      webRTCConversationService.off('connecting', handleConnecting); // ✅ NEW: Cleanup connecting handler
+      webRTCConversationService.off('connected', handleConnected);   // ✅ NEW: Cleanup connected handler
+      webRTCConversationService.off('audioDeviceChanged', handleAudioDeviceChanged);
+      webRTCConversationService.off('sessionStarted', handleSessionStarted);
+      webRTCConversationService.off('sessionStopped', handleSessionStopped);
+      webRTCConversationService.off('scenarioChanged', handleScenarioChanged);
+      webRTCConversationService.off('userSpeechStarted', handleUserSpeechStarted);
+      webRTCConversationService.off('userSpeechStopped', handleUserSpeechStopped);
+      webRTCConversationService.off('aiSpeechEnded', handleAISpeechEnded);
+      webRTCConversationService.off('aiSpeechStarted', handleAISpeechStarted);
+      // User transcript event listeners removed
+      webRTCConversationService.off('aiTranscriptDelta', handleAITranscriptDelta);
+      webRTCConversationService.off('aiTranscriptComplete', handleAITranscriptComplete);
+      webRTCConversationService.off('rateLimitsUpdated', handleRateLimitsUpdated);
+      webRTCConversationService.off('outputAudioBufferStopped', handleOutputAudioBufferStopped);
+      webRTCConversationService.off('error', handleError);
+      webRTCConversationService.off('initialized', handleInitialized);
     };
-  }, [updateStateFromService]);
+  }, []); // ✅ FIXED: Removed updateStateFromService dependency to prevent infinite re-registration loops
 
-  // Auto-initialize on mount
+  // Auto-initialize on mount and ensure state synchronization
   useEffect(() => {
-    if (!initializationRef.current) {
-      initialize();
-    }
+    const initializeAndSync = async () => {
+      await initialize();
+
+      // ✅ ADDITIONAL FIX: Force state synchronization after initialization
+      // This ensures UI state is always in sync with service state
+      const currentState = webRTCConversationService.getState();
+      updateStateFromService(currentState);
+      console.log("🎯 State synchronized on mount:", {
+        isSessionActive: currentState.isSessionActive,
+        isConnected: currentState.isConnected,
+        conversationHistoryLength: currentState.conversationHistory?.length || 0
+      });
+    };
+
+    initializeAndSync();
   }, [initialize]);
+
+  // ✅ CRITICAL FIX: Separate effect for state synchronization to prevent dependency loops
+  useEffect(() => {
+    const syncState = () => {
+      const currentState = webRTCConversationService.getState();
+      const prevState = {
+        isSessionActive: isSessionActive,
+        isConnected: isConnected,
+        conversationHistoryLength: conversationHistory?.length || 0
+      };
+
+      // Only log if state actually changed to prevent spam
+      const hasChanged =
+        prevState.isSessionActive !== currentState.isSessionActive ||
+        prevState.isConnected !== currentState.isConnected ||
+        prevState.conversationHistoryLength !== (currentState.conversationHistory?.length || 0);
+
+      updateStateFromService(currentState);
+
+      if (hasChanged) {
+        console.log("🎯 State synchronized (changed):", {
+          isSessionActive: currentState.isSessionActive,
+          isConnected: currentState.isConnected,
+          conversationHistoryLength: currentState.conversationHistory?.length || 0
+        });
+      }
+    };
+
+    // Sync state immediately on mount
+    syncState();
+
+    // ✅ CRITICAL FIX: Further reduced frequency to 10000ms to prevent auto-reconnection triggers
+    const syncInterval = setInterval(syncState, 10000);
+
+    return () => {
+      clearInterval(syncInterval);
+    };
+  }, [updateStateFromService, isSessionActive, isConnected, conversationHistory]);
 
   /**
    * Stop session by user action (prevents auto-restart)
@@ -308,10 +441,14 @@ export const useWebRTCConversation = () => {
 
       await webRTCConversationService.stopSessionByUser();
 
-      // Update local state
+      // Update local state - but don't force AI speaking to false if audio is still playing
       setIsConnected(false);
       setIsSessionActive(false);
-      setIsAISpeaking(false);
+      // Only set isAISpeaking to false if the service confirms it's not speaking
+      const serviceState = webRTCConversationService.getState();
+      if (!serviceState.isAISpeaking) {
+        setIsAISpeaking(false);
+      }
       setCurrentScenario(null);
       setCurrentLevel("beginner");
       setConnectionState('new');
@@ -351,10 +488,22 @@ export const useWebRTCConversation = () => {
       // Force destroy the service to clean up all resources
       await webRTCConversationService.destroy();
 
-      // Reset all local state
+      // Reset initialization flag so service can be reinitialized
+      initializationRef.current = false;
+      setIsInitialized(false);
+
+      // Reset all local state with audio protection
       setIsConnected(false);
       setIsSessionActive(false);
-      setIsAISpeaking(false);
+
+      // Only reset isAISpeaking if service confirms AI is not speaking
+      const serviceState = webRTCConversationService.getState();
+      if (!serviceState.isAISpeaking) {
+        setIsAISpeaking(false);
+      } else {
+        console.log("🎯 Preserving isAISpeaking state during cleanup - AI is still speaking");
+      }
+
       setCurrentScenario(null);
       setCurrentLevel("beginner");
       setConnectionState('new');
@@ -362,17 +511,27 @@ export const useWebRTCConversation = () => {
       setUserEndedSession(false);
       setAllowAutoRestart(true);
       setConversationHistory([]);
-      setCurrentUserTranscript("");
+      // ✅ FIXED: Removed setCurrentUserTranscript - this state doesn't exist
       setCurrentAITranscript("");
+      setIsWaitingForTranscription(false); // ✅ ADDED: Reset transcription loading state
       setIsInitialized(false);
       initializationRef.current = false;
 
       console.log("✅ All WebRTC data cleared and disconnected");
+
+      // Auto-reinitialize after a short delay to allow for cleanup
+      setTimeout(() => {
+        if (!initializationRef.current) {
+          console.log("🔄 Auto-reinitializing service after cleanup");
+          initialize();
+        }
+      }, 500);
+
     } catch (error) {
       console.error("❌ Error clearing all data:", error);
       setError(error);
     }
-  }, []);
+  }, [initialize]);
 
   return {
     // State
@@ -390,21 +549,30 @@ export const useWebRTCConversation = () => {
     userEndedSession,
     allowAutoRestart,
     conversationHistory,
-    currentUserTranscript,
     currentAITranscript,
+    isWaitingForTranscription, // ✅ NEW: Export transcription loading state
+
+    // Session lifecycle state
+    isCleaningUp,
+    canStartNewSession,
+    isStartingSession,
+    isStoppingSession,
+    isConnecting, // ✅ FIXED: Export isConnecting state
 
     // Actions
     initialize,
     startSession,
+    startUserSession, // ✅ CRITICAL FIX: Export explicit user session start
     stopSession,
     changeScenario,
-    getServiceState,
     stopSessionByUser,
     resetSessionControlFlags,
+    resetServiceState, // ✅ CRITICAL FIX: Export service state reset
     clearAllData,
+    getServiceState, // ✅ CRITICAL FIX: Export service state getter
 
-    // Computed state
-    isConnecting: connectionState === 'connecting',
+    // Computed state - fixed status logic
     isDisconnected: connectionState === 'disconnected' || connectionState === 'failed',
+    isReady: isConnected && isSessionActive && !isConnecting && !isCleaningUp,
   };
 };

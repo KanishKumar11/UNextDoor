@@ -119,17 +119,17 @@ export const getModelConfig = (model, useCase) => {
   const baseConfig = {
     model,
     temperature: 0.7,
-    max_tokens: 500
+    max_tokens: 300  // REDUCED from 1500 to 300 for shorter, more interactive responses
   };
 
-  // Adjust configuration based on use case
+  // Adjust configuration based on use case - REDUCED all token limits for shorter responses
   switch (useCase) {
     case USE_CASES.GRAMMAR_ANALYSIS:
     case USE_CASES.PRONUNCIATION_FEEDBACK:
       return {
         ...baseConfig,
         temperature: 0.3, // More deterministic for analysis
-        max_tokens: 300
+        max_tokens: 200  // REDUCED from 800 to 200 for concise feedback
       };
 
     case USE_CASES.SIMPLE_RESPONSE:
@@ -137,21 +137,21 @@ export const getModelConfig = (model, useCase) => {
       return {
         ...baseConfig,
         temperature: 0.5,
-        max_tokens: 150
+        max_tokens: 150  // REDUCED from 600 to 150 for brief responses
       };
 
     case USE_CASES.EDUCATIONAL_CHAT:
       return {
         ...baseConfig,
         temperature: 0.7,
-        max_tokens: 400
+        max_tokens: 250  // REDUCED from 1200 to 250 for interactive conversation
       };
 
     case USE_CASES.CONVERSATION_FEEDBACK:
       return {
         ...baseConfig,
         temperature: 0.4,
-        max_tokens: 600
+        max_tokens: 300  // REDUCED from 1000 to 300 for focused feedback
       };
 
     default:

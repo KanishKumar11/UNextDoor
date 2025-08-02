@@ -27,7 +27,7 @@ export const getRealtimeToken = async (req, res) => {
 
     // Extract options from request body
     const {
-      model = "gpt-4o-realtime-preview-2025-06-03", // Updated realtime model
+      model = "gpt-4o-mini-realtime-preview-2024-12-17", // Use the model specified in requirements
       voice: requestedVoice,
       scenarioId,
       isScenarioBased = false,
@@ -35,30 +35,34 @@ export const getRealtimeToken = async (req, res) => {
       lessonDetails = "",
       conversationId,
       level: requestLevel,
+      user: requestUser, // User information for personalized conversations
     } = req.body;
 
-    // Use optimized voice for educational content
-    const voice = requestedVoice || VOICE_CONFIG.realtime.primary;
+    // Use most robotic voice for educational content (as per requirements)
+    // Available voices: alloy, ash, ballad, coral, echo, sage, shimmer, verse
+    // Echo is typically the most robotic/least human-sounding
+    const voice = requestedVoice || "echo";
 
     // Get user's actual proficiency level (this is the key fix!)
     const level = requestLevel || await getUserLevelCached(userId);
 
     console.log(
-      `🎯 OpenAI token request: model=${model}, scenarioId=${scenarioId || "none"
+      `🎯 OpenAI token request: model=${model}, voice=${voice}, scenarioId=${scenarioId || "none"
       }, level=${level || "not specified"}, isScenarioBased=${isScenarioBased || false
-      }`
+      }, user=${requestUser?.displayName || requestUser?.name || 'anonymous'} (${requestUser?.id || userId})`
     );
 
     // Import scenario prompts
     const { getScenarioPrompt } = await import("../data/scenarioPrompts.js");
 
-    // Generate prompt instructions with conversation context
+    // Generate prompt instructions with conversation context and user information
     const instructions = await createContextAwareTeachingPrompt({
       isScenarioBased,
       scenarioId,
       isLessonBased,
       lessonDetails,
       level,
+      user: requestUser, // Include user context in prompt generation
     }, userId);
 
     // Call OpenAI API to generate token
@@ -73,7 +77,9 @@ export const getRealtimeToken = async (req, res) => {
         body: JSON.stringify({
           model,
           voice,
-          instructions,
+          instructions
+          // Note: OpenAI Realtime API doesn't support max_response_output_tokens
+          // Response length is controlled through instructions
         }),
       }
     );

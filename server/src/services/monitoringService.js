@@ -92,7 +92,7 @@ class SystemMonitoringManager {
    * @param {Object} requestData - Request data
    */
   trackRequest(requestData) {
-    const { success, responseTime, endpoint, error } = requestData;
+    const { success, responseTime, endpoint, error, payloadSize } = requestData;
 
     this.metrics.requests.total++;
 
@@ -247,18 +247,36 @@ class SystemMonitoringManager {
       this.metrics.errors = this.metrics.errors.slice(-50);
     }
 
-    // Check error rate
+    // ✅ CRITICAL FIX: Improved error rate calculation
     const recentErrors = this.metrics.errors.filter(
       error => Date.now() - error.timestamp < 5 * 60 * 1000 // Last 5 minutes
     );
 
-    const errorRate = recentErrors.length / Math.max(this.metrics.requests.total, 1);
+    // Calculate error rate based on recent requests, not total requests
+    const recentRequests = Math.max(this.metrics.requests.total > 100 ? 100 : this.metrics.requests.total, 1);
+    const errorRate = recentErrors.length / recentRequests;
 
-    if (errorRate > this.thresholds.errorRate) {
+    // Filter out payload size errors from critical alerts (they're configuration issues, not system failures)
+    const criticalErrors = recentErrors.filter(error =>
+      !error.error?.includes('entity.too.large') &&
+      !error.error?.includes('PayloadTooLargeError')
+    );
+
+    const criticalErrorRate = criticalErrors.length / recentRequests;
+
+    if (criticalErrorRate > this.thresholds.errorRate) {
       this.createAlert({
         type: 'high_error_rate',
-        message: `High error rate detected: ${(errorRate * 100).toFixed(1)}%`,
+        message: `High error rate detected: ${(errorRate * 100).toFixed(1)}% (${criticalErrors.length} critical errors)`,
         severity: 'critical',
+        timestamp: Date.now()
+      });
+    } else if (errorRate > this.thresholds.errorRate * 2) {
+      // Only warn about high error rates if they're significantly high and include non-critical errors
+      this.createAlert({
+        type: 'elevated_error_rate',
+        message: `Elevated error rate detected: ${(errorRate * 100).toFixed(1)}% (includes configuration errors)`,
+        severity: 'warning',
         timestamp: Date.now()
       });
     }
@@ -454,23 +472,37 @@ class SystemMonitoringManager {
 export const systemMonitoring = new SystemMonitoringManager();
 
 /**
- * Express middleware for request monitoring
+ * ✅ CRITICAL FIX: Enhanced request monitoring middleware with payload size tracking
  */
 export const requestMonitoringMiddleware = (req, res, next) => {
   const startTime = Date.now();
+
+  // Calculate payload size
+  const payloadSize = req.headers['content-length'] ? parseInt(req.headers['content-length']) : 0;
 
   // Override res.end to capture response
   const originalEnd = res.end;
   res.end = function (...args) {
     const responseTime = Date.now() - startTime;
 
+    // Determine if this is a payload size error
+    const isPayloadError = res.statusCode === 413 ||
+      (res.statusCode >= 400 && req.rawBody?.includes?.('entity.too.large'));
+
     systemMonitoring.trackRequest({
       success: res.statusCode < 400,
       responseTime,
       endpoint: req.path,
       method: req.method,
-      statusCode: res.statusCode
+      statusCode: res.statusCode,
+      payloadSize,
+      isPayloadError
     });
+
+    // Log large payloads for monitoring
+    if (payloadSize > 1024 * 1024) { // > 1MB
+      console.warn(`⚠️ Large payload detected: ${req.path} - ${(payloadSize / 1024 / 1024).toFixed(2)}MB`);
+    }
 
     originalEnd.apply(this, args);
   };

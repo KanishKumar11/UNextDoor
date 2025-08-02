@@ -140,6 +140,7 @@ const ConversationScreen = ({ conversationId, params = {} }) => {
           <PersistentConversationView
             scenarioId={scenarioId}
             level="beginner"
+            user={null} // TODO: Pass user information when available
             onSessionEnd={() => {
               console.log("Session ended");
             }}

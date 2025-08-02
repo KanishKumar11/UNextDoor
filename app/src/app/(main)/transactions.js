@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
   SafeAreaView,
   RefreshControl,
   Alert,
@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../features/auth/context/AuthContext';
 import { SubscriptionService } from '../../shared/services/subscriptionService';
+import { BRAND_COLORS } from '../../shared/constants/colors';
 
 const { width } = Dimensions.get('window');
 
@@ -29,9 +30,9 @@ const TransactionsScreen = () => {
   const fetchTransactions = async (showLoader = true) => {
     try {
       if (showLoader) setLoading(true);
-      
+
       const data = await SubscriptionService.getTransactions();
-      
+
       if (data.success) {
         setTransactions(data.data.transactions || []);
       } else {
@@ -130,10 +131,10 @@ const TransactionsScreen = () => {
     <View key={transaction.id} style={styles.transactionCard}>
       <View style={styles.transactionHeader}>
         <View style={styles.transactionIcon}>
-          <Ionicons 
-            name={getTransactionTypeIcon(transaction.type)} 
-            size={24} 
-            color="#4F46E5" 
+          <Ionicons
+            name={getTransactionTypeIcon(transaction.type)}
+            size={24}
+            color={BRAND_COLORS.EXPLORER_TEAL}
           />
         </View>
         <View style={styles.transactionInfo}>
@@ -146,10 +147,10 @@ const TransactionsScreen = () => {
         </View>
         <View style={styles.transactionStatus}>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(transaction.status) + '20' }]}>
-            <Ionicons 
-              name={getStatusIcon(transaction.status)} 
-              size={16} 
-              color={getStatusColor(transaction.status)} 
+            <Ionicons
+              name={getStatusIcon(transaction.status)}
+              size={16}
+              color={getStatusColor(transaction.status)}
             />
             <Text style={[styles.statusText, { color: getStatusColor(transaction.status) }]}>
               {transaction.status?.charAt(0).toUpperCase() + transaction.status?.slice(1)}
@@ -157,7 +158,7 @@ const TransactionsScreen = () => {
           </View>
         </View>
       </View>
-      
+
       <View style={styles.transactionDetails}>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Amount</Text>
@@ -165,21 +166,21 @@ const TransactionsScreen = () => {
             {formatAmount(transaction.amount, transaction.currency)}
           </Text>
         </View>
-        
+
         {transaction.razorpayOrderId && (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Order ID</Text>
             <Text style={styles.detailValue}>{transaction.razorpayOrderId}</Text>
           </View>
         )}
-        
+
         {transaction.razorpayPaymentId && (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Payment ID</Text>
             <Text style={styles.detailValue}>{transaction.razorpayPaymentId}</Text>
           </View>
         )}
-        
+
         {transaction.planName && (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Plan</Text>
@@ -192,13 +193,13 @@ const TransactionsScreen = () => {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="receipt-outline" size={64} color="#D1D5DB" />
+      <Ionicons name="receipt-outline" size={64} color={BRAND_COLORS.SHADOW_GREY} />
       <Text style={styles.emptyTitle}>No Transactions</Text>
       <Text style={styles.emptySubtitle}>
         Your payment history will appear here once you make your first purchase.
       </Text>
-      <TouchableOpacity 
-        style={styles.emptyButton}
+      <TouchableOpacity
+        style={[styles.emptyButton, { backgroundColor: BRAND_COLORS.EXPLORER_TEAL }]}
         onPress={() => router.push('/subscription')}
       >
         <Text style={styles.emptyButtonText}>View Plans</Text>
@@ -210,11 +211,11 @@ const TransactionsScreen = () => {
     return (
       <SafeAreaView style={styles.container}>
         <LinearGradient
-          colors={['#667eea', '#764ba2']}
+          colors={[BRAND_COLORS.EXPLORER_TEAL, BRAND_COLORS.OCEAN_BLUE]}
           style={styles.header}
         >
           <View style={styles.headerContent}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backButton}
               onPress={() => router.back()}
             >
@@ -223,9 +224,9 @@ const TransactionsScreen = () => {
             <Text style={styles.headerTitle}>Transaction History</Text>
           </View>
         </LinearGradient>
-        
+
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
           <Text style={styles.loadingText}>Loading transactions...</Text>
         </View>
       </SafeAreaView>
@@ -235,11 +236,11 @@ const TransactionsScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
-        colors={['#667eea', '#764ba2']}
+        colors={[BRAND_COLORS.EXPLORER_TEAL, BRAND_COLORS.OCEAN_BLUE]}
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
@@ -263,7 +264,7 @@ const TransactionsScreen = () => {
             <Text style={styles.sectionTitle}>
               {transactions.length} Transaction{transactions.length !== 1 ? 's' : ''}
             </Text>
-            
+
             {transactions.map(renderTransactionItem)}
           </View>
         )}
@@ -272,10 +273,11 @@ const TransactionsScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+// Move StyleSheet creation after component definition to ensure BRAND_COLORS is available
+const createStyles = () => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
   },
   header: {
     paddingTop: 20,
@@ -303,7 +305,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#6B7280',
+    color: BRAND_COLORS.SHADOW_GREY,
   },
   content: {
     flex: 1,
@@ -314,22 +316,22 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginBottom: 16,
   },
   transactionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: BRAND_COLORS.OCEAN_BLUE,
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 0,
   },
   transactionHeader: {
     flexDirection: 'row',
@@ -340,7 +342,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL + '15',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -351,12 +353,12 @@ const styles = StyleSheet.create({
   transactionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginBottom: 4,
   },
   transactionDate: {
     fontSize: 14,
-    color: '#6B7280',
+    color: BRAND_COLORS.SHADOW_GREY,
   },
   transactionStatus: {
     alignItems: 'flex-end',
@@ -386,12 +388,12 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: BRAND_COLORS.SHADOW_GREY,
   },
   detailValue: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#111827',
+    color: BRAND_COLORS.OCEAN_BLUE,
     flex: 1,
     textAlign: 'right',
   },
@@ -405,22 +407,22 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
+    color: BRAND_COLORS.OCEAN_BLUE,
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: BRAND_COLORS.SHADOW_GREY,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 24,
   },
   emptyButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 16,
   },
   emptyButtonText: {
     color: '#FFFFFF',
@@ -428,5 +430,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+// Create styles instance
+const styles = createStyles();
 
 export default TransactionsScreen;

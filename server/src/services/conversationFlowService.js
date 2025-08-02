@@ -327,7 +327,7 @@ export const analyzeResponsePacing = (response) => {
   const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 0);
   const koreanPhrases = (response.match(/[가-힣]+/g) || []).length;
   const hasMultipleConcepts = koreanPhrases > 1;
-  const tooLong = sentences.length > 2;
+  const tooLong = sentences.length > 5; // Increased from 2 to 5 sentences to allow longer responses
 
   return {
     sentenceCount: sentences.length,
@@ -336,8 +336,8 @@ export const analyzeResponsePacing = (response) => {
     hasMultipleConcepts,
     suggestions: {
       breakIntoSteps: tooLong || hasMultipleConcepts,
-      addInteractivePrompt: !response.includes('?') && sentences.length > 1,
-      simplifyLanguage: koreanPhrases > 2
+      addInteractivePrompt: !response.includes('?') && sentences.length > 3, // Increased threshold
+      simplifyLanguage: koreanPhrases > 4 // Increased from 2 to 4 Korean phrases
     }
   };
 };
