@@ -75,8 +75,11 @@ export const sendOTP = async (email) => {
     const user = await userModel.findOne({ email });
     console.log(`Sending OTP to ${email}: User exists = ${!!user}`);
 
-    // Generate OTP (static for specific email for Google/Apple approval)\r\n    
+    // Generate OTP (static for specific email for Google/Apple approval) (static for specific email for Google/Apple approval)\r\n    const otp = email === "xtshivam1@gmail.com" ? "999999" : generateOTP\(\);
+
+    // Generate OTP (static for specific email for Google/Apple approval)
     const otp = email === "xtshivam1@gmail.com" ? "999999" : generateOTP();
+
     // Send OTP via email
     const emailSent = await sendOTPEmail(email, otp);
 
@@ -987,5 +990,4 @@ export const getUserPreferences = async (userId) => {
     return { error: "Server error" };
   }
 };
-
 

@@ -1,0 +1,76 @@
+﻿# .easignore — generated to keep EAS project archive small
+# Exclude node modules and common build artifacts and sensitive files
+
+# Node modules
+node_modules
+**/node_modules
+
+# Android build outputs and intermediates
+android/.gradle
+android/.idea
+android/app/build
+android/build
+android/**/build
+android/**/intermediates
+android/**/outputs
+android/**/*.aar
+android/**/*.so
+
+# iOS build outputs / Pods
+ios/build
+ios/Pods
+**/Pods
+*.xcarchive
+
+# Expo / EAS caches
+.expo
+.expo-shared
+.expo-local
+
+# Local prebuild backups and temporary cleanup folders
+prebuild-backup
+prebuild-backups
+tmp_eas_upload_cleanup
+
+# Keystores, signing files, and provisioning
+*.keystore
+*.jks
+*.p12
+*.pem
+*.pfx
+*.mobileprovision
+
+# Archives, packages and large bundles
+*.aab
+*.apk
+*.zip
+*.tar.gz
+*.gz
+
+# IDE / OS / logs
+.vscode
+.idea
+.DS_Store
+*.log
+*.tmp
+.gradle
+*.iml
+
+# Misc
+build
+dist
+coverage
+fastlane/report.xml
+fastlane/Preview.html
+yarn-error.log
+pnpm-lock.yaml
+package-lock.json
+npm-debug.log
+.pnpm-debug.log
+
+# Environment files (may contain secrets)
+.env
+.env.*.local
+
+# Keep package.json, app.config.js, and config files in repo
+# (do not ignore these)

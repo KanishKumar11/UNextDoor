@@ -4,7 +4,6 @@
  */
 
 import { Platform, Alert, Linking } from "react-native";
-import * as MediaLibrary from "expo-media-library";
 import * as Camera from "expo-camera";
 import * as ExpoAudio from "expo-audio";
 
@@ -21,8 +20,8 @@ export const requestInitialPermissions = async () => {
     permissionResults.microphone = microphonePermission.status;
 
     // Request media library permission
-    const mediaLibraryPermission = await MediaLibrary.requestPermissionsAsync();
-    permissionResults.mediaLibrary = mediaLibraryPermission.status;
+    // const mediaLibraryPermission = await MediaLibrary.requestPermissionsAsync();
+    // permissionResults.mediaLibrary = mediaLibraryPermission.status;
 
     // Log permission results
     console.log("Initial permission results:", permissionResults);
@@ -92,10 +91,10 @@ export const isPermissionGranted = async (permissionType) => {
         const cameraPermission = await Camera.getCameraPermissionsAsync();
         status = cameraPermission.status;
         break;
-      case "mediaLibrary":
-        const mediaLibraryPermission = await MediaLibrary.getPermissionsAsync();
-        status = mediaLibraryPermission.status;
-        break;
+      // case "mediaLibrary":
+      //   const mediaLibraryPermission = await MediaLibrary.getPermissionsAsync();
+      //   status = mediaLibraryPermission.status;
+      //   break;
       case "location":
         const locationPermission =
           await Location.getForegroundPermissionsAsync();

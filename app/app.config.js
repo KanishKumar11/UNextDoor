@@ -5,7 +5,7 @@ import { BRAND_COLORS } from "./src/shared/constants/colors";
 const config = {
   name: "UNextDoor",
   slug: "UNextDoor",
-  version: "1.0.3", // bumped version for production
+  version: "1.0.4", // bumped version for production
   orientation: "portrait",
   icon: "./src/assets/app-logo-square.png",
   userInterfaceStyle: "light",
@@ -65,8 +65,10 @@ const config = {
       "android.permission.BLUETOOTH",
       "android.permission.ACCESS_FINE_LOCATION",
       "android.permission.ACCESS_COARSE_LOCATION",
-      "android.permission.READ_EXTERNAL_STORAGE",
-      "android.permission.WRITE_EXTERNAL_STORAGE",
+      // Removed READ/WRITE external storage permissions because Android 13+
+      // uses scoped media permissions (READ_MEDIA_*) and the app should
+      // request media access at runtime or use the Android Photo Picker.
+      // See https://developer.android.com/about/versions/13/behavior-changes-13
     ],
   },
   web: {
