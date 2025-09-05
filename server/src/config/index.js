@@ -187,6 +187,10 @@ const config = {
     featureGating: process.env.ENABLE_FEATURE_GATING === "true",
     subscriptionUpgrades: process.env.ENABLE_SUBSCRIPTION_UPGRADES === "true",
     proration: process.env.ENABLE_PRORATION === "true",
+    // iOS compliance flags - can be used to disable subscription services
+    subscriptionRenewalService: process.env.ENABLE_SUBSCRIPTION_RENEWAL_SERVICE !== "false",
+    paymentRecoveryService: process.env.ENABLE_PAYMENT_RECOVERY_SERVICE !== "false",
+    subscriptionEmails: process.env.ENABLE_SUBSCRIPTION_EMAILS !== "false",
   },
 };
 

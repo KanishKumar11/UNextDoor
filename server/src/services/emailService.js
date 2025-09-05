@@ -60,9 +60,14 @@ class EmailService {
       return;
     }
 
+    if (!config.features.subscriptionEmails) {
+      console.log('🚫 Subscription emails disabled (iOS compliance mode), skipping payment reminder');
+      return false;
+    }
+
     try {
       const subject = `Payment Reminder - Your ${subscription.planName} subscription renews in ${daysUntilPayment} day(s)`;
-      
+
       const html = `
         <!DOCTYPE html>
         <html>
@@ -128,7 +133,7 @@ class EmailService {
 
       await this.transporter.sendMail(mailOptions);
       console.log(`📧 Payment reminder sent to ${user.email}`);
-      
+
       return { success: true };
     } catch (error) {
       console.error('❌ Failed to send payment reminder:', error);
@@ -145,9 +150,14 @@ class EmailService {
       return;
     }
 
+    if (!config.features.subscriptionEmails) {
+      console.log('🚫 Subscription emails disabled (iOS compliance mode), skipping payment failed notification');
+      return false;
+    }
+
     try {
       const subject = `Payment Failed - Action Required for Your ${subscription.planName} Subscription`;
-      
+
       const html = `
         <!DOCTYPE html>
         <html>
@@ -216,7 +226,7 @@ class EmailService {
 
       await this.transporter.sendMail(mailOptions);
       console.log(`📧 Payment failed notification sent to ${user.email}`);
-      
+
       return { success: true };
     } catch (error) {
       console.error('❌ Failed to send payment failed notification:', error);
@@ -233,9 +243,14 @@ class EmailService {
       return;
     }
 
+    if (!config.features.subscriptionEmails) {
+      console.log('🚫 Subscription emails disabled (iOS compliance mode), skipping cancellation notification');
+      return false;
+    }
+
     try {
       const subject = `Subscription Cancelled - ${subscription.planName}`;
-      
+
       const html = `
         <!DOCTYPE html>
         <html>
@@ -269,10 +284,10 @@ class EmailService {
                 ${subscription.currentPeriodEnd ? `<p><strong>Access Until:</strong> ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}</p>` : ''}
               </div>
               
-              ${subscription.currentPeriodEnd ? 
-                '<p>You\'ll continue to have access to premium features until the end of your current billing period.</p>' : 
-                '<p>Your access to premium features has ended.</p>'
-              }
+              ${subscription.currentPeriodEnd ?
+          '<p>You\'ll continue to have access to premium features until the end of your current billing period.</p>' :
+          '<p>Your access to premium features has ended.</p>'
+        }
               
               <p>We're sorry to see you go! If you change your mind, you can reactivate your subscription anytime:</p>
               
@@ -298,7 +313,7 @@ class EmailService {
 
       await this.transporter.sendMail(mailOptions);
       console.log(`📧 Subscription cancelled notification sent to ${user.email}`);
-      
+
       return { success: true };
     } catch (error) {
       console.error('❌ Failed to send cancellation notification:', error);
@@ -317,7 +332,7 @@ class EmailService {
 
     try {
       const subject = `Payment Successful - Your ${subscription.planName} subscription has been renewed`;
-      
+
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -395,7 +410,7 @@ class EmailService {
     try {
       const subject = `Action Required: Renew your ${subscription.planName} subscription`;
       const paymentUrl = `${process.env.CLIENT_URL}/payment?orderId=${orderData.id}`;
-      
+
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -474,7 +489,7 @@ class EmailService {
 
     try {
       const subject = `Subscription Suspended - Multiple payment failures detected`;
-      
+
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -538,7 +553,7 @@ class EmailService {
 
     try {
       const subject = `Subscription Expired - ${subscription.planName} plan has ended`;
-      
+
       const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
           <div style="text-align: center; margin-bottom: 30px;">

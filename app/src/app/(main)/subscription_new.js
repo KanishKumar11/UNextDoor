@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Animated,
   Easing,
+  Linking,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -18,6 +19,12 @@ import { useTheme } from '../../shared/context/ThemeContext';
 import { SubscriptionService } from '../../shared/services/subscriptionService';
 import { useSubscription } from '../../shared/hooks/useSubscription';
 import { CurrencyService } from '../../shared/services/currencyService';
+import {
+  shouldShowSubscriptionFeatures,
+  getSubscriptionMessage,
+  getContactInfo,
+  getLimitReachedMessage
+} from '../../shared/utils/platformUtils';
 
 // Import modern components
 import {
@@ -39,6 +46,79 @@ export default function SubscriptionScreen() {
   const router = useRouter();
   const { user, token } = useAuth();
   const { theme } = useTheme();
+
+  // iOS-specific content
+  if (!shouldShowSubscriptionFeatures()) {
+    const iosMessage = getSubscriptionMessage();
+    const contactInfo = getContactInfo();
+
+    return (
+      <SafeAreaWrapper>
+        <Container withPadding>
+          <Column align="center" justify="center" style={{ flex: 1, paddingHorizontal: 20 }}>
+            {/* Header */}
+            <View style={{ alignItems: 'center', marginBottom: 40 }}>
+              <View
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 40,
+                  backgroundColor: BRAND_COLORS.EXPLORER_TEAL + '20',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 20,
+                }}
+              >
+                <Ionicons name="star-outline" size={40} color={BRAND_COLORS.EXPLORER_TEAL} />
+              </View>
+              <Heading level="h2" style={{ color: BRAND_COLORS.OCEAN_BLUE, textAlign: 'center' }}>
+                {iosMessage.title}
+              </Heading>
+            </View>
+
+            {/* Message */}
+            <ModernCard style={{ padding: 24, marginBottom: 30 }}>
+              <Text
+                style={{
+                  textAlign: 'center',
+                  lineHeight: 24,
+                  color: BRAND_COLORS.SHADOW_GREY,
+                  fontSize: 16,
+                }}
+              >
+                {iosMessage.message}
+              </Text>
+              <Spacer size="md" />
+              <Text
+                weight="medium"
+                style={{
+                  textAlign: 'center',
+                  color: BRAND_COLORS.OCEAN_BLUE,
+                  fontSize: 16,
+                }}
+              >
+                {iosMessage.contactInfo}
+              </Text>
+            </ModernCard>
+
+            {/* Contact Button */}
+            <ModernButton
+              text={iosMessage.buttonText}
+              onPress={() => {
+                Linking.openURL(`mailto:${contactInfo.email}?subject=${encodeURIComponent(contactInfo.subject)}&body=${encodeURIComponent(contactInfo.body)}`);
+              }}
+              style={{
+                backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
+                paddingHorizontal: 40,
+                paddingVertical: 16,
+              }}
+              textStyle={{ color: 'white', fontSize: 16, fontWeight: '600' }}
+            />
+          </Column>
+        </Container>
+      </SafeAreaWrapper>
+    );
+  }
 
   // Use the subscription hook for real-time data
   const {
@@ -668,7 +748,7 @@ You will be charged automatically on each billing cycle.`,
                                 fontSize: 11,
                               }}
                             >
-                              Limit reached! Upgrade to continue learning.
+                              {getLimitReachedMessage()}
                             </Text>
                           </View>
                         )}

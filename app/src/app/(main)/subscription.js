@@ -24,6 +24,13 @@ import { useSubscription } from '../../shared/hooks/useSubscription';
 import { CurrencyService, SUPPORTED_CURRENCIES } from '../../shared/services/currencyService';
 import { apiClient } from '../../shared/api/apiClient';
 import { BRAND_COLORS } from '../../shared/constants/colors';
+import {
+  shouldShowSubscriptionFeatures,
+  shouldShowPaymentFeatures,
+  getSubscriptionMessage,
+  getContactInfo,
+  getLimitReachedMessage
+} from '../../shared/utils/platformUtils';
 
 // Import UI components
 import SafeAreaWrapper from '../../shared/components/SafeAreaWrapper';
@@ -1066,7 +1073,85 @@ export default function SubscriptionScreen() {
           <Column align="center" justify="center" style={{ flex: 1 }}>
             <ActivityIndicator size="large" color={BRAND_COLORS.EXPLORER_TEAL} />
             <Spacer size="md" />
-            <Text>Loading subscription details...</Text>
+            <Text>
+              {shouldShowSubscriptionFeatures()
+                ? "Loading subscription details..."
+                : "Loading premium features..."
+              }
+            </Text>
+          </Column>
+        </Container>
+      </SafeAreaWrapper>
+    );
+  }
+
+  // iOS-specific content
+  if (!shouldShowSubscriptionFeatures()) {
+    const iosMessage = getSubscriptionMessage();
+    const contactInfo = getContactInfo();
+
+    return (
+      <SafeAreaWrapper>
+        <Container withPadding>
+          <Column align="center" justify="center" style={{ flex: 1, paddingHorizontal: 20 }}>
+            {/* Header */}
+            <View style={{ alignItems: 'center', marginBottom: 40 }}>
+              <View
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 40,
+                  backgroundColor: BRAND_COLORS.EXPLORER_TEAL + '20',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 20,
+                }}
+              >
+                <Ionicons name="star-outline" size={40} color={BRAND_COLORS.EXPLORER_TEAL} />
+              </View>
+              <Heading level="h2" style={{ color: BRAND_COLORS.OCEAN_BLUE, textAlign: 'center' }}>
+                {iosMessage.title}
+              </Heading>
+            </View>
+
+            {/* Message */}
+            <ModernCard style={{ padding: 24, marginBottom: 30 }}>
+              <Text
+                style={{
+                  textAlign: 'center',
+                  lineHeight: 24,
+                  color: BRAND_COLORS.SHADOW_GREY,
+                  fontSize: 16,
+                }}
+              >
+                {iosMessage.message}
+              </Text>
+              <Spacer size="md" />
+              <Text
+                weight="medium"
+                style={{
+                  textAlign: 'center',
+                  color: BRAND_COLORS.OCEAN_BLUE,
+                  fontSize: 16,
+                }}
+              >
+                {iosMessage.contactInfo}
+              </Text>
+            </ModernCard>
+
+            {/* Contact Button */}
+            <ModernButton
+              text={iosMessage.buttonText}
+              onPress={() => {
+                Linking.openURL(`mailto:${contactInfo.email}?subject=${encodeURIComponent(contactInfo.subject)}&body=${encodeURIComponent(contactInfo.body)}`);
+              }}
+              style={{
+                backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
+                paddingHorizontal: 40,
+                paddingVertical: 16,
+              }}
+              textStyle={{ color: 'white', fontSize: 16, fontWeight: '600' }}
+            />
           </Column>
         </Container>
       </SafeAreaWrapper>
@@ -1415,7 +1500,7 @@ export default function SubscriptionScreen() {
                                 fontFamily: getFontFamily('medium'),
                               }}
                             >
-                              Limit reached! Upgrade to continue learning.
+                              {getLimitReachedMessage()}
                             </Text>
                           </View>
                         )}
@@ -1426,8 +1511,8 @@ export default function SubscriptionScreen() {
               </ModernCard>
             </View>
 
-            {/* Auto-Renewal Management Section - only show for active subscriptions */}
-            {hasActiveSubscription && currentPlan.tier !== 'free' && (
+            {/* Auto-Renewal Management Section - Hidden on iOS */}
+            {hasActiveSubscription && currentPlan.tier !== 'free' && shouldShowSubscriptionFeatures() && (
               <>
                 <Spacer size="md" />
                 <View style={{ paddingHorizontal: theme.spacing.md }}>
@@ -1441,8 +1526,8 @@ export default function SubscriptionScreen() {
               </>
             )}
 
-            {/* Subscription Status Warnings */}
-            {currentPlan.tier !== 'free' && (
+            {/* Subscription Status Warnings - Hidden on iOS */}
+            {currentPlan.tier !== 'free' && shouldShowSubscriptionFeatures() && (
               <View style={{ paddingHorizontal: theme.spacing.md }}>
                 <SubscriptionStatusWarnings currentPlan={currentPlan} />
               </View>
@@ -1736,59 +1821,66 @@ export default function SubscriptionScreen() {
           iconColor={confirmDialog.title.includes('Error') ? theme.colors.error.main : theme.colors.brandGreen}
         />
 
-        <RazorpayPaymentDialog
-          visible={paymentDialog.visible}
-          onClose={() => setPaymentDialog({ visible: false, orderDetails: null, planDetails: null })}
-          orderDetails={paymentDialog.orderDetails}
-          planDetails={paymentDialog.planDetails}
-          onPaymentSuccess={handlePaymentSuccess}
-          onPaymentFailure={handlePaymentFailure}
-        />
+        {shouldShowPaymentFeatures() && (
+          <RazorpayPaymentDialog
+            visible={paymentDialog.visible}
+            onClose={() => setPaymentDialog({ visible: false, orderDetails: null, planDetails: null })}
+            orderDetails={paymentDialog.orderDetails}
+            planDetails={paymentDialog.planDetails}
+            onPaymentSuccess={handlePaymentSuccess}
+            onPaymentFailure={handlePaymentFailure}
+          />
+        )}
 
-        <PaymentSuccessDialog
-          visible={successDialog.visible}
-          onClose={() => setSuccessDialog({ visible: false, planName: '', amount: null, message: '' })}
-          planName={successDialog.planName}
-          amount={successDialog.amount}
-          currency={successDialog.currency}
-          currencySymbol={successDialog.currencySymbol}
-          originalAmount={successDialog.originalAmount}
-          prorationCredit={successDialog.prorationCredit}
-          isUpgrade={successDialog.isUpgrade}
-          previousPlan={successDialog.previousPlan}
-          message={successDialog.message}
-        />
+        {shouldShowPaymentFeatures() && (
+          <>
+            <PaymentSuccessDialog
+              visible={successDialog.visible}
+              onClose={() => setSuccessDialog({ visible: false, planName: '', amount: null, message: '' })}
+              planName={successDialog.planName}
+              amount={successDialog.amount}
+              currency={successDialog.currency}
+              currencySymbol={successDialog.currencySymbol}
+              originalAmount={successDialog.originalAmount}
+              prorationCredit={successDialog.prorationCredit}
+              isUpgrade={successDialog.isUpgrade}
+              previousPlan={successDialog.previousPlan}
+              message={successDialog.message}
+            />
 
-        <PaymentFailureDialog
-          visible={failureDialog.visible}
-          onClose={() => setFailureDialog({ visible: false, title: '', message: '', errorCode: null })}
-          title={failureDialog.title}
-          message={failureDialog.message}
-          errorCode={failureDialog.errorCode}
-        />
+            <PaymentFailureDialog
+              visible={failureDialog.visible}
+              onClose={() => setFailureDialog({ visible: false, title: '', message: '', errorCode: null })}
+              title={failureDialog.title}
+              message={failureDialog.message}
+              errorCode={failureDialog.errorCode}
+            />
 
-        <CurrencyConfirmationDialog
-          visible={currencyDialog.visible}
-          detectedCurrency={currencyDialog.detectedCurrency}
-          onConfirm={handleCurrencyConfirm}
-          onClose={handleCurrencyDialogClose}
-          loading={currencyDialog.loading}
-          isManualSelection={currencyDialog.isManualSelection}
-        />
+            <CurrencyConfirmationDialog
+              visible={currencyDialog.visible}
+              detectedCurrency={currencyDialog.detectedCurrency}
+              onConfirm={handleCurrencyConfirm}
+              onClose={handleCurrencyDialogClose}
+              loading={currencyDialog.loading}
+              isManualSelection={currencyDialog.isManualSelection}
+            />
 
-        <UpgradePreviewDialog
-          visible={upgradePreviewDialog.visible}
-          targetPlan={upgradePreviewDialog.targetPlan}
-          currentPlan={upgradePreviewDialog.currentPlan}
-          originalPrice={upgradePreviewDialog.originalPrice}
-          prorationCredit={upgradePreviewDialog.prorationCredit}
-          finalPrice={upgradePreviewDialog.finalPrice}
-          remainingDays={upgradePreviewDialog.remainingDays}
-          currency={upgradePreviewDialog.currency}
-          onConfirm={handleUpgradePreviewConfirm}
-          onCancel={handleUpgradePreviewCancel}
+            <UpgradePreviewDialog
+              visible={upgradePreviewDialog.visible}
+              targetPlan={upgradePreviewDialog.targetPlan}
+              currentPlan={upgradePreviewDialog.currentPlan}
+              originalPrice={upgradePreviewDialog.originalPrice}
+              prorationCredit={upgradePreviewDialog.prorationCredit}
+              finalPrice={upgradePreviewDialog.finalPrice}
+              remainingDays={upgradePreviewDialog.remainingDays}
+              currency={upgradePreviewDialog.currency}
+              onConfirm={handleUpgradePreviewConfirm}
+              onCancel={handleUpgradePreviewCancel}
+            />
+          </>
+        )}
 
-          loading={upgradePreviewDialog.loading}
+        loading={upgradePreviewDialog.loading}
         />
       </Container>
     </SafeAreaWrapper>
@@ -2184,7 +2276,10 @@ const SubscriptionStatusWarnings = ({ currentPlan }) => {
           color="neutral.600"
           style={{ marginTop: 8, fontStyle: 'italic' }}
         >
-          Choose a plan below to reactivate your subscription.
+          {shouldShowSubscriptionFeatures()
+            ? "Choose a plan below to reactivate your subscription."
+            : "Contact support to reactivate your premium access."
+          }
         </Text>
       )}
     </View>

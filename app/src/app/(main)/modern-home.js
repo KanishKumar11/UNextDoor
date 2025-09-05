@@ -30,6 +30,7 @@ import { getUserAchievements } from "../../features/achievements/services/achiev
 import { useContext, useEffect, useState } from "react";
 import { useSubscription } from "../../shared/hooks/useSubscription";
 import { levelService } from "../../features/level/services/levelService";
+import { shouldShowSubscriptionFeatures, handleSubscriptionNavigation } from "../../shared/utils/platformUtils";
 // Import component sections
 import ProgressSection from "./components/ProgressSection";
 import QuickActionsSection from "./components/QuickActionsSection";
@@ -626,7 +627,7 @@ export default function ModernHome() {
           </Animated.View>
 
           {/* Enhanced Subscription Display */}
-          {!subscriptionLoading && (
+          {!subscriptionLoading && shouldShowSubscriptionFeatures() && (
             <Animated.View
               style={{
                 opacity: fadeAnim,
@@ -636,7 +637,13 @@ export default function ModernHome() {
                 backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
               }}
             >
-              <TouchableOpacity onPress={() => router.push("/subscription")}>
+              <TouchableOpacity onPress={() => {
+                if (!handleSubscriptionNavigation(router, Alert.alert)) {
+                  // iOS - navigation was handled by showing alert
+                  return;
+                }
+                // Android - proceed with normal navigation
+              }}>
                 <View
                   style={{
                     backgroundColor: currentPlan.tier === 'free'
@@ -682,7 +689,7 @@ export default function ModernHome() {
                       </Column>
                     </Row>
                     <Row align="center">
-                      {currentPlan.tier === 'free' && hasReachedLimit('lessons') && (
+                      {currentPlan.tier === 'free' && hasReachedLimit('lessons') && shouldShowSubscriptionFeatures() && (
                         <View
                           style={{
                             backgroundColor: theme.colors.warning.main,

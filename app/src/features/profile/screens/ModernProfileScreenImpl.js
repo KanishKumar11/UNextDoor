@@ -23,6 +23,13 @@ import { SUPPORT_EMAIL } from "../../../shared/constants/appConstants";
 import { useSubscription } from "../../../shared/hooks/useSubscription";
 import SafeAreaWrapper from "../../../shared/components/SafeAreaWrapper";
 import { BRAND_COLORS } from "../../../shared/constants/colors";
+import {
+  shouldShowSubscriptionFeatures,
+  shouldShowUpgradePrompts,
+  getLimitReachedMessage,
+  handleSubscriptionNavigation,
+  getSubscriptionMessage
+} from "../../../shared/utils/platformUtils";
 
 // Import modern components
 import {
@@ -245,9 +252,19 @@ const ModernProfileScreenImpl = () => {
 
   // Handle upgrade button press
   const handleUpgrade = () => {
-    Alert.alert("Coming Soon", "Stay tuned for premium features!", [
-      { text: "OK", style: "default" },
-    ]);
+    if (shouldShowUpgradePrompts()) {
+      Alert.alert("Coming Soon", "Stay tuned for premium features!", [
+        { text: "OK", style: "default" },
+      ]);
+    } else {
+      // iOS - show contact support
+      const message = getSubscriptionMessage();
+      Alert.alert(
+        message.title,
+        `${message.message}\n\n${message.contactInfo}`,
+        [{ text: 'OK', style: 'default' }]
+      );
+    }
   };
 
   // Handle help & support
@@ -600,196 +617,202 @@ const ModernProfileScreenImpl = () => {
 
             <Spacer size="md" />
 
-            {/* Subscription Section */}
-            <View style={{ paddingHorizontal: theme.spacing.md }}>
-              <ModernCard
-                style={{
-                  backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
-                  borderRadius: 16,
-                  padding: theme.spacing.lg,
-                }}
-              >
-                <Text
-                  variant="caption"
-                  weight="medium"
+            {/* Subscription Section - Hidden on iOS */}
+            {shouldShowSubscriptionFeatures() && (
+              <View style={{ paddingHorizontal: theme.spacing.md }}>
+                <ModernCard
                   style={{
-                    color: BRAND_COLORS.SHADOW_GREY,
-                    fontFamily: theme.typography.fontFamily.medium,
-                    marginBottom: 8,
+                    backgroundColor: BRAND_COLORS.CARD_BACKGROUND,
+                    borderRadius: 16,
+                    padding: theme.spacing.lg,
                   }}
                 >
-                  SUBSCRIPTION
-                </Text>
-                <Heading
-                  level="h3"
-                  style={{
-                    color: BRAND_COLORS.OCEAN_BLUE,
-                    fontFamily: theme.typography.fontFamily.bold,
-                    marginBottom: theme.spacing.md,
-                  }}
-                >
-                  Current Plan
-                </Heading>
+                  <Text
+                    variant="caption"
+                    weight="medium"
+                    style={{
+                      color: BRAND_COLORS.SHADOW_GREY,
+                      fontFamily: theme.typography.fontFamily.medium,
+                      marginBottom: 8,
+                    }}
+                  >
+                    SUBSCRIPTION
+                  </Text>
+                  <Heading
+                    level="h3"
+                    style={{
+                      color: BRAND_COLORS.OCEAN_BLUE,
+                      fontFamily: theme.typography.fontFamily.bold,
+                      marginBottom: theme.spacing.md,
+                    }}
+                  >
+                    Current Plan
+                  </Heading>
 
-                {subscriptionLoading ? (
-                  <View style={{ alignItems: "center", paddingVertical: 20 }}>
-                    <ActivityIndicator
-                      size="small"
-                      color={BRAND_COLORS.EXPLORER_TEAL}
-                    />
-                    <Text
-                      variant="caption"
-                      style={{
-                        marginTop: 8,
-                        color: BRAND_COLORS.SHADOW_GREY,
-                      }}
-                    >
-                      Loading subscription data...
-                    </Text>
-                  </View>
-                ) : (
-                  <>
-                    {/* Current Plan */}
-                    <Row
-                      justify="space-between"
-                      align="center"
-                      style={{
-                        paddingVertical: 12,
-                        borderBottomWidth: 1,
-                        borderBottomColor: BRAND_COLORS.EXPLORER_TEAL + "15",
-                      }}
-                    >
-                      <Row align="center">
-                        <View
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 20,
-                            backgroundColor: currentPlan.tier === 'free' ? BRAND_COLORS.GOLDEN_AMBER + "20" : BRAND_COLORS.EXPLORER_TEAL + "20",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            marginRight: 12,
-                          }}
-                        >
-                          <Ionicons
-                            name={currentPlan.tier === 'free' ? "star-outline" : "checkmark-circle-outline"}
-                            size={20}
-                            color={currentPlan.tier === 'free' ? BRAND_COLORS.GOLDEN_AMBER : BRAND_COLORS.EXPLORER_TEAL}
-                          />
-                        </View>
-                        <Column>
-                          <Text
-                            weight="medium"
-                            style={{
-                              color: BRAND_COLORS.OCEAN_BLUE,
-                              fontFamily: theme.typography.fontFamily.medium,
-                            }}
-                          >
-                            {currentPlan.name} Plan
-                          </Text>
-                          <Text
-                            variant="caption"
-                            style={{
-                              color: BRAND_COLORS.SHADOW_GREY,
-                              fontFamily: theme.typography.fontFamily.regular,
-                            }}
-                          >
-                            {currentPlan.tier === 'free'
-                              ? `${usage.lessons.remaining}/${usage.lessons.limit} lessons left`
-                              : hasActiveSubscription
-                                ? 'Active subscription'
-                                : 'Inactive subscription'
-                            }
-                          </Text>
-                        </Column>
-                      </Row>
-
-                      {currentPlan.tier === 'free' ? (
-                        <ModernButton
-                          text="Upgrade"
-                          variant="solid"
-                          size="sm"
-                          style={{
-                            backgroundColor: BRAND_COLORS.GOLDEN_AMBER,
-                            paddingHorizontal: theme.spacing.md,
-                          }}
-                          onPress={() => router.push("/subscription")}
-                        />
-                      ) : (
-                        <TouchableOpacity onPress={() => router.push("/subscription")}>
-                          <Ionicons name="chevron-forward" size={20} color={BRAND_COLORS.SHADOW_GREY} />
-                        </TouchableOpacity>
-                      )}
-                    </Row>
-
-                    {/* Usage Stats for Free Users */}
-                    {currentPlan.tier === 'free' && (
-                      <View style={{ marginTop: theme.spacing.md }}>
-                        <Text
-                          variant="caption"
-                          weight="medium"
-                          style={{
-                            color: BRAND_COLORS.SHADOW_GREY,
-                            fontFamily: theme.typography.fontFamily.medium,
-                            marginBottom: 8,
-                          }}
-                        >
-                          USAGE THIS MONTH
-                        </Text>
-
-                        <Row justify="space-between" align="center" style={{ marginBottom: 8 }}>
-                          <Text
-                            variant="caption"
-                            style={{
-                              color: BRAND_COLORS.OCEAN_BLUE,
-                              fontFamily: theme.typography.fontFamily.regular,
-                            }}
-                          >
-                            Lessons
-                          </Text>
-                          <Text
-                            variant="caption"
-                            weight="medium"
-                            style={{
-                              color: hasReachedLimit('lessons') ? BRAND_COLORS.WARM_CORAL : BRAND_COLORS.EXPLORER_TEAL,
-                              fontFamily: theme.typography.fontFamily.medium,
-                            }}
-                          >
-                            {usage.lessons.current}/{usage.lessons.limit}
-                          </Text>
-                        </Row>
-
-                        {/* AI Sessions removed for free plan - no limitations on AI sessions */}
-
-                        {hasReachedLimit('lessons') && (
+                  {subscriptionLoading ? (
+                    <View style={{ alignItems: "center", paddingVertical: 20 }}>
+                      <ActivityIndicator
+                        size="small"
+                        color={BRAND_COLORS.EXPLORER_TEAL}
+                      />
+                      <Text
+                        variant="caption"
+                        style={{
+                          marginTop: 8,
+                          color: BRAND_COLORS.SHADOW_GREY,
+                        }}
+                      >
+                        Loading subscription data...
+                      </Text>
+                    </View>
+                  ) : (
+                    <>
+                      {/* Current Plan */}
+                      <Row
+                        justify="space-between"
+                        align="center"
+                        style={{
+                          paddingVertical: 12,
+                          borderBottomWidth: 1,
+                          borderBottomColor: BRAND_COLORS.EXPLORER_TEAL + "15",
+                        }}
+                      >
+                        <Row align="center">
                           <View
                             style={{
-                              backgroundColor: BRAND_COLORS.WARM_CORAL + "10",
-                              borderRadius: 8,
-                              padding: 12,
-                              marginTop: 12,
-                              borderWidth: 1,
-                              borderColor: BRAND_COLORS.WARM_CORAL + "20",
+                              width: 40,
+                              height: 40,
+                              borderRadius: 20,
+                              backgroundColor: currentPlan.tier === 'free' ? BRAND_COLORS.GOLDEN_AMBER + "20" : BRAND_COLORS.EXPLORER_TEAL + "20",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              marginRight: 12,
                             }}
                           >
+                            <Ionicons
+                              name={currentPlan.tier === 'free' ? "star-outline" : "checkmark-circle-outline"}
+                              size={20}
+                              color={currentPlan.tier === 'free' ? BRAND_COLORS.GOLDEN_AMBER : BRAND_COLORS.EXPLORER_TEAL}
+                            />
+                          </View>
+                          <Column>
+                            <Text
+                              weight="medium"
+                              style={{
+                                color: BRAND_COLORS.OCEAN_BLUE,
+                                fontFamily: theme.typography.fontFamily.medium,
+                              }}
+                            >
+                              {currentPlan.name} Plan
+                            </Text>
+                            <Text
+                              variant="caption"
+                              style={{
+                                color: BRAND_COLORS.SHADOW_GREY,
+                                fontFamily: theme.typography.fontFamily.regular,
+                              }}
+                            >
+                              {currentPlan.tier === 'free'
+                                ? `${usage.lessons.remaining}/${usage.lessons.limit} lessons left`
+                                : hasActiveSubscription
+                                  ? 'Active subscription'
+                                  : 'Inactive subscription'
+                              }
+                            </Text>
+                          </Column>
+                        </Row>
+
+                        {currentPlan.tier === 'free' ? (
+                          <ModernButton
+                            text="Upgrade"
+                            variant="solid"
+                            size="sm"
+                            style={{
+                              backgroundColor: BRAND_COLORS.GOLDEN_AMBER,
+                              paddingHorizontal: theme.spacing.md,
+                            }}
+                            onPress={() => {
+                              handleSubscriptionNavigation(router, Alert.alert);
+                            }}
+                          />
+                        ) : (
+                          <TouchableOpacity onPress={() => {
+                            handleSubscriptionNavigation(router, Alert.alert);
+                          }}>
+                            <Ionicons name="chevron-forward" size={20} color={BRAND_COLORS.SHADOW_GREY} />
+                          </TouchableOpacity>
+                        )}
+                      </Row>
+
+                      {/* Usage Stats for Free Users */}
+                      {currentPlan.tier === 'free' && (
+                        <View style={{ marginTop: theme.spacing.md }}>
+                          <Text
+                            variant="caption"
+                            weight="medium"
+                            style={{
+                              color: BRAND_COLORS.SHADOW_GREY,
+                              fontFamily: theme.typography.fontFamily.medium,
+                              marginBottom: 8,
+                            }}
+                          >
+                            USAGE THIS MONTH
+                          </Text>
+
+                          <Row justify="space-between" align="center" style={{ marginBottom: 8 }}>
+                            <Text
+                              variant="caption"
+                              style={{
+                                color: BRAND_COLORS.OCEAN_BLUE,
+                                fontFamily: theme.typography.fontFamily.regular,
+                              }}
+                            >
+                              Lessons
+                            </Text>
                             <Text
                               variant="caption"
                               weight="medium"
                               style={{
-                                color: BRAND_COLORS.WARM_CORAL,
-                                textAlign: "center",
+                                color: hasReachedLimit('lessons') ? BRAND_COLORS.WARM_CORAL : BRAND_COLORS.EXPLORER_TEAL,
+                                fontFamily: theme.typography.fontFamily.medium,
                               }}
                             >
-                              Usage limit reached. Upgrade to continue learning!
+                              {usage.lessons.current}/{usage.lessons.limit}
                             </Text>
-                          </View>
-                        )}
-                      </View>
-                    )}
-                  </>
-                )}
-              </ModernCard>
-            </View>
+                          </Row>
+
+                          {/* AI Sessions removed for free plan - no limitations on AI sessions */}
+
+                          {hasReachedLimit('lessons') && (
+                            <View
+                              style={{
+                                backgroundColor: BRAND_COLORS.WARM_CORAL + "10",
+                                borderRadius: 8,
+                                padding: 12,
+                                marginTop: 12,
+                                borderWidth: 1,
+                                borderColor: BRAND_COLORS.WARM_CORAL + "20",
+                              }}
+                            >
+                              <Text
+                                variant="caption"
+                                weight="medium"
+                                style={{
+                                  color: BRAND_COLORS.WARM_CORAL,
+                                  textAlign: "center",
+                                }}
+                              >
+                                {getLimitReachedMessage()}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      )}
+                    </>
+                  )}
+                </ModernCard>
+              </View>
+            )}
 
             <Spacer size="md" />
 
@@ -944,8 +967,8 @@ const ModernProfileScreenImpl = () => {
                   </Row>
                 </TouchableOpacity>
 
-                {/* Billing - Only show for subscribed users */}
-                {hasActiveSubscription && (
+                {/* Billing - Only show for subscribed users and not on iOS */}
+                {hasActiveSubscription && shouldShowSubscriptionFeatures() && (
                   <TouchableOpacity
                     onPress={() => router.push("/profile/billing")}
                     style={{
@@ -1005,8 +1028,8 @@ const ModernProfileScreenImpl = () => {
                   </TouchableOpacity>
                 )}
 
-                {/* Transactions - Only show for subscribed users */}
-                {hasActiveSubscription && (
+                {/* Transactions - Only show for subscribed users and not on iOS */}
+                {hasActiveSubscription && shouldShowSubscriptionFeatures() && (
                   <TouchableOpacity
                     onPress={() => router.push("/profile/transactions")}
                     style={{

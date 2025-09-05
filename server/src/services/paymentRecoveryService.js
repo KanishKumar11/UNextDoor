@@ -30,6 +30,11 @@ class PaymentRecoveryService {
       return;
     }
 
+    if (!config.features.paymentRecoveryService) {
+      console.log('🚫 Payment recovery service disabled (iOS compliance mode)');
+      return;
+    }
+
     console.log('🔄 Starting payment recovery service...');
 
     // Run every 5 minutes to check for pending payments
@@ -65,7 +70,7 @@ class PaymentRecoveryService {
 
     try {
       const cutoffTime = new Date(Date.now() - maxAgeMinutes * 60 * 1000);
-      
+
       // Find pending transactions older than cutoff time
       const pendingTransactions = await PaymentTransaction.find({
         status: 'pending',
@@ -90,7 +95,7 @@ class PaymentRecoveryService {
         try {
           results.checked++;
           const recovered = await this.recoverSinglePayment(transaction);
-          
+
           if (recovered === 'success') {
             results.recovered++;
           } else if (recovered === 'failed') {
@@ -131,7 +136,7 @@ class PaymentRecoveryService {
     try {
       // Check payment status with Razorpay
       const razorpayOrder = await this.razorpay.getOrder(transaction.gatewayOrderId);
-      
+
       if (razorpayOrder.status === 'paid') {
         // Order is paid, find the successful payment
         const payments = await this.razorpay.getOrderPayments(transaction.gatewayOrderId);
@@ -139,7 +144,7 @@ class PaymentRecoveryService {
 
         if (successfulPayment) {
           console.log(`💰 Recovering successful payment: ${transaction.gatewayOrderId}`);
-          
+
           // Update transaction
           transaction.gatewayPaymentId = successfulPayment.id;
           transaction.status = 'completed';
@@ -150,20 +155,20 @@ class PaymentRecoveryService {
 
           // Activate subscription
           await this.activateSubscription(transaction);
-          
+
           console.log(`✅ Payment recovered successfully: ${transaction.gatewayOrderId}`);
           return 'success';
         }
       } else if (razorpayOrder.status === 'failed' || razorpayOrder.status === 'cancelled') {
         // Payment failed, update transaction
         console.log(`❌ Payment failed: ${transaction.gatewayOrderId}`);
-        
+
         transaction.status = 'failed';
         transaction.failureReason = `Payment ${razorpayOrder.status} (auto-recovery check)`;
         transaction.recoveredAt = new Date();
         transaction.recoveryMethod = 'auto_recovery_service';
         await transaction.save();
-        
+
         return 'failed';
       } else {
         // Still pending or attempt_processing
@@ -176,16 +181,16 @@ class PaymentRecoveryService {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       if (transaction.createdAt < twentyFourHoursAgo) {
         console.log(`🔄 Marking old transaction as failed: ${transaction.gatewayOrderId}`);
-        
+
         transaction.status = 'failed';
         transaction.failureReason = 'Unable to verify after 24 hours';
         transaction.recoveredAt = new Date();
         transaction.recoveryMethod = 'auto_recovery_service';
         await transaction.save();
-        
+
         return 'failed';
       }
-      
+
       throw error;
     }
   }

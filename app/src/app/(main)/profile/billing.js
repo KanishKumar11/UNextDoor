@@ -7,6 +7,8 @@ import {
   RefreshControl,
   Alert,
   Button,
+  Platform,
+  Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,6 +17,11 @@ import { useSubscription } from "../../../shared/hooks/useSubscription";
 import SafeAreaWrapper from "../../../shared/components/SafeAreaWrapper";
 import { subscriptionService } from "../../../shared/services/subscriptionService";
 import { BRAND_COLORS } from "../../../shared/constants/colors";
+import {
+  shouldShowSubscriptionFeatures,
+  getSubscriptionMessage,
+  getContactInfo
+} from "../../../shared/utils/platformUtils";
 
 // Import modern components
 import {
@@ -36,6 +43,85 @@ import {
 const BillingPage = () => {
   const router = useRouter();
   const { theme } = useTheme();
+
+  // iOS-specific content
+  if (!shouldShowSubscriptionFeatures()) {
+    const iosMessage = getSubscriptionMessage();
+    const contactInfo = getContactInfo();
+
+    return (
+      <SafeAreaWrapper>
+        <Container withPadding>
+          <View style={{ marginBottom: theme.spacing.lg }}>
+            <Heading level="h2" style={{ color: BRAND_COLORS.OCEAN_BLUE }}>
+              Billing & Subscriptions
+            </Heading>
+          </View>
+
+          <Column align="center" justify="center" style={{ flex: 1, paddingHorizontal: 20 }}>
+            {/* Header */}
+            <View style={{ alignItems: 'center', marginBottom: 40 }}>
+              <View
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 40,
+                  backgroundColor: BRAND_COLORS.EXPLORER_TEAL + '20',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 20,
+                }}
+              >
+                <Ionicons name="card-outline" size={40} color={BRAND_COLORS.EXPLORER_TEAL} />
+              </View>
+              <Heading level="h3" style={{ color: BRAND_COLORS.OCEAN_BLUE, textAlign: 'center' }}>
+                {iosMessage.title}
+              </Heading>
+            </View>
+
+            {/* Message */}
+            <ModernCard style={{ padding: 24, marginBottom: 30 }}>
+              <Text
+                style={{
+                  textAlign: 'center',
+                  lineHeight: 24,
+                  color: BRAND_COLORS.SHADOW_GREY,
+                  fontSize: 16,
+                }}
+              >
+                {iosMessage.message}
+              </Text>
+              <Spacer size="md" />
+              <Text
+                weight="medium"
+                style={{
+                  textAlign: 'center',
+                  color: BRAND_COLORS.OCEAN_BLUE,
+                  fontSize: 16,
+                }}
+              >
+                {iosMessage.contactInfo}
+              </Text>
+            </ModernCard>
+
+            {/* Contact Button */}
+            <ModernButton
+              text={iosMessage.buttonText}
+              onPress={() => {
+                Linking.openURL(`mailto:${contactInfo.email}?subject=${encodeURIComponent(contactInfo.subject)}&body=${encodeURIComponent(contactInfo.body)}`);
+              }}
+              style={{
+                backgroundColor: BRAND_COLORS.EXPLORER_TEAL,
+                paddingHorizontal: 40,
+                paddingVertical: 16,
+              }}
+              textStyle={{ color: 'white', fontSize: 16, fontWeight: '600' }}
+            />
+          </Column>
+        </Container>
+      </SafeAreaWrapper>
+    );
+  }
 
   // Subscription hook
   const {

@@ -25,6 +25,11 @@ class SubscriptionRenewalService {
       return;
     }
 
+    if (!config.features.subscriptionRenewalService) {
+      console.log('🚫 Subscription renewal service disabled (iOS compliance mode)');
+      return;
+    }
+
     console.log('🔄 Starting subscription renewal service...');
 
     // Send payment reminders (runs daily at 9 AM)
