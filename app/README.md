@@ -98,12 +98,14 @@ Apple Sign-In is automatically configured for iOS devices. To complete the setup
 #### 1. Apple Developer Account Configuration
 
 1. **Enable Sign In with Apple capability**:
+
    - Go to [Apple Developer Console](https://developer.apple.com/account/)
    - Navigate to Certificates, Identifiers & Profiles
    - Select your App ID and edit it
    - Enable "Sign In with Apple" capability
 
 2. **Create a Service ID** (for web authentication):
+
    - Create a new Services ID
    - Configure it with your domain and return URLs
 
@@ -127,6 +129,7 @@ APPLE_BUNDLE_ID=com.UNextDoor.app
 #### 3. App Configuration
 
 The app is already configured with:
+
 - `expo-apple-authentication` package
 - Apple Sign-In plugin in `app.config.js`
 - Proper entitlements and Info.plist configuration
@@ -142,18 +145,26 @@ The app is already configured with:
 1. Create a project in the [Google Cloud Console](https://console.cloud.google.com/)
 2. Enable the Google+ API
 3. Create OAuth 2.0 credentials for your app
-4. Update the client IDs in `app.config.js`:
+4. Update the client IDs in `app.config.js` (already configured with production values):
    ```javascript
    plugins: [
      [
        "./plugins/withGoogleSignIn",
        {
-         iosClientId: "your-ios-client-id.apps.googleusercontent.com",
-         androidClientId: "your-android-client-id.apps.googleusercontent.com",
-         webClientId: "your-web-client-id.apps.googleusercontent.com",
+         iosClientId:
+           "670102459133-vr2l1a5hfq84k817lmuj6sprkhkrdotc.apps.googleusercontent.com",
+         androidClientId:
+           "670102459133-7bq03aetjs4q5cp5ljl610cbjstnbmeg.apps.googleusercontent.com",
+         webClientId:
+           "670102459133-rde3n2655fu9r5sonqfilg1hl635fa3h.apps.googleusercontent.com",
        },
      ],
-   ]
+   ];
+   ```
+5. Update server environment variables in `server/.env`:
+   ```bash
+   GOOGLE_CLIENT_ID=670102459133-rde3n2655fu9r5sonqfilg1hl635fa3h.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your-google-client-secret
    ```
 
 ## Permissions

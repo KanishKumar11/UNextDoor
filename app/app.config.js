@@ -91,9 +91,9 @@ const config = {
     [
       "./plugins/withGoogleSignIn",
       {
-        iosClientId: "1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
-        androidClientId: "1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
-        webClientId: "1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com",
+        iosClientId: "670102459133-vr2l1a5hfq84k817lmuj6sprkhkrdotc.apps.googleusercontent.com",
+        androidClientId: "670102459133-7bq03aetjs4q5cp5ljl610cbjstnbmeg.apps.googleusercontent.com",
+        webClientId: "670102459133-rde3n2655fu9r5sonqfilg1hl635fa3h.apps.googleusercontent.com",
       },
     ],
   ],

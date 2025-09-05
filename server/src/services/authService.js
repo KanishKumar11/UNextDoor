@@ -75,12 +75,18 @@ export const sendOTP = async (email) => {
     const user = await userModel.findOne({ email });
     console.log(`Sending OTP to ${email}: User exists = ${!!user}`);
 
-    // Generate OTP (static for specific email for Google/Apple approval)\r\n    
-    const otp = email === "xtshivam1@gmail.com" ? "999999" : generateOTP();
+    // Generate OTP
+    const otp = generateOTP();
+
+    // Save OTP to database
+    await otpModel.create(email, otp);
+
     // Send OTP via email
     const emailSent = await sendOTPEmail(email, otp);
 
     if (!emailSent) {
+      // If email sending fails, clean up the OTP from database
+      await otpModel.delete(email);
       return { error: "Failed to send OTP" };
     }
 
@@ -117,18 +123,24 @@ export const verifyOTP = async (email, otp, metadata = {}) => {
 
     // Special case for testing/development - "123456" is always valid
     let isValid = false;
-    if ((otp === "123456" && config.nodeEnv === "development") ||
-      (otp === "999999" && email === "xtshivam1@gmail.com")) {
+    console.log(`🔐 Verifying OTP for ${email}: "${otp}"`);
+
+    if (otp === "123456" && config.nodeEnv === "development") {
       isValid = true;
-      console.log(`Using ${otp === "123456" ? "development" : "static"} OTP bypass for ${email}`);
+      console.log("Using development OTP bypass");
     } else {
       // Verify OTP
+      console.log(`🔍 Checking OTP in database...`);
       isValid = await otpModel.verify(email, otp);
+      console.log(`📋 OTP verification result: ${isValid}`);
     }
 
     if (!isValid) {
+      console.log(`❌ OTP verification failed for ${email}`);
       return { error: "Invalid or expired OTP" };
     }
+
+    console.log(`✅ OTP verification successful for ${email}`);
 
     // Clear OTP
     await otpModel.delete(email);
@@ -797,41 +809,36 @@ export const authenticateWithApple = async (token, metadata = {}) => {
       return { error: "Invalid Apple token" };
     }
 
-    // Check if user exists
-    let user = await userModel.findOne({ email: appleUser.email });
+    // Check if user exists by email or Apple ID
+    let user = await userModel.findOne({
+      $or: [
+        { email: appleUser.email },
+        { authProviderId: appleUser.id, authProvider: AuthProvider.APPLE }
+      ]
+    });
 
     if (!user) {
       // Create new user
-      const username = appleUser.email.split("@")[0];
+      const username = appleUser.email ? appleUser.email.split("@")[0] : `apple_user_${Date.now()}`;
 
       // Check if username is taken
       const existingUsername = await userModel.findOne({ username });
-      if (existingUsername) {
-        // Generate a unique username
-        const uniqueUsername = `${username}${Date.now().toString().slice(-4)}`;
+      const finalUsername = existingUsername ?
+        `${username}${Date.now().toString().slice(-4)}` :
+        username;
 
-        user = await userModel.create({
-          email: appleUser.email,
-          username: uniqueUsername,
-          displayName: appleUser.name,
-          authProvider: AuthProvider.APPLE,
-          authProviderId: appleUser.id,
-          isVerified: true,
-          status: UserStatus.ACTIVE,
-          lastLogin: new Date(),
-        });
-      } else {
-        user = await userModel.create({
-          email: appleUser.email,
-          username,
-          displayName: appleUser.name,
-          authProvider: AuthProvider.APPLE,
-          authProviderId: appleUser.id,
-          isVerified: true,
-          status: UserStatus.ACTIVE,
-          lastLogin: new Date(),
-        });
-      }
+      user = await userModel.create({
+        email: appleUser.email,
+        username: finalUsername,
+        displayName: appleUser.name || 'Apple User',
+        authProvider: AuthProvider.APPLE,
+        authProviderId: appleUser.id,
+        isVerified: true,
+        status: UserStatus.ACTIVE,
+        lastLogin: new Date(),
+      });
+
+      console.log(`✅ Created new Apple user: ${user.email}`);
     } else {
       // Update user with Apple info if needed
       if (!user.authProviderId || user.authProvider !== AuthProvider.APPLE) {

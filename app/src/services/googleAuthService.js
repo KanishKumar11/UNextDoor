@@ -162,6 +162,11 @@ export const signInWithGoogle = async () => {
 
     console.log('📋 Extracted user data for registration:', extractedUserData);
 
+    // Validate that we have the required token
+    if (!idToken) {
+      throw new Error('Failed to get Google ID token');
+    }
+
     return {
       user: extractedUserData,
       idToken: idToken,

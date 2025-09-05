@@ -277,6 +277,9 @@ const ModernEmailInput = ({ onContinue }) => {
 
                 if (result.error) {
                   setServerError(result.error);
+                } else {
+                  console.log('✅ Apple authentication successful');
+                  // Navigation will be handled by the auth state change
                 }
               } catch (error) {
                 console.error('Apple Sign-In error:', error);

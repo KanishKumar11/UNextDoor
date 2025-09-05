@@ -56,6 +56,11 @@ class AppleAuthService {
         identityToken: credential.identityToken ? 'Present' : 'Missing',
       });
 
+      // Validate that we have the required token
+      if (!credential.identityToken) {
+        throw new Error('Failed to get Apple identity token');
+      }
+
       // Return the credential for backend verification
       return {
         success: true,
@@ -71,7 +76,7 @@ class AppleAuthService {
       };
     } catch (error) {
       console.error('❌ Apple Sign-In error:', error);
-      
+
       // Handle specific Apple Sign-In errors
       if (error.code === 'ERR_CANCELED') {
         return {
@@ -80,7 +85,7 @@ class AppleAuthService {
           cancelled: true,
         };
       }
-      
+
       return {
         success: false,
         error: error.message || 'Apple Sign-In failed',
@@ -101,7 +106,7 @@ class AppleAuthService {
 
       const credentialState = await AppleAuthentication.getCredentialStateAsync(userID);
       console.log('🍎 Apple credential state for user', userID, ':', credentialState);
-      
+
       return credentialState;
     } catch (error) {
       console.error('❌ Error getting Apple credential state:', error);

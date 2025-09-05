@@ -124,7 +124,7 @@ class SubscriptionRenewalService {
 
     try {
       const now = new Date();
-      
+
       // Find subscriptions that are due for renewal
       const subscriptionsToRenew = await Subscription.find({
         status: 'active',
@@ -167,15 +167,21 @@ class SubscriptionRenewalService {
       subscription.lastRenewalAttempt = new Date();
       await subscription.save();
 
+      // Extract plan type and duration from planId (e.g., 'basic_monthly' -> 'basic', 'monthly')
+      const planParts = subscription.planId.split('_');
+      const planType = planParts[0]; // 'basic', 'standard', 'pro'
+      const planDuration = planParts[1]; // 'monthly', 'quarterly', 'yearly'
+
       // Create a new payment transaction for the renewal
       const transaction = new PaymentTransaction({
         userId: subscription.userId._id,
         planId: subscription.planId,
+        planType: planType,
+        planDuration: planDuration,
         amount: subscription.amount,
         currency: subscription.currency,
         type: 'subscription_renewal',
         status: 'pending',
-        gatewayOrderId: null, // Will be set when order is created
         subscriptionId: subscription._id,
         metadata: new Map([
           ['renewalFor', subscription._id.toString()],
@@ -183,25 +189,33 @@ class SubscriptionRenewalService {
         ])
       });
 
-      await transaction.save();
+      // Note: razorpayOrderId and gatewayOrderId will be set after order creation
 
       // Create Razorpay order for the renewal payment
-      const orderResult = await this.razorpay.createOrder({
-        amount: subscription.amount,
-        currency: subscription.currency,
-        receipt: `renewal_${subscription._id}_${Date.now()}`,
-        notes: {
-          subscription_id: subscription._id.toString(),
-          user_id: subscription.userId._id.toString(),
-          renewal: 'true'
+      // Generate a short receipt (max 40 chars for Razorpay)
+      const shortId = subscription._id.toString().slice(-8);
+      const timestamp = Date.now().toString().slice(-8);
+      const receipt = `rnw_${shortId}_${timestamp}`;
+
+      const orderResult = await this.razorpay.createOrder(
+        subscription.amount,
+        subscription.currency,
+        {
+          receipt: receipt,
+          notes: {
+            subscription_id: subscription._id.toString(),
+            user_id: subscription.userId._id.toString(),
+            renewal: 'true'
+          }
         }
-      });
+      );
 
       if (!orderResult.success) {
         throw new Error(`Failed to create renewal order: ${orderResult.error}`);
       }
 
       // Update transaction with order details
+      transaction.razorpayOrderId = orderResult.data.id;
       transaction.gatewayOrderId = orderResult.data.id;
       transaction.status = 'processing';
       await transaction.save();
@@ -214,7 +228,7 @@ class SubscriptionRenewalService {
 
     } catch (error) {
       console.error(`❌ Error renewing subscription ${subscription._id}:`, error);
-      
+
       // Mark the renewal as failed
       subscription.renewalFailedAt = new Date();
       subscription.renewalFailureCount = (subscription.renewalFailureCount || 0) + 1;
@@ -312,7 +326,7 @@ class SubscriptionRenewalService {
           await subscription.save();
 
           await this.renewSubscription(subscription);
-          
+
         } catch (error) {
           console.error(`❌ Failed to retry payment for subscription ${subscription._id}:`, error);
         }
@@ -348,7 +362,7 @@ class SubscriptionRenewalService {
       subscription.nextBillingDate = nextPeriodEnd;
       subscription.lastPaymentDate = new Date();
       subscription.lastPaymentId = paymentData.paymentId;
-      
+
       // Reset failure counters
       subscription.renewalFailedAt = null;
       subscription.renewalFailureCount = 0;
