@@ -72,9 +72,12 @@ export const verifyAppleToken = async (token) => {
 
     try {
       // Use apple-signin-auth library for proper token verification
+      console.log('🔍 Verifying Apple token with audience:', 'com.UNextDoor.app');
+
       const appleIdTokenClaims = await appleSignin.verifyIdToken(token, {
         audience: 'com.UNextDoor.app', // Your app's bundle ID
         ignoreExpiration: false,
+        nonce: undefined, // Add nonce if you're using one
       });
 
       console.log('✅ Apple token verified successfully:', {
