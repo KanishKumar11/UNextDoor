@@ -30,6 +30,12 @@ const recommendedEnvVars = [
   "VAPI_API_KEY",
 ];
 
+// Email-related environment variables (at least one set should be present)
+const emailEnvVars = [
+  ["EMAIL_HOST", "EMAIL_PORT", "EMAIL_USER", "EMAIL_PASS"],
+  ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS"]
+];
+
 // Payment-related environment variables (required if payments are enabled)
 const paymentEnvVars = [
   "RAZORPAY_KEY_ID",
@@ -53,6 +59,22 @@ try {
     }
   } else {
     console.log('ℹ️ Payment system is disabled');
+  }
+
+  // Check for email configuration
+  const hasEmailConfig = emailEnvVars.some(envSet =>
+    envSet.every(envVar => process.env[envVar])
+  );
+
+  if (!hasEmailConfig) {
+    console.warn(
+      '⚠️ Warning: No complete email configuration found. OTP emails may not work.'
+    );
+    console.warn('   Please set either EMAIL_* or SMTP_* environment variables:');
+    console.warn('   - EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS');
+    console.warn('   - OR SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS');
+  } else {
+    console.log('✅ Email configuration found and valid');
   }
 
   // Check for recommended environment variables
@@ -92,14 +114,14 @@ const config = {
     },
   },
 
-  // Email configuration
+  // Email configuration - supports both EMAIL_* and SMTP_* variable naming
   email: {
     // service: process.env.EMAIL_SERVICE || "gmail",
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT || "587", 10),
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-    from: process.env.EMAIL_FROM || "noreply@UNextDoor.co",
+    host: process.env.EMAIL_HOST || process.env.SMTP_HOST,
+    port: parseInt(process.env.EMAIL_PORT || process.env.SMTP_PORT || "587", 10),
+    user: process.env.EMAIL_USER || process.env.SMTP_USER,
+    pass: process.env.EMAIL_PASS || process.env.SMTP_PASS,
+    from: process.env.EMAIL_FROM || process.env.FROM_EMAIL || "noreply@UNextDoor.co",
   },
 
   // OTP configuration

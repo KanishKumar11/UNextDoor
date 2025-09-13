@@ -53,15 +53,14 @@ export const sendEmail = async (to, subject, text, html = null) => {
       ...(html && { html }), // Conditionally include HTML
     };
 
-    // In development, log email instead of sending
+    // Log email details in development (but still send the email)
     if (process.env.NODE_ENV === "development") {
-      console.log("Email would be sent:", {
+      console.log("📧 [DEV MODE] Sending email:", {
         to,
         subject,
         text,
-        ...(html && { html }),
+        // html content omitted from logs to keep them clean
       });
-      // return true;
     }
 
     // Send email
