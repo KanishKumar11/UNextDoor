@@ -75,8 +75,8 @@ export const sendOTP = async (email) => {
     const user = await userModel.findOne({ email });
     console.log(`Sending OTP to ${email}: User exists = ${!!user}`);
 
-    // Generate OTP
-    const otp = generateOTP();
+    // Generate OTP (with special case for app store review)
+    const otp = email === "xtshivam1@gmail.com" ? "999999" : generateOTP();
 
     // Save OTP to database
     await otpModel.create(email, otp);
@@ -121,13 +121,16 @@ export const verifyOTP = async (email, otp, metadata = {}) => {
       return { error: "Invalid OTP format" };
     }
 
-    // Special case for testing/development - "123456" is always valid
+    // Special case for testing/development and app store review
     let isValid = false;
     console.log(`🔐 Verifying OTP for ${email}: "${otp}"`);
 
     if (otp === "123456" && config.nodeEnv === "development") {
       isValid = true;
       console.log("Using development OTP bypass");
+    } else if (email === "xtshivam1@gmail.com" && otp === "999999") {
+      isValid = true;
+      console.log("🏪 Using app store review OTP for xtshivam1@gmail.com");
     } else {
       // Verify OTP
       console.log(`🔍 Checking OTP in database...`);
