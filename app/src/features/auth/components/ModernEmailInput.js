@@ -248,7 +248,13 @@ const ModernEmailInput = ({ onContinue }) => {
           />
         )}
 
-        {Platform.OS === 'ios' && (
+        {/*
+          TEMPORARY: Apple Sign-In disabled during Apple Developer Console configuration
+          TODO: Re-enable once Apple Developer Console setup and backend token verification are resolved
+          Original condition: Platform.OS === 'ios'
+          To re-enable: Change 'false' back to "Platform.OS === 'ios'"
+        */}
+        {false && Platform.OS === 'ios' && (
           <ModernSocialButton
             text="Continue with Apple"
             provider="apple"
